@@ -1,0 +1,523 @@
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { SupabaseService } from '../../../core/services/supabase.service';
+import {
+  ArtworkImage,
+  ImageUploadRequest,
+} from '../../../shared/models/artwork-image.model';
+import { ImageService } from '../../../shared/services/image.service';
+
+interface Artwork {
+  id: number;
+  autor: string | null;
+  titulo: string;
+  tecnica: string | null;
+  dimension: string | null;
+  ano: number | null;
+  ubicacion: string | null;
+  valor: number | null;
+  observaciones: string | null;
+  responsable: string | null;
+  fecha_creacion?: string;
+  fecha_actualizacion?: string;
+  imagenes?: ArtworkImage[];
+}
+
+interface ArtworkCreateData {
+  autor: string | null;
+  titulo: string;
+  tecnica: string | null;
+  dimension: string | null;
+  ano: number | null;
+  ubicacion: string | null;
+  valor: number | null;
+  observaciones: string | null;
+  responsable: string | null;
+}
+
+interface ArtworkState {
+  artworks: Artwork[];
+  selectedArtwork: Artwork | null;
+  loading: boolean;
+  error: boolean;
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class ArtworksService {
+  private supabaseClient = inject(SupabaseService).supabaseClient;
+  private imageService = inject(ImageService);
+
+  private state = signal<ArtworkState>({
+    artworks: [],
+    selectedArtwork: null,
+    loading: false,
+    error: false,
+  });
+
+  // Selectores
+  artworks = computed(() => this.state().artworks);
+  selectedArtwork = computed(() => this.state().selectedArtwork);
+  loading = computed(() => this.state().loading);
+  error = computed(() => this.state().error);
+
+  async getAllArtworks() {
+    try {
+      this.state.update((state) => ({
+        ...state,
+        loading: true,
+      }));
+
+      const { data, error } = await this.supabaseClient.from('obras').select(`
+          *,
+          imagenes(*)
+        `);
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        this.state.update((state) => ({
+          ...state,
+          artworks: data,
+        }));
+      }
+    } catch (error) {
+      this.state.update((state) => ({
+        ...state,
+        error: true,
+      }));
+    } finally {
+      this.state.update((state) => ({
+        ...state,
+        loading: false,
+      }));
+    }
+  }
+
+  async getArtworkById(id: number) {
+    try {
+      this.state.update((state) => ({
+        ...state,
+        loading: true,
+        selectedArtwork: null,
+        error: false,
+      }));
+
+      const { data, error } = await this.supabaseClient
+        .from('obras')
+        .select(
+          `
+          *,
+          imagenes(*)
+        `
+        )
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        this.state.update((state) => ({
+          ...state,
+          selectedArtwork: data,
+        }));
+      }
+    } catch (error) {
+      this.state.update((state) => ({
+        ...state,
+        error: true,
+        selectedArtwork: null,
+      }));
+    } finally {
+      this.state.update((state) => ({
+        ...state,
+        loading: false,
+      }));
+    }
+  }
+
+  clearSelectedArtwork() {
+    this.state.update((state) => ({
+      ...state,
+      selectedArtwork: null,
+      error: false,
+    }));
+  }
+
+  async createArtwork(artworkData: ArtworkCreateData, imageFiles: File[] = []) {
+    try {
+      this.state.update((state) => ({
+        ...state,
+        loading: true,
+        error: false,
+      }));
+
+      // Crear la obra primero
+      const { data: artworkRecord, error: artworkError } =
+        await this.supabaseClient
+          .from('obras')
+          .insert(artworkData)
+          .select()
+          .single();
+
+      if (artworkError) {
+        throw artworkError;
+      }
+
+      // Si hay archivos de imagen, subirlos al Storage
+      if (imageFiles.length > 0 && artworkRecord) {
+        // Preparar requests de subida
+        const imageRequests: ImageUploadRequest[] = imageFiles.map((file) => ({
+          file,
+          filename: file.name,
+        }));
+
+        // Subir imágenes al Storage
+        const uploadedImages = await this.imageService.uploadMultipleImages(
+          imageRequests
+        );
+
+        // Guardar referencias en la base de datos
+        const imageRecords = uploadedImages.map((uploadResult) => ({
+          id_obra: artworkRecord.id, // Usando el nombre correcto de la columna
+          url: uploadResult.url,
+          nombre: uploadResult.filename,
+          tamano:
+            imageFiles.find((f) => f.name === uploadResult.filename)?.size || 0,
+        }));
+
+        const { error: imagesError } = await this.supabaseClient
+          .from('imagenes')
+          .insert(imageRecords);
+
+        if (imagesError) {
+          // Si falla la inserción de imágenes, eliminar los archivos subidos
+          const pathsToDelete = uploadedImages.map((img) =>
+            this.imageService.getPathFromUrl(img.url)
+          );
+          await this.imageService.deleteMultipleImages(pathsToDelete);
+          throw imagesError;
+        }
+      }
+
+      // Recargar la lista de obras
+      await this.getAllArtworks();
+
+      return artworkRecord;
+    } catch (error) {
+      this.state.update((state) => ({
+        ...state,
+        error: true,
+      }));
+      throw error;
+    } finally {
+      this.state.update((state) => ({
+        ...state,
+        loading: false,
+      }));
+    }
+  }
+
+  async updateArtwork(
+    id: number,
+    artworkData: Partial<ArtworkCreateData>,
+    newImageFiles: File[] = [],
+    existingImages: ArtworkImage[] = []
+  ) {
+    try {
+      this.state.update((state) => ({
+        ...state,
+        loading: true,
+        error: false,
+      }));
+
+      // Actualizar los datos de la obra con la fecha de actualización
+      const updateData = {
+        ...artworkData,
+        fecha_actualizacion: new Date().toISOString(),
+      };
+
+      const { data: artworkRecord, error: artworkError } =
+        await this.supabaseClient
+          .from('obras')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single();
+
+      if (artworkError) {
+        throw artworkError;
+      }
+
+      // Obtener las imágenes actuales de la base de datos
+      const { data: currentImages, error: currentImagesError } =
+        await this.supabaseClient
+          .from('imagenes')
+          .select('*')
+          .eq('id_obra', id);
+
+      if (currentImagesError) {
+        throw currentImagesError;
+      }
+
+      // Determinar qué imágenes eliminar (las que están en BD pero no en existingImages)
+      const imagesToDelete = (currentImages || []).filter(
+        (dbImage) =>
+          !existingImages.some((existing) => existing.id === dbImage.id)
+      );
+
+      // Eliminar imágenes que ya no se necesitan
+      if (imagesToDelete.length > 0) {
+        // Eliminar archivos del Storage
+        const pathsToDelete = imagesToDelete.map((img) =>
+          this.imageService.getPathFromUrl(img.url)
+        );
+        await this.imageService.deleteMultipleImages(pathsToDelete);
+
+        // Eliminar registros de la base de datos
+        const idsToDelete = imagesToDelete.map((img) => img.id);
+        const { error: deleteError } = await this.supabaseClient
+          .from('imagenes')
+          .delete()
+          .in('id', idsToDelete);
+
+        if (deleteError) {
+          throw deleteError;
+        }
+      }
+
+      // Subir nuevas imágenes si las hay
+      if (newImageFiles.length > 0) {
+        // Preparar requests de subida
+        const imageRequests: ImageUploadRequest[] = newImageFiles.map(
+          (file) => ({
+            file,
+            filename: file.name,
+          })
+        );
+
+        // Subir imágenes al Storage
+        const uploadedImages = await this.imageService.uploadMultipleImages(
+          imageRequests
+        );
+
+        // Guardar referencias en la base de datos
+        const imageRecords = uploadedImages.map((uploadResult) => ({
+          id_obra: id,
+          url: uploadResult.url,
+          nombre: uploadResult.filename,
+          tamano:
+            newImageFiles.find((f) => f.name === uploadResult.filename)?.size ||
+            0,
+        }));
+
+        const { error: imagesError } = await this.supabaseClient
+          .from('imagenes')
+          .insert(imageRecords);
+
+        if (imagesError) {
+          // Si falla la inserción, eliminar los archivos subidos
+          const pathsToDelete = uploadedImages.map((img) =>
+            this.imageService.getPathFromUrl(img.url)
+          );
+          await this.imageService.deleteMultipleImages(pathsToDelete);
+          throw imagesError;
+        }
+      }
+
+      // Recargar la obra seleccionada
+      await this.getArtworkById(id);
+
+      return artworkRecord;
+    } catch (error) {
+      this.state.update((state) => ({
+        ...state,
+        error: true,
+      }));
+      throw error;
+    } finally {
+      this.state.update((state) => ({
+        ...state,
+        loading: false,
+      }));
+    }
+  }
+
+  async deleteArtwork(id: number) {
+    try {
+      this.state.update((state) => ({
+        ...state,
+        loading: true,
+        error: false,
+      }));
+
+      // Primero obtener todas las imágenes asociadas para eliminar los archivos
+      const { data: images, error: imagesQueryError } =
+        await this.supabaseClient
+          .from('imagenes')
+          .select('url')
+          .eq('id_obra', id);
+
+      if (imagesQueryError) {
+        throw imagesQueryError;
+      }
+
+      // Eliminar archivos del Storage si existen imágenes
+      if (images && images.length > 0) {
+        const pathsToDelete = images.map((img) =>
+          this.imageService.getPathFromUrl(img.url)
+        );
+        await this.imageService.deleteMultipleImages(pathsToDelete);
+      }
+
+      // Eliminar registros de imágenes de la base de datos
+      const { error: imagesError } = await this.supabaseClient
+        .from('imagenes')
+        .delete()
+        .eq('id_obra', id);
+
+      if (imagesError) {
+        throw imagesError;
+      }
+
+      // Finalmente eliminar la obra
+      const { error: artworkError } = await this.supabaseClient
+        .from('obras')
+        .delete()
+        .eq('id', id);
+
+      if (artworkError) {
+        throw artworkError;
+      }
+
+      // Recargar la lista
+      await this.getAllArtworks();
+    } catch (error) {
+      this.state.update((state) => ({
+        ...state,
+        error: true,
+      }));
+      throw error;
+    } finally {
+      this.state.update((state) => ({
+        ...state,
+        loading: false,
+      }));
+    }
+  }
+
+  // Método para eliminar una imagen específica
+  async deleteSpecificImage(imageId: number, artworkId: number) {
+    try {
+      this.state.update((state) => ({
+        ...state,
+        loading: true,
+        error: false,
+      }));
+
+      // Obtener la información de la imagen para eliminar el archivo del Storage
+      const { data: imageData, error: imageQueryError } =
+        await this.supabaseClient
+          .from('imagenes')
+          .select('url')
+          .eq('id', imageId)
+          .single();
+
+      if (imageQueryError) {
+        throw imageQueryError;
+      }
+
+      if (imageData) {
+        // Eliminar archivo del Storage
+        const filePath = this.imageService.getPathFromUrl(imageData.url);
+        await this.imageService.deleteImage(filePath);
+      }
+
+      // Eliminar registro de la base de datos
+      const { error: deleteError } = await this.supabaseClient
+        .from('imagenes')
+        .delete()
+        .eq('id', imageId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Recargar la obra específica
+      await this.getArtworkById(artworkId);
+    } catch (error) {
+      this.state.update((state) => ({
+        ...state,
+        error: true,
+      }));
+      throw error;
+    } finally {
+      this.state.update((state) => ({
+        ...state,
+        loading: false,
+      }));
+    }
+  }
+
+  // Método para agregar imágenes a una obra existente
+  async addImagesToArtwork(artworkId: number, imageFiles: File[]) {
+    try {
+      this.state.update((state) => ({
+        ...state,
+        loading: true,
+        error: false,
+      }));
+
+      // Preparar requests de subida
+      const imageRequests: ImageUploadRequest[] = imageFiles.map((file) => ({
+        file,
+        filename: file.name,
+      }));
+
+      // Subir imágenes al Storage
+      const uploadedImages = await this.imageService.uploadMultipleImages(
+        imageRequests
+      );
+
+      // Guardar referencias en la base de datos
+      const imageRecords = uploadedImages.map((uploadResult) => ({
+        id_obra: artworkId,
+        url: uploadResult.url,
+        nombre: uploadResult.filename,
+        tamano:
+          imageFiles.find((f) => f.name === uploadResult.filename)?.size || 0,
+      }));
+
+      const { error: imagesError } = await this.supabaseClient
+        .from('imagenes')
+        .insert(imageRecords);
+
+      if (imagesError) {
+        // Si falla la inserción, eliminar los archivos subidos
+        const pathsToDelete = uploadedImages.map((img) =>
+          this.imageService.getPathFromUrl(img.url)
+        );
+        await this.imageService.deleteMultipleImages(pathsToDelete);
+        throw imagesError;
+      }
+
+      // Recargar la obra específica
+      await this.getArtworkById(artworkId);
+    } catch (error) {
+      this.state.update((state) => ({
+        ...state,
+        error: true,
+      }));
+      throw error;
+    } finally {
+      this.state.update((state) => ({
+        ...state,
+        loading: false,
+      }));
+    }
+  }
+}

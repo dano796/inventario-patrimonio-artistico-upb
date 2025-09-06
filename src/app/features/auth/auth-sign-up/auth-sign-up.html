@@ -1,0 +1,128 @@
+<!-- Header Simple -->
+<header class="bg-white shadow-sm border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="flex justify-between items-center">
+      <h1 class="text-xl font-bold text-gray-900">Registro</h1>
+      <a
+        routerLink="/auth/log-in"
+        class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+      >
+        Iniciar sesión
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- Contenido Principal -->
+<div
+  class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8"
+>
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <h2 class="text-center text-3xl font-bold text-gray-900">Crear cuenta</h2>
+    <p class="mt-2 text-center text-sm text-gray-600">
+      Completa tus datos para registrarte
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 py-8 px-6">
+      <form class="space-y-6" [formGroup]="form" (ngSubmit)="onSubmit()">
+        <!-- Campo Correo -->
+        <div>
+          <label for="correo" class="block text-sm font-medium text-gray-700">
+            Correo
+          </label>
+          <div class="mt-1">
+            <input
+              id="correo"
+              name="correo"
+              type="email"
+              formControlName="correo"
+              class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              placeholder="correo@email.com"
+            />
+            @if (showErrorMessage("correo")) {
+            <div class="text-red-500 text-sm mt-1 font-medium">
+              {{ getErrorMessage("correo") }}
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Campo Contraseña -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700">
+            Contraseña
+          </label>
+          <div class="mt-1">
+            <input
+              id="password"
+              name="contrasena"
+              type="password"
+              formControlName="contrasena"
+              class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              placeholder="••••••••"
+            />
+            @if (showErrorMessage("contrasena")) {
+            <div class="text-red-500 text-sm mt-1 font-medium">
+              {{ getErrorMessage("contrasena") }}
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Campo Nombre -->
+        <div>
+          <label for="nombre" class="block text-sm font-medium text-gray-700">
+            Nombre completo
+          </label>
+          <div class="mt-1">
+            <input
+              id="nombre"
+              name="nombre"
+              type="text"
+              formControlName="nombre"
+              class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              placeholder="Juan Carlos"
+            />
+            @if (showErrorMessage("nombre")) {
+            <div class="text-red-500 text-sm mt-1 font-medium">
+              {{ getErrorMessage("nombre") }}
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Botón de Registro -->
+        <div>
+          <button
+            type="submit"
+            class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            [disabled]="form.invalid"
+          >
+            Crear cuenta
+          </button>
+
+          @if (globalErrorMessage) {
+          <div class="text-red-500 text-sm mt-4 font-medium text-center">
+            {{ globalErrorMessage }}
+          </div>
+          }
+        </div>
+      </form>
+
+      <!-- Enlace de inicio de sesión -->
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-600">
+          ¿Ya tienes una cuenta?
+          <a
+            routerLink="/auth/log-in"
+            class="font-medium text-blue-600 hover:text-blue-500"
+          >
+            Inicia sesión aquí
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
