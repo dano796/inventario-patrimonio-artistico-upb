@@ -81,7 +81,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
       return;
     }
     if (this.artwork()) {
-      this.router.navigate(['/obras/edit', this.artwork()!.id]);
+      this.router.navigate(['/edit', this.artwork()!.id]);
     }
   }
 
@@ -108,7 +108,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
 
         // Redirigir a la lista después de un breve delay
         setTimeout(() => {
-          this.router.navigate(['/obras']);
+          this.router.navigate(['/']);
         }, 1500);
       } catch (error) {
         console.error('Error al eliminar obra:', error);
@@ -128,7 +128,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/obras']);
+    this.router.navigate(['/']);
   }
 
   // Métodos para navegación de imágenes

@@ -7,7 +7,7 @@
       <!-- Botón "Crear Nueva Obra" visible solo si el usuario está AUTENTICADO -->
       <a
         *ngIf="isAuthenticated()"
-        routerLink="/obras/new"
+        routerLink="/new"
         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
       >
         Crear Nueva Obra
@@ -245,7 +245,7 @@
         <!-- Acciones: visibles solo si el usuario está autenticado -->
         <div *ngIf="isAuthenticated()" class="flex justify-end space-x-2 mt-4">
           <a
-            [routerLink]="['/obras/edit', artwork.id]"
+            [routerLink]="['/edit', artwork.id]"
             class="bg-indigo-500 text-white px-3 py-1 text-sm rounded-md hover:bg-indigo-600 transition-colors"
           >
             Editar
@@ -284,7 +284,7 @@
       <p class="text-lg mb-4">No hay obras de arte registradas.</p>
       <a
         *ngIf="isAuthenticated()"
-        routerLink="/obras/new"
+        routerLink="/new"
         class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
       >
         Crear primera obra

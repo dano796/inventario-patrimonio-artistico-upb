@@ -177,7 +177,7 @@ export class ArtworkFormComponent implements OnInit {
 
       // Redirigir después de un breve delay
       setTimeout(() => {
-        this.router.navigate(['/obras']);
+        this.router.navigate(['/']);
       }, 1500);
     } catch (error) {
       console.error('Error saving artwork:', error);
@@ -188,7 +188,7 @@ export class ArtworkFormComponent implements OnInit {
   }
 
   onCancel(): void {
-    this.router.navigate(['/obras']);
+    this.router.navigate(['/']);
   }
 
   // Event handlers para el ImageUploader

@@ -9,15 +9,10 @@ export const routes: Routes = [
     children: AuthRoutes,
   },
   {
-    path: 'obras',
+    path: '',
     loadChildren: () =>
       import('./features/artworks/artwork-shell/artwork.routing').then(
         (m) => m.routes
       ),
-  },
-  {
-    path: '',
-    redirectTo: '/obras',
-    pathMatch: 'full',
   },
 ];

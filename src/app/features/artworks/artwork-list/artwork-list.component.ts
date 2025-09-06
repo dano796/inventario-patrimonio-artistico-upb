@@ -62,7 +62,7 @@ export class ArtworkListComponent implements AfterViewInit {
   }
 
   viewArtworkDetails(id: number) {
-    this.router.navigateByUrl(`/obras/artwork/${id}`);
+    this.router.navigateByUrl(`/artwork/${id}`);
   }
 
   onDeleteArtwork(id: number) {
