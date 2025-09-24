@@ -90,11 +90,18 @@ export class ArtworkFormComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Limpiar estados anteriores
+    this.isLoading.set(false);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.uploadedImages.set([]);
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditMode.set(true);
       this.loadArtwork(Number(id));
     } else {
+      this.isEditMode.set(false);
       // Limpiar el artwork seleccionado cuando se crea una nueva obra
       this.artworksService.clearSelectedArtwork();
     }
@@ -102,6 +109,9 @@ export class ArtworkFormComponent implements OnInit {
 
   private async loadArtwork(id: number): Promise<void> {
     try {
+      this.isLoading.set(true);
+      this.errorMessage.set(null);
+
       await this.artworksService.getArtworkById(id);
       const artwork = this.selectedArtwork();
 
@@ -117,10 +127,24 @@ export class ArtworkFormComponent implements OnInit {
           observaciones: artwork.observaciones,
           responsable: artwork.responsable,
         });
+
+        // Cargar imágenes existentes
+        if (artwork.imagenes) {
+          this.uploadedImages.set(artwork.imagenes);
+        }
       }
     } catch (error) {
       console.error('Error loading artwork:', error);
-      this.errorMessage.set('Error al cargar la obra de arte');
+      this.errorMessage.set(
+        'Error al cargar la obra de arte. Por favor, intente nuevamente.'
+      );
+
+      // Redirigir al listado después de un error de carga
+      setTimeout(() => {
+        this.router.navigate(['/']);
+      }, 2000);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

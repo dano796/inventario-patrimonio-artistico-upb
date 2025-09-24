@@ -21,9 +21,10 @@ export class ArtworkListComponent implements AfterViewInit {
   private router = inject(Router);
   private artworksService = inject(ArtworksService);
 
-  // Signals para el estado de autenticación
-  private userSession = signal<any>(null);
-  isAuthenticated = computed(() => !!this.userSession()?.user);
+  // Usar directamente el AuthService optimizado
+  isAuthenticated = this.authService.isAuthenticated;
+  isAdmin = this.authService.isAdmin;
+  isAuthLoading = this.authService.isLoading;
 
   // Signals para el modal de confirmación
   isModalOpen = signal(false);
@@ -41,19 +42,7 @@ export class ArtworkListComponent implements AfterViewInit {
   error = this.artworksService.error;
 
   constructor() {
-    this.checkAuthStatus();
-    this.setupAuthListener();
-  }
-
-  private async checkAuthStatus() {
-    const { data } = await this.authService.session();
-    this.userSession.set(data.session);
-  }
-
-  private setupAuthListener() {
-    this.authService.onAuthStateChange((event, session) => {
-      this.userSession.set(session);
-    });
+    // AuthService maneja automáticamente la autenticación
   }
 
   async onLogout() {

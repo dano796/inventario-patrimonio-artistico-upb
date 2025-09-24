@@ -186,8 +186,8 @@
           <h1 class="text-3xl font-bold text-gray-800 mb-4">
             {{ artwork()!.titulo }}
           </h1>
-          <!-- Botones de acción visible solo si el usuario está AUTENTICADO -->
-          <div *ngIf="isAuthenticated()" class="flex space-x-2">
+          <!-- Botones de acción visible solo si el usuario es ADMIN -->
+          <div *ngIf="isAdmin()" class="flex space-x-2">
             <button
               (click)="onEditArtwork()"
               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"

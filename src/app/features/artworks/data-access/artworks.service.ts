@@ -55,6 +55,9 @@ export class ArtworksService {
     error: false,
   });
 
+  // Variable para evitar llamadas concurrentes
+  private loadingPromise: Promise<any> | null = null;
+
   // Selectores
   artworks = computed(() => this.state().artworks);
   selectedArtwork = computed(() => this.state().selectedArtwork);
@@ -97,6 +100,16 @@ export class ArtworksService {
   }
 
   async getArtworkById(id: number) {
+    // Evitar llamadas concurrentes
+    if (this.loadingPromise) {
+      await this.loadingPromise;
+    }
+
+    this.loadingPromise = this._getArtworkById(id);
+    return this.loadingPromise;
+  }
+
+  private async _getArtworkById(id: number) {
     try {
       this.state.update((state) => ({
         ...state,
@@ -105,7 +118,12 @@ export class ArtworksService {
         error: false,
       }));
 
-      const { data, error } = await this.supabaseClient
+      // Timeout para evitar carga infinita
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Artwork load timeout')), 15000)
+      );
+
+      const artworkPromise = this.supabaseClient
         .from('obras')
         .select(
           `
@@ -115,6 +133,11 @@ export class ArtworksService {
         )
         .eq('id', id)
         .single();
+
+      const { data, error } = (await Promise.race([
+        artworkPromise,
+        timeoutPromise,
+      ])) as any;
 
       if (error) {
         throw error;
@@ -127,24 +150,31 @@ export class ArtworksService {
         }));
       }
     } catch (error) {
+      console.error('Error loading artwork:', error);
       this.state.update((state) => ({
         ...state,
         error: true,
         selectedArtwork: null,
       }));
+      throw error;
     } finally {
       this.state.update((state) => ({
         ...state,
         loading: false,
       }));
+      this.loadingPromise = null;
     }
   }
 
   clearSelectedArtwork() {
+    // Cancelar cualquier carga pendiente
+    this.loadingPromise = null;
+
     this.state.update((state) => ({
       ...state,
       selectedArtwork: null,
       error: false,
+      loading: false,
     }));
   }
 

@@ -24,9 +24,10 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   private artworksService = inject(ArtworksService);
   private authService = inject(AuthService);
 
-  // Signals para estado local
-  private userSession = signal<any>(null);
-  isAuthenticated = computed(() => !!this.userSession()?.user);
+  // Signals para estado local - usar directamente el AuthService
+  isAuthenticated = this.authService.isAuthenticated;
+  isAdmin = this.authService.isAdmin;
+  isAuthLoading = this.authService.isLoading;
 
   // Signal para el índice de la imagen actual
   currentImageIndex = signal<number>(0);
@@ -43,19 +44,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   error = this.artworksService.error;
 
   constructor() {
-    this.checkAuthStatus();
-    this.setupAuthListener();
-  }
-
-  private async checkAuthStatus() {
-    const { data } = await this.authService.session();
-    this.userSession.set(data.session);
-  }
-
-  private setupAuthListener() {
-    this.authService.onAuthStateChange((event, session) => {
-      this.userSession.set(session);
-    });
+    // No necesitamos manejar la autenticación aquí, el AuthService lo hace automáticamente
   }
 
   ngOnInit(): void {
@@ -76,7 +65,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   }
 
   onEditArtwork(): void {
-    if (!this.isAuthenticated()) {
+    if (!this.isAdmin()) {
       this.router.navigate(['/auth/log-in']);
       return;
     }
@@ -86,7 +75,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   }
 
   onDeleteArtwork(): void {
-    if (!this.isAuthenticated()) {
+    if (!this.isAdmin()) {
       this.router.navigate(['/auth/log-in']);
       return;
     }

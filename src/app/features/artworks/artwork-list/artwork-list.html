@@ -4,9 +4,9 @@
       Inventario de Obras de Arte
     </h2>
     <div class="flex items-center space-x-4">
-      <!-- Botón "Crear Nueva Obra" visible solo si el usuario está AUTENTICADO -->
+      <!-- Botón "Crear Nueva Obra" visible solo si el usuario es ADMIN -->
       <a
-        *ngIf="isAuthenticated()"
+        *ngIf="isAdmin()"
         routerLink="/new"
         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
       >
@@ -242,8 +242,8 @@
           </p>
         </div>
 
-        <!-- Acciones: visibles solo si el usuario está autenticado -->
-        <div *ngIf="isAuthenticated()" class="flex justify-end space-x-2 mt-4">
+        <!-- Acciones: visibles solo si el usuario es ADMIN -->
+        <div *ngIf="isAdmin()" class="flex justify-end space-x-2 mt-4">
           <a
             [routerLink]="['/edit', artwork.id]"
             class="bg-indigo-500 text-white px-3 py-1 text-sm rounded-md hover:bg-indigo-600 transition-colors"
@@ -283,7 +283,7 @@
       </svg>
       <p class="text-lg mb-4">No hay obras de arte registradas.</p>
       <a
-        *ngIf="isAuthenticated()"
+        *ngIf="isAdmin()"
         routerLink="/new"
         class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
       >

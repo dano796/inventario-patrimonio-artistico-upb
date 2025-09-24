@@ -7,22 +7,100 @@ const authServiceInjection = () => inject(AuthService);
 
 export const privateGuard: CanActivateFn = async () => {
   const router = routerInjection();
-  const { data } = await authServiceInjection().session();
+  const authService = authServiceInjection();
 
-  if (!data.session) {
-    router.navigateByUrl('auth/log-in');
+  try {
+    // Esperar máximo 1.5 segundos por la carga del perfil
+    const timeoutPromise = new Promise<boolean>((resolve) => {
+      setTimeout(() => resolve(false), 1500);
+    });
+
+    const checkAuthPromise = new Promise<boolean>((resolve) => {
+      // Si ya está cargado
+      if (!authService.isLoading()) {
+        resolve(authService.isAuthenticated());
+        return;
+      }
+
+      // Esperar a que termine de cargar
+      const checkInterval = setInterval(() => {
+        if (!authService.isLoading()) {
+          clearInterval(checkInterval);
+          resolve(authService.isAuthenticated());
+        }
+      }, 100);
+
+      // Timeout de seguridad
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve(false);
+      }, 1200);
+    });
+
+    const isAuthenticated = await Promise.race([
+      checkAuthPromise,
+      timeoutPromise,
+    ]);
+
+    if (!isAuthenticated) {
+      router.navigateByUrl('/auth/log-in');
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in privateGuard:', error);
+    router.navigateByUrl('/auth/log-in');
+    return false;
   }
-
-  return !!data.session;
 };
 
 export const publicGuard: CanActivateFn = async () => {
   const router = routerInjection();
-  const { data } = await authServiceInjection().session();
+  const authService = authServiceInjection();
 
-  if (data.session) {
-    router.navigateByUrl('/');
+  try {
+    // Esperar máximo 1 segundo para rutas públicas
+    const timeoutPromise = new Promise<boolean>((resolve) => {
+      setTimeout(() => resolve(true), 1000); // Permitir acceso en caso de timeout
+    });
+
+    const checkAuthPromise = new Promise<boolean>((resolve) => {
+      // Si ya está cargado
+      if (!authService.isLoading()) {
+        if (authService.isAuthenticated()) {
+          router.navigateByUrl('/');
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+        return;
+      }
+
+      // Esperar a que termine de cargar
+      const checkInterval = setInterval(() => {
+        if (!authService.isLoading()) {
+          clearInterval(checkInterval);
+          if (authService.isAuthenticated()) {
+            router.navigateByUrl('/');
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        }
+      }, 100);
+
+      // Timeout de seguridad
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve(true); // En caso de timeout, permitir acceso a rutas públicas
+      }, 800);
+    });
+
+    return await Promise.race([checkAuthPromise, timeoutPromise]);
+  } catch (error) {
+    console.error('Error in publicGuard:', error);
+    // En caso de error, permitir acceso a rutas públicas
+    return true;
   }
-
-  return !data.session;
 };
