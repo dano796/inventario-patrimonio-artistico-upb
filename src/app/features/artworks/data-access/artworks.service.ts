@@ -39,6 +39,16 @@ interface ArtworkState {
   selectedArtwork: Artwork | null;
   loading: boolean;
   error: boolean;
+  // Paginación
+  currentPage: number;
+  totalItems: number;
+  itemsPerPage: number;
+  totalPages: number;
+}
+
+interface PaginationParams {
+  page?: number;
+  limit?: number;
 }
 
 @Injectable({
@@ -53,6 +63,10 @@ export class ArtworksService {
     selectedArtwork: null,
     loading: false,
     error: false,
+    currentPage: 1,
+    totalItems: 0,
+    itemsPerPage: 12,
+    totalPages: 0,
   });
 
   // Variable para evitar llamadas concurrentes
@@ -63,27 +77,58 @@ export class ArtworksService {
   selectedArtwork = computed(() => this.state().selectedArtwork);
   loading = computed(() => this.state().loading);
   error = computed(() => this.state().error);
+  
+  // Selectores de paginación
+  currentPage = computed(() => this.state().currentPage);
+  totalItems = computed(() => this.state().totalItems);
+  itemsPerPage = computed(() => this.state().itemsPerPage);
+  totalPages = computed(() => this.state().totalPages);
+  
+  // Computed para información de paginación
+  startItem = computed(() => (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  endItem = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+  hasPreviousPage = computed(() => this.currentPage() > 1);
+  hasNextPage = computed(() => this.currentPage() < this.totalPages());
 
-  async getAllArtworks() {
+  async getAllArtworks(params: PaginationParams = {}) {
     try {
+      const page = params.page || this.state().currentPage;
+      const limit = params.limit || this.state().itemsPerPage;
+      
       this.state.update((state) => ({
         ...state,
         loading: true,
+        currentPage: page,
       }));
 
-      const { data, error } = await this.supabaseClient.from('obras').select(`
+      // Calcular el rango para la paginación
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit - 1;
+
+      // Consulta con paginación y conteo total
+      const { data, error, count } = await this.supabaseClient
+        .from('obras')
+        .select(`
           *,
           imagenes(*)
-        `);
+        `, { count: 'exact' })
+        .range(startIndex, endIndex)
+        .order('fecha_creacion', { ascending: false });
 
       if (error) {
         throw error;
       }
 
       if (data) {
+        const totalItems = count || 0;
+        const totalPages = Math.ceil(totalItems / limit);
+        
         this.state.update((state) => ({
           ...state,
           artworks: data,
+          totalItems,
+          totalPages,
+          itemsPerPage: limit,
         }));
       }
     } catch (error) {
@@ -97,6 +142,33 @@ export class ArtworksService {
         loading: false,
       }));
     }
+  }
+
+  // Métodos de navegación de páginas
+  async goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages()) {
+      await this.getAllArtworks({ page });
+    }
+  }
+
+  async nextPage() {
+    if (this.hasNextPage()) {
+      await this.goToPage(this.currentPage() + 1);
+    }
+  }
+
+  async previousPage() {
+    if (this.hasPreviousPage()) {
+      await this.goToPage(this.currentPage() - 1);
+    }
+  }
+
+  async firstPage() {
+    await this.goToPage(1);
+  }
+
+  async lastPage() {
+    await this.goToPage(this.totalPages());
   }
 
   async getArtworkById(id: number) {

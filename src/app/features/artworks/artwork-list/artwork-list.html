@@ -31,6 +31,72 @@
     </div>
   </div>
 
+  <!-- Información y controles de paginación -->
+  <div *ngIf="!isLoading() && !error() && totalItems() > 0" class="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 bg-gray-50 rounded-lg">
+    <div class="text-sm text-gray-600 mb-4 sm:mb-0">
+      Mostrando {{ startItem() }}-{{ endItem() }} de {{ totalItems() }} obras
+    </div>
+    
+    <!-- Controles de paginación -->
+    <div class="flex items-center space-x-2">
+      <!-- Botón Primera Página -->
+      <button
+        *ngIf="currentPage() > 2"
+        (click)="firstPage()"
+        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+        [disabled]="isLoading()"
+      >
+        Primera
+      </button>
+      
+      <!-- Botón Anterior -->
+      <button
+        (click)="previousPage()"
+        [disabled]="!hasPreviousPage() || isLoading()"
+        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        Anterior
+      </button>
+      
+      <!-- Números de página -->
+      <div class="flex space-x-1">
+        <button
+          *ngFor="let pageNum of getPageNumbers()"
+          (click)="goToPage(pageNum)"
+          [disabled]="isLoading()"
+          class="px-3 py-1 text-sm border rounded-md transition-colors"
+          [class.bg-blue-600]="pageNum === currentPage()"
+          [class.text-white]="pageNum === currentPage()"
+          [class.border-blue-600]="pageNum === currentPage()"
+          [class.bg-white]="pageNum !== currentPage()"
+          [class.border-gray-300]="pageNum !== currentPage()"
+          [class.hover:bg-gray-50]="pageNum !== currentPage()"
+        >
+          {{ pageNum }}
+        </button>
+      </div>
+      
+      <!-- Botón Siguiente -->
+      <button
+        (click)="nextPage()"
+        [disabled]="!hasNextPage() || isLoading()"
+        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        Siguiente
+      </button>
+      
+      <!-- Botón Última Página -->
+      <button
+        *ngIf="currentPage() < totalPages() - 1"
+        (click)="lastPage()"
+        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+        [disabled]="isLoading()"
+      >
+        Última
+      </button>
+    </div>
+  </div>
+
   <!-- Mensaje de éxito -->
   <div
     *ngIf="successMessage()"
@@ -260,6 +326,34 @@
       </div>
     </li>
   </ul>
+
+  <!-- Controles de paginación inferiores -->
+  <div *ngIf="!isLoading() && !error() && totalItems() > 0" class="flex justify-center mt-8">
+    <div class="flex items-center space-x-2">
+      <!-- Botón Anterior -->
+      <button
+        (click)="previousPage()"
+        [disabled]="!hasPreviousPage() || isLoading()"
+        class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        ← Anterior
+      </button>
+      
+      <!-- Información de página -->
+      <span class="px-4 py-2 text-sm text-gray-600">
+        Página {{ currentPage() }} de {{ totalPages() }}
+      </span>
+      
+      <!-- Botón Siguiente -->
+      <button
+        (click)="nextPage()"
+        [disabled]="!hasNextPage() || isLoading()"
+        class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        Siguiente →
+      </button>
+    </div>
+  </div>
 
   <!-- Estado vacío -->
   <div

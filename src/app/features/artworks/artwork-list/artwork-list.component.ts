@@ -40,6 +40,15 @@ export class ArtworkListComponent implements AfterViewInit {
   artworks = this.artworksService.artworks;
   isLoading = this.artworksService.loading;
   error = this.artworksService.error;
+  
+  // Computed properties de paginación
+  currentPage = this.artworksService.currentPage;
+  totalItems = this.artworksService.totalItems;
+  totalPages = this.artworksService.totalPages;
+  startItem = this.artworksService.startItem;
+  endItem = this.artworksService.endItem;
+  hasPreviousPage = this.artworksService.hasPreviousPage;
+  hasNextPage = this.artworksService.hasNextPage;
 
   constructor() {
     // AuthService maneja automáticamente la autenticación
@@ -136,6 +145,50 @@ export class ArtworkListComponent implements AfterViewInit {
       ...indices,
       [artworkId]: prevIndex,
     }));
+  }
+
+  // Métodos de navegación de páginas
+  async goToPage(page: number) {
+    await this.artworksService.goToPage(page);
+  }
+
+  async nextPage() {
+    await this.artworksService.nextPage();
+  }
+
+  async previousPage() {
+    await this.artworksService.previousPage();
+  }
+
+  async firstPage() {
+    await this.artworksService.firstPage();
+  }
+
+  async lastPage() {
+    await this.artworksService.lastPage();
+  }
+
+  // Generar array de números de página para mostrar
+  getPageNumbers(): number[] {
+    const totalPages = this.totalPages();
+    const currentPage = this.currentPage();
+    const pageNumbers: number[] = [];
+    
+    // Mostrar máximo 5 páginas
+    const maxPages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+    let endPage = Math.min(totalPages, startPage + maxPages - 1);
+    
+    // Ajustar si estamos cerca del final
+    if (endPage - startPage + 1 < maxPages) {
+      startPage = Math.max(1, endPage - maxPages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+    
+    return pageNumbers;
   }
 
   getDeleteConfirmMessage(): string {
