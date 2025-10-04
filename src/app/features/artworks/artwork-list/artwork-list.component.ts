@@ -40,7 +40,7 @@ export class ArtworkListComponent implements AfterViewInit {
   artworks = this.artworksService.artworks;
   isLoading = this.artworksService.loading;
   error = this.artworksService.error;
-  
+
   // Computed properties de paginación
   currentPage = this.artworksService.currentPage;
   totalItems = this.artworksService.totalItems;
@@ -173,22 +173,55 @@ export class ArtworkListComponent implements AfterViewInit {
     const totalPages = this.totalPages();
     const currentPage = this.currentPage();
     const pageNumbers: number[] = [];
-    
+
     // Mostrar máximo 5 páginas
     const maxPages = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
     let endPage = Math.min(totalPages, startPage + maxPages - 1);
-    
+
     // Ajustar si estamos cerca del final
     if (endPage - startPage + 1 < maxPages) {
       startPage = Math.max(1, endPage - maxPages + 1);
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
-    
+
     return pageNumbers;
+  }
+
+  // Navegación avanzada
+  async goToSpecificPage(page: number) {
+    if (this.artworksService.isValidPageNumber(page)) {
+      await this.artworksService.goToPage(page);
+    }
+  }
+
+  async goToFirstPage() {
+    await this.artworksService.goToFirstPage();
+  }
+
+  async goToLastPage() {
+    await this.artworksService.goToLastPage();
+  }
+
+  // Manejar input de página específica
+  async onPageInputChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const page = parseInt(input.value);
+
+    if (this.artworksService.isValidPageNumber(page)) {
+      await this.goToSpecificPage(page);
+    } else if (input.value !== '') {
+      // Resetear a página actual si el número no es válido
+      input.value = this.currentPage().toString();
+    }
+  }
+
+  // Obtener rango de páginas para mostrar
+  get pageRange() {
+    return this.artworksService.getPageRange();
   }
 
   getDeleteConfirmMessage(): string {

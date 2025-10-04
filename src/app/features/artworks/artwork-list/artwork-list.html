@@ -32,68 +32,102 @@
   </div>
 
   <!-- Información y controles de paginación -->
-  <div *ngIf="!isLoading() && !error() && totalItems() > 0" class="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 bg-gray-50 rounded-lg">
+  <div
+    *ngIf="!isLoading() && !error() && totalItems() > 0"
+    class="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 bg-gray-50 rounded-lg"
+  >
     <div class="text-sm text-gray-600 mb-4 sm:mb-0">
       Mostrando {{ startItem() }}-{{ endItem() }} de {{ totalItems() }} obras
     </div>
-    
-    <!-- Controles de paginación -->
-    <div class="flex items-center space-x-2">
-      <!-- Botón Primera Página -->
-      <button
-        *ngIf="currentPage() > 2"
-        (click)="firstPage()"
-        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-        [disabled]="isLoading()"
-      >
-        Primera
-      </button>
-      
-      <!-- Botón Anterior -->
-      <button
-        (click)="previousPage()"
-        [disabled]="!hasPreviousPage() || isLoading()"
-        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        Anterior
-      </button>
-      
-      <!-- Números de página -->
-      <div class="flex space-x-1">
+
+    <!-- Controles de paginación mejorados -->
+    <div
+      class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4"
+    >
+      <!-- Navegación básica -->
+      <div class="flex items-center space-x-1">
+        <!-- Primera página -->
         <button
-          *ngFor="let pageNum of getPageNumbers()"
-          (click)="goToPage(pageNum)"
+          *ngIf="currentPage() > 2"
+          (click)="goToFirstPage()"
+          class="px-2 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           [disabled]="isLoading()"
-          class="px-3 py-1 text-sm border rounded-md transition-colors"
+          title="Primera página"
+        >
+          ««
+        </button>
+
+        <!-- Página anterior -->
+        <button
+          (click)="previousPage()"
+          [disabled]="!hasPreviousPage() || isLoading()"
+          class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          title="Página anterior"
+        >
+          ‹ Anterior
+        </button>
+      </div>
+
+      <!-- Selector inteligente de páginas -->
+      <div class="flex items-center space-x-1">
+        <button
+          *ngFor="let pageNum of pageRange; let i = index"
+          (click)="pageNum > 0 ? goToSpecificPage(pageNum) : null"
+          [disabled]="isLoading() || pageNum < 0"
+          class="px-3 py-1 text-sm border rounded-md transition-colors min-w-[40px]"
           [class.bg-blue-600]="pageNum === currentPage()"
           [class.text-white]="pageNum === currentPage()"
           [class.border-blue-600]="pageNum === currentPage()"
-          [class.bg-white]="pageNum !== currentPage()"
-          [class.border-gray-300]="pageNum !== currentPage()"
-          [class.hover:bg-gray-50]="pageNum !== currentPage()"
+          [class.bg-white]="pageNum !== currentPage() && pageNum > 0"
+          [class.border-gray-300]="pageNum !== currentPage() && pageNum > 0"
+          [class.hover:bg-gray-50]="pageNum !== currentPage() && pageNum > 0"
+          [class.cursor-default]="pageNum < 0"
+          [class.border-transparent]="pageNum < 0"
         >
-          {{ pageNum }}
+          <span *ngIf="pageNum > 0">{{ pageNum }}</span>
+          <span *ngIf="pageNum < 0">...</span>
         </button>
       </div>
-      
-      <!-- Botón Siguiente -->
-      <button
-        (click)="nextPage()"
-        [disabled]="!hasNextPage() || isLoading()"
-        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        Siguiente
-      </button>
-      
-      <!-- Botón Última Página -->
-      <button
-        *ngIf="currentPage() < totalPages() - 1"
-        (click)="lastPage()"
-        class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-        [disabled]="isLoading()"
-      >
-        Última
-      </button>
+
+      <!-- Navegación rápida -->
+      <div class="flex items-center space-x-2">
+        <!-- Página siguiente -->
+        <button
+          (click)="nextPage()"
+          [disabled]="!hasNextPage() || isLoading()"
+          class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          title="Página siguiente"
+        >
+          Siguiente ›
+        </button>
+
+        <!-- Última página -->
+        <button
+          *ngIf="currentPage() < totalPages() - 1"
+          (click)="goToLastPage()"
+          class="px-2 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          [disabled]="isLoading()"
+          title="Última página"
+        >
+          »»
+        </button>
+      </div>
+
+      <!-- Input para ir a página específica -->
+      <div class="flex items-center space-x-2 text-sm">
+        <span class="text-gray-600">Ir a:</span>
+        <input
+          type="number"
+          [value]="currentPage()"
+          (change)="onPageInputChange($event)"
+          [min]="1"
+          [max]="totalPages()"
+          class="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+          [disabled]="isLoading()"
+          title="Escriba el número de página"
+        />
+        <span class="text-gray-600">de {{ totalPages() }}</span>
+      </div>
     </div>
   </div>
 
@@ -327,10 +361,22 @@
     </li>
   </ul>
 
-  <!-- Controles de paginación inferiores -->
-  <div *ngIf="!isLoading() && !error() && totalItems() > 0" class="flex justify-center mt-8">
+  <!-- Controles de paginación inferiores mejorados -->
+  <div
+    *ngIf="!isLoading() && !error() && totalItems() > 0"
+    class="flex flex-col sm:flex-row justify-center items-center mt-8 space-y-4 sm:space-y-0 sm:space-x-6"
+  >
+    <!-- Navegación básica -->
     <div class="flex items-center space-x-2">
-      <!-- Botón Anterior -->
+      <button
+        (click)="goToFirstPage()"
+        [disabled]="currentPage() === 1 || isLoading()"
+        class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        title="Primera página"
+      >
+        ⟪ Primera
+      </button>
+
       <button
         (click)="previousPage()"
         [disabled]="!hasPreviousPage() || isLoading()"
@@ -338,19 +384,40 @@
       >
         ← Anterior
       </button>
-      
-      <!-- Información de página -->
-      <span class="px-4 py-2 text-sm text-gray-600">
-        Página {{ currentPage() }} de {{ totalPages() }}
-      </span>
-      
-      <!-- Botón Siguiente -->
+    </div>
+
+    <!-- Información y selector de página -->
+    <div class="flex items-center space-x-3 text-sm">
+      <span class="text-gray-600">Página</span>
+      <input
+        type="number"
+        [value]="currentPage()"
+        (change)="onPageInputChange($event)"
+        [min]="1"
+        [max]="totalPages()"
+        class="w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+        [disabled]="isLoading()"
+      />
+      <span class="text-gray-600">de {{ totalPages() }}</span>
+    </div>
+
+    <!-- Navegación siguiente -->
+    <div class="flex items-center space-x-2">
       <button
         (click)="nextPage()"
         [disabled]="!hasNextPage() || isLoading()"
         class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         Siguiente →
+      </button>
+
+      <button
+        (click)="goToLastPage()"
+        [disabled]="currentPage() === totalPages() || isLoading()"
+        class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        title="Última página"
+      >
+        Última ⟫
       </button>
     </div>
   </div>

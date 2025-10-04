@@ -77,16 +77,20 @@ export class ArtworksService {
   selectedArtwork = computed(() => this.state().selectedArtwork);
   loading = computed(() => this.state().loading);
   error = computed(() => this.state().error);
-  
+
   // Selectores de paginación
   currentPage = computed(() => this.state().currentPage);
   totalItems = computed(() => this.state().totalItems);
   itemsPerPage = computed(() => this.state().itemsPerPage);
   totalPages = computed(() => this.state().totalPages);
-  
+
   // Computed para información de paginación
-  startItem = computed(() => (this.currentPage() - 1) * this.itemsPerPage() + 1);
-  endItem = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+  startItem = computed(
+    () => (this.currentPage() - 1) * this.itemsPerPage() + 1
+  );
+  endItem = computed(() =>
+    Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems())
+  );
   hasPreviousPage = computed(() => this.currentPage() > 1);
   hasNextPage = computed(() => this.currentPage() < this.totalPages());
 
@@ -94,7 +98,7 @@ export class ArtworksService {
     try {
       const page = params.page || this.state().currentPage;
       const limit = params.limit || this.state().itemsPerPage;
-      
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -108,10 +112,13 @@ export class ArtworksService {
       // Consulta con paginación y conteo total
       const { data, error, count } = await this.supabaseClient
         .from('obras')
-        .select(`
+        .select(
+          `
           *,
           imagenes(*)
-        `, { count: 'exact' })
+        `,
+          { count: 'exact' }
+        )
         .range(startIndex, endIndex)
         .order('fecha_creacion', { ascending: false });
 
@@ -122,7 +129,7 @@ export class ArtworksService {
       if (data) {
         const totalItems = count || 0;
         const totalPages = Math.ceil(totalItems / limit);
-        
+
         this.state.update((state) => ({
           ...state,
           artworks: data,
@@ -149,6 +156,60 @@ export class ArtworksService {
     if (page >= 1 && page <= this.totalPages()) {
       await this.getAllArtworks({ page });
     }
+  }
+
+  async goToFirstPage() {
+    await this.goToPage(1);
+  }
+
+  async goToLastPage() {
+    await this.goToPage(this.totalPages());
+  }
+
+  // Método para validar número de página
+  isValidPageNumber(page: number): boolean {
+    return page >= 1 && page <= this.totalPages() && Number.isInteger(page);
+  }
+
+  // Obtener rango de páginas para mostrar en el paginador
+  getPageRange(): number[] {
+    const current = this.currentPage();
+    const total = this.totalPages();
+    const range: number[] = [];
+
+    if (total <= 7) {
+      // Si hay 7 o menos páginas, mostrar todas
+      for (let i = 1; i <= total; i++) {
+        range.push(i);
+      }
+    } else {
+      // Lógica para páginas con rango inteligente
+      if (current <= 4) {
+        // Inicio: 1,2,3,4,5...last
+        for (let i = 1; i <= 5; i++) {
+          range.push(i);
+        }
+        range.push(-1); // Indicador de "..."
+        range.push(total);
+      } else if (current >= total - 3) {
+        // Final: 1...n-4,n-3,n-2,n-1,n
+        range.push(1);
+        range.push(-1);
+        for (let i = total - 4; i <= total; i++) {
+          range.push(i);
+        }
+      } else {
+        // Medio: 1...current-1,current,current+1...last
+        range.push(1);
+        range.push(-1);
+        for (let i = current - 1; i <= current + 1; i++) {
+          range.push(i);
+        }
+        range.push(-2); // Segundo indicador de "..."
+        range.push(total);
+      }
+    }
+    return range;
   }
 
   async nextPage() {
