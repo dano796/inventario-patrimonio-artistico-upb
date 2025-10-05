@@ -9,6 +9,7 @@ import {
   inject,
   signal,
   OnDestroy,
+  effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -106,6 +107,99 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     // AuthService maneja automáticamente la autenticación
     this.setupFilters();
     this.listenToQueryParams();
+    this.setupErrorRecovery();
+  }
+
+  // Sistema de recuperación de errores
+  private setupErrorRecovery() {
+    // Monitorear estado de loading para detectar problemas
+    let loadingTimeoutId: NodeJS.Timeout | null = null;
+
+    effect(() => {
+      const loading = this.isLoading();
+
+      if (loading) {
+        // Si está cargando, establecer timeout de seguridad
+        loadingTimeoutId = setTimeout(() => {
+          console.warn('Detected infinite loading - attempting recovery');
+          this.recoverFromLoadingError();
+        }, 30000); // 30 segundos
+      } else {
+        // Si terminó de cargar, limpiar timeout
+        if (loadingTimeoutId) {
+          clearTimeout(loadingTimeoutId);
+          loadingTimeoutId = null;
+        }
+      }
+    });
+  }
+
+  private async recoverFromLoadingError() {
+    console.log('Attempting to recover from loading error...');
+
+    // 1. Resetear estado de artworks service
+    this.artworksService.resetLoadingState();
+
+    // 2. Intentar reinicializar auth si es necesario
+    if (this.isAuthLoading()) {
+      try {
+        await this.authService.reinitializeAuth();
+      } catch (error) {
+        console.warn('Auth reinitialize failed:', error);
+      }
+    }
+
+    // 3. Recargar datos con reintento
+    try {
+      await this.retryLoadArtworks();
+    } catch (error) {
+      console.error('Recovery failed:', error);
+      // Como último recurso, forzar recarga de página
+      setTimeout(() => {
+        if (this.isLoading()) {
+          console.warn('Final recovery: reloading page');
+          window.location.reload();
+        }
+      }, 5000);
+    }
+  }
+
+  private async retryLoadArtworks(attempts: number = 3): Promise<void> {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        console.log(`Retry attempt ${i + 1}/${attempts}`);
+
+        if (this.hasActiveFilters()) {
+          const ubicacionFilter =
+            this.selectedUbicaciones().length > 0
+              ? this.selectedUbicaciones()
+              : this.ubicacionFilter();
+
+          await this.artworksService.filterArtworks(
+            {
+              search: this.searchTerm(),
+              ubicacion: ubicacionFilter,
+              responsable: this.responsableFilter(),
+              autor: this.autorFilter(),
+              tecnica: this.tecnicaFilter(),
+            },
+            this.currentPage()
+          );
+        } else {
+          await this.artworksService.getAllArtworks();
+        }
+
+        console.log('Recovery successful');
+        return;
+      } catch (error) {
+        console.warn(`Retry attempt ${i + 1} failed:`, error);
+        if (i < attempts - 1) {
+          // Esperar antes del siguiente intento
+          await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1)));
+        }
+      }
+    }
+    throw new Error('All retry attempts failed');
   }
 
   // Métodos para persistencia de filtros

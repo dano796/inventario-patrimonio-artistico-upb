@@ -76,6 +76,7 @@ export class ArtworksService {
 
   // Variable para evitar llamadas concurrentes
   private loadingPromise: Promise<any> | null = null;
+  private loadingTimeout: NodeJS.Timeout | null = null;
 
   // Selectores
   artworks = computed(() => this.state().artworks);
@@ -100,6 +101,22 @@ export class ArtworksService {
   hasNextPage = computed(() => this.currentPage() < this.totalPages());
 
   async getAllArtworks(params: PaginationParams = {}) {
+    // Evitar llamadas concurrentes
+    if (this.loadingPromise) {
+      return this.loadingPromise;
+    }
+
+    this.loadingPromise = this.doGetAllArtworks(params);
+    return this.loadingPromise;
+  }
+
+  private async doGetAllArtworks(params: PaginationParams = {}) {
+    // Limpiar timeout previo
+    if (this.loadingTimeout) {
+      clearTimeout(this.loadingTimeout);
+      this.loadingTimeout = null;
+    }
+
     try {
       const page = params.page || this.state().currentPage;
       const limit = params.limit || this.state().itemsPerPage;
@@ -108,8 +125,20 @@ export class ArtworksService {
       this.state.update((state) => ({
         ...state,
         loading: true,
+        error: false, // Resetear error anterior
         currentPage: page,
       }));
+
+      // Timeout de seguridad para evitar loading infinito
+      this.loadingTimeout = setTimeout(() => {
+        console.warn('Artworks loading timeout - forcing stop');
+        this.state.update((state) => ({
+          ...state,
+          loading: false,
+          error: true,
+        }));
+        this.loadingPromise = null;
+      }, 25000); // 25 segundos timeout
 
       // Calcular el rango para la paginación
       const startIndex = (page - 1) * limit;
@@ -166,10 +195,20 @@ export class ArtworksService {
         activeFilters.push('tecnica');
       }
 
-      // Aplicar paginación y orden (límite antes del range para mejor performance)
-      const { data, error, count } = await query
+      // Aplicar paginación y orden con timeout
+      const queryPromise = query
         .order('fecha_creacion', { ascending: false })
         .range(startIndex, endIndex);
+
+      // Timeout para la query específica
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Database query timeout')), 20000)
+      );
+
+      const { data, error, count } = (await Promise.race([
+        queryPromise,
+        timeoutPromise,
+      ])) as any;
 
       if (error) {
         throw error;
@@ -192,13 +231,38 @@ export class ArtworksService {
       this.state.update((state) => ({
         ...state,
         error: true,
+        artworks: [], // Limpiar datos en caso de error
       }));
     } finally {
+      // Garantizar que loading siempre se resetee
+      if (this.loadingTimeout) {
+        clearTimeout(this.loadingTimeout);
+        this.loadingTimeout = null;
+      }
+
       this.state.update((state) => ({
         ...state,
         loading: false,
       }));
+
+      this.loadingPromise = null;
     }
+  }
+
+  // Método para resetear estado en caso de problemas
+  resetLoadingState() {
+    if (this.loadingTimeout) {
+      clearTimeout(this.loadingTimeout);
+      this.loadingTimeout = null;
+    }
+
+    this.loadingPromise = null;
+
+    this.state.update((state) => ({
+      ...state,
+      loading: false,
+      error: false,
+    }));
   }
 
   // Métodos de navegación de páginas
@@ -327,7 +391,7 @@ export class ArtworksService {
 
       // Timeout para evitar carga infinita
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Artwork load timeout')), 15000)
+        setTimeout(() => reject(new Error('Artwork load timeout')), 25000)
       );
 
       const artworkPromise = this.supabaseClient

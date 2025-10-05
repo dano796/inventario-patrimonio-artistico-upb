@@ -17,6 +17,7 @@ export class AuthService {
   private supabaseClient = inject(SupabaseService).supabaseClient;
   private userProfile = signal<UserProfile | null>(null);
   private loadingProfile = signal<boolean>(false);
+  private initializationPromise: Promise<void> | null = null;
   private profileCache = new Map<
     string,
     { profile: UserProfile; timestamp: number }
@@ -44,20 +45,47 @@ export class AuthService {
   }
 
   private async initializeAuth() {
+    // Evitar múltiples inicializaciones simultáneas
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this.doInitializeAuth();
+    return this.initializationPromise;
+  }
+
+  private async doInitializeAuth() {
     try {
-      const { data } = await this.session();
+      // Timeout más agresivo para la inicialización
+      const sessionPromise = this.session();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Session timeout')), 5000)
+      );
+
+      const { data } = (await Promise.race([
+        sessionPromise,
+        timeoutPromise,
+      ])) as any;
+
       if (data.session?.user) {
-        // Usar timeout más corto para inicialización
         await this.loadUserProfile(data.session.user.id, true);
       } else {
-        // Si no hay sesión, establecer estado como no autenticado
         this.userProfile.set(null);
         this.loadingProfile.set(false);
       }
     } catch (error) {
-      console.error('Error initializing auth:', error);
+      console.warn('Error initializing auth (will retry):', error);
+      // En caso de error de inicialización, establecer estado por defecto
       this.userProfile.set(null);
       this.loadingProfile.set(false);
+
+      // Reintento después de 2 segundos
+      setTimeout(() => {
+        this.initializationPromise = null;
+        this.initializeAuth();
+      }, 2000);
+    } finally {
+      this.initializationPromise = null;
     }
 
     // Escuchar cambios de autenticación
@@ -99,7 +127,7 @@ export class AuthService {
 
     try {
       // Timeout más largo y diferenciado para evitar errores prematuros
-      const timeoutDuration = isInitialLoad ? 8000 : 10000;
+      const timeoutDuration = isInitialLoad ? 12000 : 15000;
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(
           () => reject(new Error('Profile load timeout')),
@@ -138,17 +166,27 @@ export class AuthService {
       this.userProfile.set(data);
       this.loadingProfile.set(false);
     } catch (error) {
-      console.error('Error loading user profile:', error);
+      console.warn('Error loading user profile:', error);
 
-      // En caso de timeout o error, usar fallback
-      const { data: sessionData } = await this.session().catch(() => ({
-        data: { session: null },
-      }));
-      if (sessionData.session?.user?.id === userId) {
-        // Usuario autenticado pero no se pudo cargar el perfil
-        const fallbackProfile: UserProfile = { id: userId, rol: 'user' };
-        this.userProfile.set(fallbackProfile);
-      } else {
+      // En caso de timeout o error, usar fallback más robusto
+      try {
+        const { data: sessionData } = (await Promise.race([
+          this.session(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Session check timeout')), 8000)
+          ),
+        ])) as any;
+
+        if (sessionData.session?.user?.id === userId) {
+          // Usuario autenticado pero no se pudo cargar el perfil
+          const fallbackProfile: UserProfile = { id: userId, rol: 'user' };
+          this.userProfile.set(fallbackProfile);
+        } else {
+          this.userProfile.set(null);
+        }
+      } catch (sessionError) {
+        console.warn('Session check also failed:', sessionError);
+        // Fallback final: asumir usuario no autenticado
         this.userProfile.set(null);
       }
       this.loadingProfile.set(false);
@@ -182,6 +220,15 @@ export class AuthService {
       this.profileCache.delete(data.session.user.id);
       await this.loadUserProfile(data.session.user.id);
     }
+  }
+
+  // Método público para reinicializar autenticación en caso de problemas
+  async reinitializeAuth() {
+    this.initializationPromise = null;
+    this.userProfile.set(null);
+    this.loadingProfile.set(false);
+    this.clearCache();
+    await this.initializeAuth();
   }
 
   session() {
