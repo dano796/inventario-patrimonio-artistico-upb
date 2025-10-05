@@ -49,6 +49,11 @@ interface ArtworkState {
 interface PaginationParams {
   page?: number;
   limit?: number;
+  search?: string;
+  ubicacion?: string;
+  responsable?: string;
+  autor?: string;
+  tecnica?: string;
 }
 
 @Injectable({
@@ -98,6 +103,7 @@ export class ArtworksService {
     try {
       const page = params.page || this.state().currentPage;
       const limit = params.limit || this.state().itemsPerPage;
+      const { search, ubicacion, responsable, autor, tecnica } = params;
 
       this.state.update((state) => ({
         ...state,
@@ -109,16 +115,38 @@ export class ArtworksService {
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit - 1;
 
-      // Consulta con paginación y conteo total
-      const { data, error, count } = await this.supabaseClient
-        .from('obras')
-        .select(
-          `
+      // Construir la consulta base
+      let query = this.supabaseClient.from('obras').select(
+        `
           *,
           imagenes(*)
         `,
-          { count: 'exact' }
-        )
+        { count: 'exact' }
+      );
+
+      // Aplicar filtros de búsqueda si existen
+      if (search && search.trim() !== '') {
+        query = query.ilike('titulo', `%${search.trim()}%`);
+      }
+
+      if (ubicacion && ubicacion.trim() !== '') {
+        query = query.ilike('ubicacion', `%${ubicacion.trim()}%`);
+      }
+
+      if (responsable && responsable.trim() !== '') {
+        query = query.ilike('responsable', `%${responsable.trim()}%`);
+      }
+
+      if (autor && autor.trim() !== '') {
+        query = query.ilike('autor', `%${autor.trim()}%`);
+      }
+
+      if (tecnica && tecnica.trim() !== '') {
+        query = query.ilike('tecnica', `%${tecnica.trim()}%`);
+      }
+
+      // Aplicar paginación y orden
+      const { data, error, count } = await query
         .range(startIndex, endIndex)
         .order('fecha_creacion', { ascending: false });
 
@@ -156,6 +184,30 @@ export class ArtworksService {
     if (page >= 1 && page <= this.totalPages()) {
       await this.getAllArtworks({ page });
     }
+  }
+
+  // Métodos de búsqueda y filtrado
+  async searchArtworks(searchTerm: string, page: number = 1) {
+    await this.getAllArtworks({ search: searchTerm, page });
+  }
+
+  async filterArtworks(
+    filters: Omit<PaginationParams, 'page' | 'limit'>,
+    page: number = 1
+  ) {
+    await this.getAllArtworks({ ...filters, page });
+  }
+
+  // Método para limpiar todos los filtros
+  async clearAllFilters() {
+    await this.getAllArtworks({
+      search: '',
+      ubicacion: '',
+      responsable: '',
+      autor: '',
+      tecnica: '',
+      page: 1,
+    });
   }
 
   async goToFirstPage() {
