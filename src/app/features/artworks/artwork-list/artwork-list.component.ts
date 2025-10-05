@@ -53,15 +53,23 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   // Signals para filtros
   searchTerm = signal<string>('');
   ubicacionFilter = signal<string>('');
+  selectedUbicaciones = signal<string[]>([]); // Nueva signal para múltiples ubicaciones
   responsableFilter = signal<string>('');
   autorFilter = signal<string>('');
   tecnicaFilter = signal<string>('');
+
+  // Signal para controlar la visibilidad de filtros avanzados
+  showAdvancedFilters = signal<boolean>(false);
+
+  // Clave para localStorage
+  private readonly FILTERS_STORAGE_KEY = 'artwork-filters';
 
   // Computed para saber si hay filtros activos
   hasActiveFilters = computed(() => {
     return (
       this.searchTerm() !== '' ||
       this.ubicacionFilter() !== '' ||
+      this.selectedUbicaciones().length > 0 ||
       this.responsableFilter() !== '' ||
       this.autorFilter() !== '' ||
       this.tecnicaFilter() !== ''
@@ -73,6 +81,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     let count = 0;
     if (this.searchTerm()) count++;
     if (this.ubicacionFilter()) count++;
+    if (this.selectedUbicaciones().length > 0) count++;
     if (this.responsableFilter()) count++;
     if (this.autorFilter()) count++;
     if (this.tecnicaFilter()) count++;
@@ -97,6 +106,69 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     // AuthService maneja automáticamente la autenticación
     this.setupFilters();
     this.listenToQueryParams();
+  }
+
+  // Métodos para persistencia de filtros
+  private saveFiltersToStorage() {
+    const filters = {
+      searchTerm: this.searchTerm(),
+      ubicacionFilter: this.ubicacionFilter(),
+      selectedUbicaciones: this.selectedUbicaciones(),
+      responsableFilter: this.responsableFilter(),
+      autorFilter: this.autorFilter(),
+      tecnicaFilter: this.tecnicaFilter(),
+      currentPage: this.currentPage(),
+      showAdvancedFilters: this.showAdvancedFilters(),
+      timestamp: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(this.FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch (error) {
+      console.warn(
+        'No se pudieron guardar los filtros en localStorage:',
+        error
+      );
+    }
+  }
+
+  private loadFiltersFromStorage(): boolean {
+    try {
+      const saved = localStorage.getItem(this.FILTERS_STORAGE_KEY);
+      if (!saved) return false;
+
+      const filters = JSON.parse(saved);
+
+      // Verificar que no sea muy antiguo (24 horas)
+      const isExpired = Date.now() - filters.timestamp > 24 * 60 * 60 * 1000;
+      if (isExpired) {
+        localStorage.removeItem(this.FILTERS_STORAGE_KEY);
+        return false;
+      }
+
+      // Restaurar filtros sin triggear búsquedas
+      this.searchTerm.set(filters.searchTerm || '');
+      this.ubicacionFilter.set(filters.ubicacionFilter || '');
+      this.selectedUbicaciones.set(filters.selectedUbicaciones || []);
+      this.responsableFilter.set(filters.responsableFilter || '');
+      this.autorFilter.set(filters.autorFilter || '');
+      this.tecnicaFilter.set(filters.tecnicaFilter || '');
+      this.showAdvancedFilters.set(filters.showAdvancedFilters || false);
+
+      return true;
+    } catch (error) {
+      console.warn('Error al cargar filtros desde localStorage:', error);
+      localStorage.removeItem(this.FILTERS_STORAGE_KEY);
+      return false;
+    }
+  }
+
+  private clearFiltersFromStorage() {
+    try {
+      localStorage.removeItem(this.FILTERS_STORAGE_KEY);
+    } catch (error) {
+      console.warn('Error al limpiar filtros de localStorage:', error);
+    }
   }
 
   private setupFilters() {
@@ -137,25 +209,67 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       });
   }
 
+  private isInitialized = signal(false);
+
   private listenToQueryParams() {
     // Escuchar cambios en query parameters
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
-      .subscribe((params) => {
+      .subscribe(async (params) => {
+        const hasQueryParams = Object.keys(params).some((key) => params[key]);
+
+        // Si no hay query params, intentar cargar desde localStorage
+        if (!hasQueryParams && !this.isInitialized()) {
+          const loadedFromStorage = this.loadFiltersFromStorage();
+          if (loadedFromStorage) {
+            // Aplicar filtros cargados desde localStorage
+            await this.performFiltersWithoutUrlUpdate();
+            this.isInitialized.set(true);
+            return;
+          }
+        }
+
         const search = params['search'] || '';
         const ubicacion = params['ubicacion'] || '';
+        const ubicaciones = params['ubicaciones']
+          ? params['ubicaciones'].split(',')
+          : [];
         const responsable = params['responsable'] || '';
         const autor = params['autor'] || '';
         const tecnica = params['tecnica'] || '';
 
-        // Actualizar signals sin triggear búsqueda
-        if (search !== this.searchTerm()) this.searchTerm.set(search);
-        if (ubicacion !== this.ubicacionFilter())
-          this.ubicacionFilter.set(ubicacion);
-        if (responsable !== this.responsableFilter())
-          this.responsableFilter.set(responsable);
-        if (autor !== this.autorFilter()) this.autorFilter.set(autor);
-        if (tecnica !== this.tecnicaFilter()) this.tecnicaFilter.set(tecnica);
+        // Establecer valores sin triggear búsqueda
+        this.searchTerm.set(search);
+        this.ubicacionFilter.set(ubicacion);
+        this.selectedUbicaciones.set(ubicaciones);
+        this.responsableFilter.set(responsable);
+        this.autorFilter.set(autor);
+        this.tecnicaFilter.set(tecnica);
+
+        // Solo cargar datos una vez al inicializar o si hay cambios reales
+        if (!this.isInitialized()) {
+          this.isInitialized.set(true);
+
+          // Preparar filtros con ubicaciones múltiples
+          const filterUbicacion =
+            ubicaciones.length > 0 ? ubicaciones : ubicacion;
+
+          // Cargar datos con filtros iniciales
+          if (search || filterUbicacion || responsable || autor || tecnica) {
+            await this.artworksService.filterArtworks(
+              {
+                search,
+                ubicacion: filterUbicacion,
+                responsable,
+                autor,
+                tecnica,
+              },
+              1
+            );
+          } else {
+            await this.artworksService.getAllArtworks();
+          }
+        }
       });
   }
 
@@ -209,36 +323,8 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    // Cargar datos basado en query parameters iniciales
-    const currentParams = this.route.snapshot.queryParams;
-    const search = currentParams['search'] || '';
-    const ubicacion = currentParams['ubicacion'] || '';
-    const responsable = currentParams['responsable'] || '';
-    const autor = currentParams['autor'] || '';
-    const tecnica = currentParams['tecnica'] || '';
-
-    // Establecer valores iniciales
-    this.searchTerm.set(search);
-    this.ubicacionFilter.set(ubicacion);
-    this.responsableFilter.set(responsable);
-    this.autorFilter.set(autor);
-    this.tecnicaFilter.set(tecnica);
-
-    // Cargar datos con filtros iniciales
-    if (search || ubicacion || responsable || autor || tecnica) {
-      this.artworksService.filterArtworks(
-        {
-          search,
-          ubicacion,
-          responsable,
-          autor,
-          tecnica,
-        },
-        1
-      );
-    } else {
-      this.artworksService.getAllArtworks();
-    }
+    // Ya no necesario - la carga se hace en listenToQueryParams
+    // Esto evita cargas duplicadas que causaban lentitud
   }
 
   // Métodos para manejar el carrusel de imágenes
@@ -358,31 +444,96 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     return this.artworksService.getPageRange();
   }
 
+  // Variable para evitar múltiples llamadas simultáneas
+  private filteringInProgress = signal(false);
+
   // Métodos de búsqueda y filtrado
   async performFilters() {
-    const filters = {
-      search: this.searchTerm(),
-      ubicacion: this.ubicacionFilter(),
-      responsable: this.responsableFilter(),
-      autor: this.autorFilter(),
-      tecnica: this.tecnicaFilter(),
-    };
+    // Evitar múltiples llamadas simultáneas
+    if (this.filteringInProgress()) {
+      return;
+    }
 
-    // Actualizar URL con query parameters
-    const queryParams: any = {};
-    Object.entries(filters).forEach(([key, value]) => {
-      queryParams[key] = value || null;
-    });
-    queryParams.page = null; // Reset página
+    this.filteringInProgress.set(true);
 
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams,
-      queryParamsHandling: 'merge',
-    });
+    try {
+      // Usar ubicaciones múltiples si están disponibles, sino usar filtro individual
+      const ubicacionFilter =
+        this.selectedUbicaciones().length > 0
+          ? this.selectedUbicaciones()
+          : this.ubicacionFilter();
 
-    // Realizar filtrado
-    await this.artworksService.filterArtworks(filters, 1);
+      const filters = {
+        search: this.searchTerm(),
+        ubicacion: ubicacionFilter,
+        responsable: this.responsableFilter(),
+        autor: this.autorFilter(),
+        tecnica: this.tecnicaFilter(),
+      };
+
+      // Actualizar URL con query parameters
+      const queryParams: any = {};
+      queryParams.search = filters.search || null;
+      queryParams.responsable = filters.responsable || null;
+      queryParams.autor = filters.autor || null;
+      queryParams.tecnica = filters.tecnica || null;
+
+      // Manejar ubicaciones múltiples en URL
+      if (Array.isArray(ubicacionFilter) && ubicacionFilter.length > 0) {
+        queryParams.ubicaciones = ubicacionFilter.join(',');
+        queryParams.ubicacion = null;
+      } else if (typeof ubicacionFilter === 'string' && ubicacionFilter) {
+        queryParams.ubicacion = ubicacionFilter;
+        queryParams.ubicaciones = null;
+      } else {
+        queryParams.ubicacion = null;
+        queryParams.ubicaciones = null;
+      }
+      queryParams.page = null; // Reset página
+
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams,
+        queryParamsHandling: 'merge',
+      });
+
+      // Realizar filtrado
+      await this.artworksService.filterArtworks(filters, 1);
+
+      // Guardar filtros en localStorage después de una búsqueda exitosa
+      this.saveFiltersToStorage();
+    } finally {
+      this.filteringInProgress.set(false);
+    }
+  }
+
+  // Método para realizar filtros sin actualizar URL (usado al cargar desde localStorage)
+  async performFiltersWithoutUrlUpdate() {
+    if (this.filteringInProgress()) {
+      return;
+    }
+
+    this.filteringInProgress.set(true);
+
+    try {
+      const ubicacionFilter =
+        this.selectedUbicaciones().length > 0
+          ? this.selectedUbicaciones()
+          : this.ubicacionFilter();
+
+      const filters = {
+        search: this.searchTerm(),
+        ubicacion: ubicacionFilter,
+        responsable: this.responsableFilter(),
+        autor: this.autorFilter(),
+        tecnica: this.tecnicaFilter(),
+      };
+
+      // Solo realizar filtrado, sin actualizar URL
+      await this.artworksService.filterArtworks(filters, 1);
+    } finally {
+      this.filteringInProgress.set(false);
+    }
   }
 
   async performSearch(searchTerm: string) {
@@ -426,9 +577,13 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     // Limpiar todos los signals
     this.searchTerm.set('');
     this.ubicacionFilter.set('');
+    this.selectedUbicaciones.set([]);
     this.responsableFilter.set('');
     this.autorFilter.set('');
     this.tecnicaFilter.set('');
+
+    // Limpiar localStorage
+    this.clearFiltersFromStorage();
 
     // Limpiar URL
     this.router.navigate([], {
@@ -436,6 +591,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       queryParams: {
         search: null,
         ubicacion: null,
+        ubicaciones: null,
         responsable: null,
         autor: null,
         tecnica: null,
@@ -457,6 +613,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     switch (filterType) {
       case 'ubicacion':
         this.ubicacionFilter.set('');
+        this.selectedUbicaciones.set([]);
         break;
       case 'responsable':
         this.responsableFilter.set('');
@@ -469,6 +626,37 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
         break;
     }
     await this.performFilters();
+  }
+
+  // Métodos para manejar múltiples ubicaciones
+  toggleAdvancedFilters() {
+    this.showAdvancedFilters.update((show) => !show);
+  }
+
+  addUbicacion() {
+    const ubicacion = this.ubicacionFilter().trim();
+    if (ubicacion && !this.selectedUbicaciones().includes(ubicacion)) {
+      this.selectedUbicaciones.update((ubicaciones) => [
+        ...ubicaciones,
+        ubicacion,
+      ]);
+      this.ubicacionFilter.set('');
+      this.performFilters();
+    }
+  }
+
+  removeUbicacion(ubicacion: string) {
+    this.selectedUbicaciones.update((ubicaciones) =>
+      ubicaciones.filter((u) => u !== ubicacion)
+    );
+    this.performFilters();
+  }
+
+  onUbicacionKeyPress(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.addUbicacion();
+    }
   }
 
   ngOnDestroy() {

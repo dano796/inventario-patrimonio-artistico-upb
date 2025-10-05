@@ -50,7 +50,7 @@ interface PaginationParams {
   page?: number;
   limit?: number;
   search?: string;
-  ubicacion?: string;
+  ubicacion?: string | string[]; // Permitir string único o array de strings
   responsable?: string;
   autor?: string;
   tecnica?: string;
@@ -115,40 +115,61 @@ export class ArtworksService {
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit - 1;
 
-      // Construir la consulta base
+      // Construir la consulta base con count estimado para mejor performance
       let query = this.supabaseClient.from('obras').select(
         `
           *,
           imagenes(*)
         `,
-        { count: 'exact' }
+        { count: 'estimated' } // Cambio de 'exact' a 'estimated' para mejor performance
       );
 
-      // Aplicar filtros de búsqueda si existen
-      if (search && search.trim() !== '') {
+      // Aplicar filtros de búsqueda si existen (optimización: solo aplicar filtros no vacíos)
+      const activeFilters = [];
+
+      if (search?.trim()) {
         query = query.ilike('titulo', `%${search.trim()}%`);
+        activeFilters.push('titulo');
       }
 
-      if (ubicacion && ubicacion.trim() !== '') {
-        query = query.ilike('ubicacion', `%${ubicacion.trim()}%`);
+      // Filtro de ubicación: soporta una ubicación o múltiples ubicaciones
+      if (ubicacion) {
+        if (Array.isArray(ubicacion)) {
+          // Múltiples ubicaciones: usar operador OR
+          const ubicacionesValidas = ubicacion.filter((u) => u?.trim());
+          if (ubicacionesValidas.length > 0) {
+            const ubicacionConditions = ubicacionesValidas.map(
+              (u) => `ubicacion.ilike.%${u.trim()}%`
+            );
+            query = query.or(ubicacionConditions.join(','));
+            activeFilters.push('ubicacion');
+          }
+        } else if (ubicacion.trim()) {
+          // Una sola ubicación: usar ILIKE normal
+          query = query.ilike('ubicacion', `%${ubicacion.trim()}%`);
+          activeFilters.push('ubicacion');
+        }
       }
 
-      if (responsable && responsable.trim() !== '') {
+      if (responsable?.trim()) {
         query = query.ilike('responsable', `%${responsable.trim()}%`);
+        activeFilters.push('responsable');
       }
 
-      if (autor && autor.trim() !== '') {
+      if (autor?.trim()) {
         query = query.ilike('autor', `%${autor.trim()}%`);
+        activeFilters.push('autor');
       }
 
-      if (tecnica && tecnica.trim() !== '') {
+      if (tecnica?.trim()) {
         query = query.ilike('tecnica', `%${tecnica.trim()}%`);
+        activeFilters.push('tecnica');
       }
 
-      // Aplicar paginación y orden
+      // Aplicar paginación y orden (límite antes del range para mejor performance)
       const { data, error, count } = await query
-        .range(startIndex, endIndex)
-        .order('fecha_creacion', { ascending: false });
+        .order('fecha_creacion', { ascending: false })
+        .range(startIndex, endIndex);
 
       if (error) {
         throw error;
@@ -167,6 +188,7 @@ export class ArtworksService {
         }));
       }
     } catch (error) {
+      console.error('Error loading artworks:', error);
       this.state.update((state) => ({
         ...state,
         error: true,

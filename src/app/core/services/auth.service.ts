@@ -98,8 +98,8 @@ export class AuthService {
     this.loadingProfile.set(true);
 
     try {
-      // Timeout más agresivo para evitar bloqueos
-      const timeoutDuration = isInitialLoad ? 3000 : 5000;
+      // Timeout más largo y diferenciado para evitar errores prematuros
+      const timeoutDuration = isInitialLoad ? 8000 : 10000;
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(
           () => reject(new Error('Profile load timeout')),
