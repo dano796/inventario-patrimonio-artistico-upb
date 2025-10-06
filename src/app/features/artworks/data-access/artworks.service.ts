@@ -138,7 +138,7 @@ export class ArtworksService {
           error: true,
         }));
         this.loadingPromise = null;
-      }, 25000); // 25 segundos timeout
+      }, 15000); // 15 segundos timeout (reducido para fallar más rápido)
 
       // Calcular el rango para la paginación
       const startIndex = (page - 1) * limit;

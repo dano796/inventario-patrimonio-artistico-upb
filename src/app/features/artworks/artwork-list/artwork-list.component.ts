@@ -51,6 +51,10 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   // Signal para manejar índices de imágenes de cada obra
   private imageIndices = signal<Record<number, number>>({});
 
+  // Signal para detectar si la página estaba oculta
+  private wasPageHidden = signal<boolean>(false);
+  private lastVisibilityChange = signal<number>(Date.now());
+
   // Signals para filtros
   searchTerm = signal<string>('');
   ubicacionFilter = signal<string>('');
@@ -108,6 +112,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     this.setupFilters();
     this.listenToQueryParams();
     this.setupErrorRecovery();
+    this.setupPageVisibilityHandler();
   }
 
   // Sistema de recuperación de errores
@@ -132,6 +137,65 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
         }
       }
     });
+  }
+
+  private setupPageVisibilityHandler() {
+    // Detectar cuando la página vuelve a estar visible después de estar oculta
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // La página se ocultó
+        this.wasPageHidden.set(true);
+        this.lastVisibilityChange.set(Date.now());
+      } else {
+        // La página volvió a estar visible
+        const hiddenTime = Date.now() - this.lastVisibilityChange();
+
+        // Si estuvo oculta por más de 2 minutos O hay un estado de carga/error
+        if (this.wasPageHidden() && hiddenTime > 2 * 60 * 1000) {
+          console.log(
+            'Page was hidden for',
+            Math.round(hiddenTime / 1000),
+            'seconds'
+          );
+
+          // Siempre refrescar si pasó tiempo considerable
+          console.log('Refreshing connection after inactivity');
+          this.handleStaleConnection();
+        } else if (this.wasPageHidden() && (this.error() || this.isLoading())) {
+          // Si hay error o está cargando, intentar recuperar inmediatamente
+          console.log('Detecting error/loading state - refreshing immediately');
+          this.handleStaleConnection();
+        }
+
+        this.wasPageHidden.set(false);
+      }
+    });
+  }
+
+  private async handleStaleConnection() {
+    console.log('Handling stale connection after page was hidden');
+
+    // 1. Resetear estado del servicio de artworks
+    this.artworksService.resetLoadingState();
+
+    // 2. Verificar/refrescar sesión de Supabase
+    try {
+      await this.authService.reinitializeAuth();
+      console.log('Auth session refreshed');
+    } catch (error) {
+      console.warn('Could not refresh auth session:', error);
+    }
+
+    // 3. Esperar un momento para que la conexión se estabilice
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 4. Recargar datos con reintentos
+    try {
+      await this.retryLoadArtworks();
+      console.log('Data reloaded successfully after stale connection');
+    } catch (error) {
+      console.error('Failed to reload data after stale connection:', error);
+    }
   }
 
   private async recoverFromLoadingError() {
@@ -369,11 +433,11 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
 
   async onLogout() {
     await this.authService.signOut();
-    this.router.navigateByUrl('/auth/log-in');
+    this.router.navigateByUrl('/autenticacion/iniciar-sesion');
   }
 
   viewArtworkDetails(id: number) {
-    this.router.navigateByUrl(`/artwork/${id}`);
+    this.router.navigateByUrl(`/obra/${id}`);
   }
 
   onDeleteArtwork(id: number) {

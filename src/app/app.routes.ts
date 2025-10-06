@@ -4,7 +4,7 @@ import { privateGuard, publicGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
-    path: 'auth',
+    path: 'autenticacion',
     canActivate: [publicGuard],
     children: AuthRoutes,
   },

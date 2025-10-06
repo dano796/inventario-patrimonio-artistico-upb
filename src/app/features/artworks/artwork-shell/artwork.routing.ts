@@ -10,17 +10,17 @@ export const routes: Routes = [
     component: ArtworkListComponent,
   },
   {
-    path: 'new',
+    path: 'nueva',
     component: ArtworkFormComponent,
     canActivate: [adminGuard],
   },
   {
-    path: 'edit/:id',
+    path: 'editar/:id',
     component: ArtworkFormComponent,
     canActivate: [adminGuard],
   },
   {
-    path: 'artwork/:id',
+    path: 'obra/:id',
     component: ArtworkDetailComponent,
   },
   {

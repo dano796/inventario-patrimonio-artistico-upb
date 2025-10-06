@@ -10,7 +10,7 @@
       <!-- Botón "Crear Nueva Obra" visible solo si el usuario es ADMIN -->
       <a
         *ngIf="isAdmin()"
-        routerLink="/new"
+        routerLink="/nueva"
         class="flex-1 md:flex-none text-center bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm md:text-base"
       >
         Crear Nueva Obra
@@ -26,7 +26,7 @@
       <!-- Botón de Iniciar Sesión visible solo si el usuario NO está autenticado -->
       <a
         *ngIf="!isAuthenticated()"
-        routerLink="/auth/log-in"
+        routerLink="/autenticacion/iniciar-sesion"
         class="flex-1 md:flex-none text-center bg-green-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-300 text-sm md:text-base"
       >
         Iniciar Sesión
@@ -776,7 +776,7 @@
           class="flex flex-col xs:flex-row gap-2 xs:justify-end mt-4"
         >
           <a
-            [routerLink]="['/edit', artwork.id]"
+            [routerLink]="['/editar', artwork.id]"
             class="flex-1 xs:flex-none text-center bg-indigo-500 text-white px-3 py-2 text-sm rounded-md hover:bg-indigo-600 transition-colors"
           >
             Editar
@@ -904,7 +904,7 @@
         <p class="text-lg mb-4">No hay obras de arte registradas.</p>
         <a
           *ngIf="isAdmin()"
-          routerLink="/new"
+          routerLink="/nueva"
           class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
         >
           Crear primera obra

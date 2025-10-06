@@ -66,17 +66,17 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
 
   onEditArtwork(): void {
     if (!this.isAdmin()) {
-      this.router.navigate(['/auth/log-in']);
+      this.router.navigate(['/autenticacion/iniciar-sesion']);
       return;
     }
     if (this.artwork()) {
-      this.router.navigate(['/edit', this.artwork()!.id]);
+      this.router.navigate(['/editar', this.artwork()!.id]);
     }
   }
 
   onDeleteArtwork(): void {
     if (!this.isAdmin()) {
-      this.router.navigate(['/auth/log-in']);
+      this.router.navigate(['/autenticacion/iniciar-sesion']);
       return;
     }
     this.deleteError.set(null);

@@ -4,16 +4,16 @@ import { AuthLogInComponent } from '../auth-log-in/auth-log-in.component';
 
 export const routes: Routes = [
   {
-    path: 'sign-up',
+    path: 'registro',
     component: AuthSignUpComponent,
   },
   {
-    path: 'log-in',
+    path: 'iniciar-sesion',
     component: AuthLogInComponent,
   },
   {
     path: '**',
-    redirectTo: 'log-in',
+    redirectTo: 'iniciar-sesion',
     pathMatch: 'full',
   },
 ];

@@ -43,14 +43,14 @@ export const privateGuard: CanActivateFn = async () => {
     ]);
 
     if (!isAuthenticated) {
-      router.navigateByUrl('/auth/log-in');
+      router.navigateByUrl('/autenticacion/iniciar-sesion');
       return false;
     }
 
     return true;
   } catch (error) {
     console.error('Error in privateGuard:', error);
-    router.navigateByUrl('/auth/log-in');
+    router.navigateByUrl('/autenticacion/iniciar-sesion');
     return false;
   }
 };

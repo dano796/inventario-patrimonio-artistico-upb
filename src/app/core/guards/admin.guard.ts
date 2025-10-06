@@ -47,12 +47,12 @@ export const adminGuard: CanActivateFn = async (route, state) => {
       return false;
     } else {
       // No autenticado
-      router.navigate(['/auth/log-in']);
+      router.navigate(['/autenticacion/iniciar-sesion']);
       return false;
     }
   } catch (error) {
     console.error('Error in admin guard:', error);
-    router.navigate(['/auth/log-in']);
+    router.navigate(['/autenticacion/iniciar-sesion']);
     return false;
   }
 };
