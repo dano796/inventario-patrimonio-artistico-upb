@@ -200,15 +200,8 @@ export class ArtworksService {
         .order('fecha_creacion', { ascending: false })
         .range(startIndex, endIndex);
 
-      // Timeout para la query específica
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Database query timeout')), 20000)
-      );
-
-      const { data, error, count } = (await Promise.race([
-        queryPromise,
-        timeoutPromise,
-      ])) as any;
+      // Ejecutar la consulta sin timeout artificial
+      const { data, error, count } = await queryPromise;
 
       if (error) {
         throw error;
@@ -389,12 +382,8 @@ export class ArtworksService {
         error: false,
       }));
 
-      // Timeout para evitar carga infinita
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Artwork load timeout')), 25000)
-      );
-
-      const artworkPromise = this.supabaseClient
+      // Ejecutar consulta sin timeout artificial
+      const { data, error } = await this.supabaseClient
         .from('obras')
         .select(
           `
@@ -404,11 +393,6 @@ export class ArtworksService {
         )
         .eq('id', id)
         .single();
-
-      const { data, error } = (await Promise.race([
-        artworkPromise,
-        timeoutPromise,
-      ])) as any;
 
       if (error) {
         throw error;
