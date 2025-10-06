@@ -14,11 +14,12 @@ interface UserProfile {
   providedIn: 'root',
 })
 export class AuthService {
-  private supabaseService = inject(SupabaseService);
+  supabaseService = inject(SupabaseService);
   private supabaseClient = this.supabaseService.supabaseClient;
   private userProfile = signal<UserProfile | null>(null);
   private loadingProfile = signal<boolean>(false);
   private initializationPromise: Promise<void> | null = null;
+  private reinitializePromise: Promise<void> | null = null;
   private profileCache = new Map<
     string,
     { profile: UserProfile; timestamp: number }
@@ -179,6 +180,24 @@ export class AuthService {
 
   // Método público para reinicializar autenticación en caso de problemas
   async reinitializeAuth() {
+    // Evitar múltiples reinicializaciones simultáneas
+    if (this.reinitializePromise) {
+      console.log(
+        'Reinitialization already in progress, waiting for it to complete'
+      );
+      return this.reinitializePromise;
+    }
+
+    this.reinitializePromise = this.doReinitializeAuth();
+
+    try {
+      await this.reinitializePromise;
+    } finally {
+      this.reinitializePromise = null;
+    }
+  }
+
+  private async doReinitializeAuth() {
     console.log('Reinitializing auth and refreshing Supabase session');
 
     // 1. Intentar refrescar la sesión de Supabase primero

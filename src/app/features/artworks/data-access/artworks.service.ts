@@ -77,6 +77,7 @@ export class ArtworksService {
   // Variable para evitar llamadas concurrentes
   private loadingPromise: Promise<any> | null = null;
   private loadingTimeout: NodeJS.Timeout | null = null;
+  private abortController: AbortController | null = null;
 
   // Selectores
   artworks = computed(() => this.state().artworks);
@@ -111,6 +112,15 @@ export class ArtworksService {
   }
 
   private async doGetAllArtworks(params: PaginationParams = {}) {
+    // Cancelar request anterior si existe
+    if (this.abortController) {
+      console.log('Cancelling previous artwork request');
+      this.abortController.abort();
+    }
+
+    // Crear nuevo AbortController para este request
+    this.abortController = new AbortController();
+
     // Limpiar timeout previo
     if (this.loadingTimeout) {
       clearTimeout(this.loadingTimeout);
@@ -131,14 +141,22 @@ export class ArtworksService {
 
       // Timeout de seguridad para evitar loading infinito
       this.loadingTimeout = setTimeout(() => {
-        console.warn('Artworks loading timeout - forcing stop');
+        console.warn(
+          'Artworks loading timeout - forcing stop and cancelling request'
+        );
+
+        // Cancelar el request
+        if (this.abortController) {
+          this.abortController.abort();
+        }
+
         this.state.update((state) => ({
           ...state,
           loading: false,
           error: true,
         }));
         this.loadingPromise = null;
-      }, 15000); // 15 segundos timeout (reducido para fallar más rápido)
+      }, 15000); // 15 segundos timeout
 
       // Calcular el rango para la paginación
       const startIndex = (page - 1) * limit;
@@ -195,15 +213,21 @@ export class ArtworksService {
         activeFilters.push('tecnica');
       }
 
-      // Aplicar paginación y orden con timeout
+      // Aplicar paginación y orden
       const queryPromise = query
         .order('fecha_creacion', { ascending: false })
-        .range(startIndex, endIndex);
+        .range(startIndex, endIndex)
+        .abortSignal(this.abortController.signal); // Agregar signal para cancelación
 
-      // Ejecutar la consulta sin timeout artificial
+      // Ejecutar la consulta
       const { data, error, count } = await queryPromise;
 
       if (error) {
+        // Si es un error de cancelación, no lo tratamos como error real
+        if (error.message?.includes('aborted') || error.name === 'AbortError') {
+          console.log('Request was cancelled');
+          return;
+        }
         throw error;
       }
 
@@ -219,7 +243,13 @@ export class ArtworksService {
           itemsPerPage: limit,
         }));
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Ignorar errores de cancelación
+      if (error?.message?.includes('aborted') || error?.name === 'AbortError') {
+        console.log('Request was cancelled, ignoring error');
+        return;
+      }
+
       console.error('Error loading artworks:', error);
       this.state.update((state) => ({
         ...state,
@@ -233,6 +263,9 @@ export class ArtworksService {
         this.loadingTimeout = null;
       }
 
+      // Limpiar abort controller
+      this.abortController = null;
+
       this.state.update((state) => ({
         ...state,
         loading: false,
@@ -244,6 +277,14 @@ export class ArtworksService {
 
   // Método para resetear estado en caso de problemas
   resetLoadingState() {
+    console.log('Resetting loading state and cancelling any pending requests');
+
+    // Cancelar cualquier request pendiente
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     if (this.loadingTimeout) {
       clearTimeout(this.loadingTimeout);
       this.loadingTimeout = null;
