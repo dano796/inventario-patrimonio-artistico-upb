@@ -60,7 +60,8 @@ interface PaginationParams {
   providedIn: 'root',
 })
 export class ArtworksService {
-  private supabaseClient = inject(SupabaseService).supabaseClient;
+  private supabaseService = inject(SupabaseService);
+  private supabaseClient = this.supabaseService.supabaseClient;
   private imageService = inject(ImageService);
 
   private state = signal<ArtworkState>({
@@ -121,13 +122,32 @@ export class ArtworksService {
     // Crear nuevo AbortController para este request
     this.abortController = new AbortController();
 
-    // Limpiar timeout previo
-    if (this.loadingTimeout) {
-      clearTimeout(this.loadingTimeout);
-      this.loadingTimeout = null;
-    }
+    // Pausar heartbeat durante el request para evitar interferencias
+    this.supabaseService.pauseHeartbeat();
 
     try {
+      // CRÍTICO: Verificar y garantizar que la sesión está activa antes de hacer el request
+      console.log('Ensuring active session before loading artworks...');
+      const sessionActive = await this.supabaseService.ensureActiveSession();
+
+      // Si el cliente fue reinicializado, actualizar referencia local
+      this.supabaseClient = this.supabaseService.supabaseClient;
+
+      if (!sessionActive) {
+        console.warn('Session not active, attempting to refresh...');
+        const refreshed = await this.supabaseService.refreshSession();
+
+        if (!refreshed) {
+          // Si tampoco se puede refrescar, reintentar referencia
+          this.supabaseService.reinitializeClient();
+          this.supabaseClient = this.supabaseService.supabaseClient;
+          throw new Error('Could not establish active session');
+        }
+
+        // Esperar después de refrescar
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+
       const page = params.page || this.state().currentPage;
       const limit = params.limit || this.state().itemsPerPage;
       const { search, ubicacion, responsable, autor, tecnica } = params;
@@ -138,25 +158,6 @@ export class ArtworksService {
         error: false, // Resetear error anterior
         currentPage: page,
       }));
-
-      // Timeout de seguridad para evitar loading infinito
-      this.loadingTimeout = setTimeout(() => {
-        console.warn(
-          'Artworks loading timeout - forcing stop and cancelling request'
-        );
-
-        // Cancelar el request
-        if (this.abortController) {
-          this.abortController.abort();
-        }
-
-        this.state.update((state) => ({
-          ...state,
-          loading: false,
-          error: true,
-        }));
-        this.loadingPromise = null;
-      }, 15000); // 15 segundos timeout
 
       // Calcular el rango para la paginación
       const startIndex = (page - 1) * limit;
@@ -219,29 +220,87 @@ export class ArtworksService {
         .range(startIndex, endIndex)
         .abortSignal(this.abortController.signal); // Agregar signal para cancelación
 
-      // Ejecutar la consulta
-      const { data, error, count } = await queryPromise;
+      // Ejecutar la consulta con reintentos automáticos
+      let retries = 0;
+      const maxRetries = 2;
+      let lastError: any = null;
 
-      if (error) {
-        // Si es un error de cancelación, no lo tratamos como error real
-        if (error.message?.includes('aborted') || error.name === 'AbortError') {
-          console.log('Request was cancelled');
-          return;
+      while (retries <= maxRetries) {
+        try {
+          const { data, error, count } = await queryPromise;
+
+          if (error) {
+            // Si es un error de cancelación, no lo tratamos como error real
+            if (
+              error.message?.includes('aborted') ||
+              error.name === 'AbortError'
+            ) {
+              console.log('Request was cancelled');
+              return;
+            }
+
+            // Si es un error de autenticación/sesión, intentar refrescar
+            if (this.isAuthError(error)) {
+              console.warn(
+                'Authentication error detected, refreshing session...'
+              );
+              await this.supabaseService.refreshSession();
+              await new Promise((resolve) => setTimeout(resolve, 1500));
+              throw error; // Lanzar para activar el retry
+            }
+
+            throw error;
+          }
+
+          if (data) {
+            const totalItems = count || 0;
+            const totalPages = Math.ceil(totalItems / limit);
+
+            this.state.update((state) => ({
+              ...state,
+              artworks: data,
+              totalItems,
+              totalPages,
+              itemsPerPage: limit,
+            }));
+
+            // Marcar actividad exitosa
+            this.supabaseService.markActivity();
+          }
+
+          // Éxito - salir del loop
+          break;
+        } catch (error: any) {
+          lastError = error;
+
+          // Ignorar errores de cancelación
+          if (
+            error?.message?.includes('aborted') ||
+            error?.name === 'AbortError'
+          ) {
+            console.log('Request was cancelled, ignoring error');
+            return;
+          }
+
+          retries++;
+          if (retries <= maxRetries) {
+            console.warn(
+              `Request failed (attempt ${retries}/${
+                maxRetries + 1
+              }), retrying...`,
+              error
+            );
+
+            // Si es un error de autenticación, esperar más tiempo
+            const waitTime = this.isAuthError(lastError)
+              ? 2000
+              : 1000 * retries;
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
+          } else {
+            // Último intento falló
+            throw lastError;
+          }
         }
-        throw error;
-      }
-
-      if (data) {
-        const totalItems = count || 0;
-        const totalPages = Math.ceil(totalItems / limit);
-
-        this.state.update((state) => ({
-          ...state,
-          artworks: data,
-          totalItems,
-          totalPages,
-          itemsPerPage: limit,
-        }));
       }
     } catch (error: any) {
       // Ignorar errores de cancelación
@@ -257,14 +316,11 @@ export class ArtworksService {
         artworks: [], // Limpiar datos en caso de error
       }));
     } finally {
-      // Garantizar que loading siempre se resetee
-      if (this.loadingTimeout) {
-        clearTimeout(this.loadingTimeout);
-        this.loadingTimeout = null;
-      }
-
       // Limpiar abort controller
       this.abortController = null;
+
+      // Reanudar heartbeat
+      this.supabaseService.resumeHeartbeat();
 
       this.state.update((state) => ({
         ...state,
@@ -285,11 +341,6 @@ export class ArtworksService {
       this.abortController = null;
     }
 
-    if (this.loadingTimeout) {
-      clearTimeout(this.loadingTimeout);
-      this.loadingTimeout = null;
-    }
-
     this.loadingPromise = null;
 
     this.state.update((state) => ({
@@ -297,6 +348,26 @@ export class ArtworksService {
       loading: false,
       error: false,
     }));
+  }
+
+  // Método para detectar errores de autenticación/sesión
+  private isAuthError(error: any): boolean {
+    if (!error) return false;
+
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCode = error.code?.toLowerCase() || '';
+
+    // Detectar errores comunes de autenticación/sesión
+    return (
+      errorMessage.includes('jwt') ||
+      errorMessage.includes('token') ||
+      errorMessage.includes('session') ||
+      errorMessage.includes('unauthorized') ||
+      errorMessage.includes('authentication') ||
+      errorCode.includes('pgrst301') || // JWT expired
+      errorCode.includes('pgrst302') || // Invalid JWT
+      errorCode === '401'
+    );
   }
 
   // Métodos de navegación de páginas
@@ -415,7 +486,32 @@ export class ArtworksService {
   }
 
   private async _getArtworkById(id: number) {
+    // Pausar heartbeat durante el request
+    this.supabaseService.pauseHeartbeat();
+
     try {
+      // CRÍTICO: Verificar y garantizar que la sesión está activa
+      console.log('Ensuring active session before loading artwork...');
+      const sessionActive = await this.supabaseService.ensureActiveSession();
+
+      // Si el cliente fue reinicializado, actualizar referencia local
+      this.supabaseClient = this.supabaseService.supabaseClient;
+
+      if (!sessionActive) {
+        console.warn('Session not active, attempting to refresh...');
+        const refreshed = await this.supabaseService.refreshSession();
+
+        if (!refreshed) {
+          // Si tampoco se puede refrescar, reintentar referencia
+          this.supabaseService.reinitializeClient();
+          this.supabaseClient = this.supabaseService.supabaseClient;
+          throw new Error('Could not establish active session');
+        }
+
+        // Esperar después de refrescar
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -423,27 +519,72 @@ export class ArtworksService {
         error: false,
       }));
 
-      // Ejecutar consulta sin timeout artificial
-      const { data, error } = await this.supabaseClient
-        .from('obras')
-        .select(
-          `
-          *,
-          imagenes(*)
-        `
-        )
-        .eq('id', id)
-        .single();
+      // Ejecutar consulta con reintentos automáticos
+      let retries = 0;
+      const maxRetries = 2;
+      let lastError: any = null;
 
-      if (error) {
-        throw error;
-      }
+      while (retries <= maxRetries) {
+        try {
+          const { data, error } = await this.supabaseClient
+            .from('obras')
+            .select(
+              `
+              *,
+              imagenes(*)
+            `
+            )
+            .eq('id', id)
+            .single();
 
-      if (data) {
-        this.state.update((state) => ({
-          ...state,
-          selectedArtwork: data,
-        }));
+          if (error) {
+            // Si es un error de autenticación/sesión, intentar refrescar
+            if (this.isAuthError(error)) {
+              console.warn(
+                'Authentication error detected, refreshing session...'
+              );
+              await this.supabaseService.refreshSession();
+              await new Promise((resolve) => setTimeout(resolve, 1500));
+              throw error; // Lanzar para activar el retry
+            }
+
+            throw error;
+          }
+
+          if (data) {
+            this.state.update((state) => ({
+              ...state,
+              selectedArtwork: data,
+            }));
+
+            // Marcar actividad exitosa
+            this.supabaseService.markActivity();
+          }
+
+          // Éxito - salir del loop
+          break;
+        } catch (error: any) {
+          lastError = error;
+          retries++;
+
+          if (retries <= maxRetries) {
+            console.warn(
+              `Loading artwork failed (attempt ${retries}/${
+                maxRetries + 1
+              }), retrying...`,
+              error
+            );
+
+            // Si es un error de autenticación, esperar más tiempo
+            const waitTime = this.isAuthError(lastError)
+              ? 2000
+              : 1000 * retries;
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
+          } else {
+            // Último intento falló
+            throw lastError;
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading artwork:', error);
@@ -454,6 +595,9 @@ export class ArtworksService {
       }));
       throw error;
     } finally {
+      // Reanudar heartbeat
+      this.supabaseService.resumeHeartbeat();
+
       this.state.update((state) => ({
         ...state,
         loading: false,

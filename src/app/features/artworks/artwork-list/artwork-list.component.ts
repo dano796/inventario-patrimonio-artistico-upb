@@ -118,25 +118,41 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     this.setupPageVisibilityHandler();
   }
 
-  // Sistema de recuperación de errores
+  // Sistema de recuperación de errores - simplificado y menos agresivo
   private setupErrorRecovery() {
     // Monitorear estado de loading para detectar problemas
     let loadingTimeoutId: NodeJS.Timeout | null = null;
+    let rescueTimeoutId: NodeJS.Timeout | null = null;
 
     effect(() => {
       const loading = this.isLoading();
 
       if (loading) {
-        // Si está cargando, establecer timeout de seguridad
-        loadingTimeoutId = setTimeout(() => {
-          console.warn('Detected infinite loading - attempting recovery');
-          this.recoverFromLoadingError();
+        // Timeout de rescate rápido tras inactividad o reinicio de sesión
+        rescueTimeoutId = setTimeout(() => {
+          if (this.isLoading()) {
+            console.warn(
+              'Rescue timeout: Forcing reset and reload after 30s stuck loading'
+            );
+            this.artworksService.resetLoadingState();
+            this.artworksService.getAllArtworks({ page: this.currentPage() });
+          }
         }, 30000); // 30 segundos
+
+        // Timeout de seguridad MUY largo (último recurso)
+        loadingTimeoutId = setTimeout(() => {
+          console.warn('Detected very long loading - attempting recovery');
+          this.recoverFromLoadingError();
+        }, 120000); // 2 minutos
       } else {
-        // Si terminó de cargar, limpiar timeout
+        // Si terminó de cargar, limpiar timeouts
         if (loadingTimeoutId) {
           clearTimeout(loadingTimeoutId);
           loadingTimeoutId = null;
+        }
+        if (rescueTimeoutId) {
+          clearTimeout(rescueTimeoutId);
+          rescueTimeoutId = null;
         }
       }
     });
@@ -165,8 +181,8 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
           return;
         }
 
-        // Si estuvo oculta por más de 30 segundos, hacer recuperación preventiva
-        if (this.wasPageHidden() && hiddenTime > 30 * 1000) {
+        // Si estuvo oculta por más de 2 minutos, hacer recuperación preventiva
+        if (this.wasPageHidden() && hiddenTime > 2 * 60 * 1000) {
           console.log(
             `Page was hidden for ${hiddenSeconds} seconds, performing preventive recovery`
           );
@@ -178,62 +194,49 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
             // 1. Cancelar cualquier request pendiente
             this.artworksService.resetLoadingState();
 
-            // 2. Verificar y refrescar la sesión de Supabase preventivamente
-            console.log('Verifying Supabase session after inactivity...');
-            try {
-              const {
-                data: { session },
-              } =
-                await this.authService.supabaseService.supabaseClient.auth.getSession();
+            // 2. El servicio ahora maneja automáticamente la verificación de sesión
+            // antes de cada request, así que solo necesitamos recargar los datos
+            console.log('Reloading artworks after inactivity...');
 
-              if (!session) {
-                console.warn('No active session found');
-              } else {
-                // Refrescar sesión para asegurar que esté activa
-                const refreshed =
-                  await this.authService.supabaseService.refreshSession();
-                if (refreshed) {
-                  console.log('Session verified and refreshed');
-                } else {
-                  console.warn('Could not refresh session, but continuing...');
-                }
-              }
-            } catch (error) {
-              console.warn('Error verifying session:', error);
-            }
+            if (this.hasActiveFilters()) {
+              const ubicacionFilter =
+                this.selectedUbicaciones().length > 0
+                  ? this.selectedUbicaciones()
+                  : this.ubicacionFilter();
 
-            // 3. Esperar un poco para que la sesión se estabilice
-            await new Promise((resolve) => setTimeout(resolve, 300));
-
-            // 4. Recargar datos automáticamente solo si hay contenido visible
-            if (!this.isLoading() && !this.error()) {
-              console.log('Reloading artworks after inactivity...');
-              if (this.hasActiveFilters()) {
-                const ubicacionFilter =
-                  this.selectedUbicaciones().length > 0
-                    ? this.selectedUbicaciones()
-                    : this.ubicacionFilter();
-
-                await this.artworksService.filterArtworks(
-                  {
-                    search: this.searchTerm(),
-                    ubicacion: ubicacionFilter,
-                    responsable: this.responsableFilter(),
-                    autor: this.autorFilter(),
-                    tecnica: this.tecnicaFilter(),
-                  },
-                  this.currentPage()
-                );
-              } else {
-                await this.artworksService.getAllArtworks({
-                  page: this.currentPage(),
-                });
-              }
+              await this.artworksService.filterArtworks(
+                {
+                  search: this.searchTerm(),
+                  ubicacion: ubicacionFilter,
+                  responsable: this.responsableFilter(),
+                  autor: this.autorFilter(),
+                  tecnica: this.tecnicaFilter(),
+                },
+                this.currentPage()
+              );
+            } else {
+              await this.artworksService.getAllArtworks({
+                page: this.currentPage(),
+              });
             }
 
             console.log('Preventive recovery completed successfully');
           } catch (error) {
             console.error('Error during preventive recovery:', error);
+
+            // Si falla, intentar una vez más después de una espera más larga
+            console.log('First attempt failed, waiting and retrying...');
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+
+            try {
+              await this.artworksService.getAllArtworks({
+                page: this.currentPage(),
+              });
+              console.log('Retry successful');
+            } catch (retryError) {
+              console.error('Retry also failed:', retryError);
+              // El servicio ya maneja los errores y los muestra al usuario
+            }
           } finally {
             this.isRecovering.set(false);
           }
@@ -245,41 +248,12 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   }
 
   private async handleStaleConnection() {
-    // Evitar múltiples intentos simultáneos
-    if (this.isRecovering()) {
-      console.log('Recovery already in progress, skipping duplicate attempt');
-      return;
-    }
-
-    this.isRecovering.set(true);
-    console.log('Handling stale connection after page was hidden');
-
-    try {
-      // 1. Resetear estado del servicio de artworks
-      this.artworksService.resetLoadingState();
-
-      // 2. Verificar/refrescar sesión de Supabase
-      try {
-        await this.authService.reinitializeAuth();
-        console.log('Auth session refreshed');
-      } catch (error) {
-        console.warn('Could not refresh auth session:', error);
-      }
-
-      // 3. Esperar un momento para que la conexión se estabilice
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // 4. Recargar datos con reintentos
-      try {
-        await this.retryLoadArtworks();
-        console.log('Data reloaded successfully after stale connection');
-      } catch (error) {
-        console.error('Failed to reload data after stale connection:', error);
-      }
-    } finally {
-      // Siempre resetear la bandera al finalizar
-      this.isRecovering.set(false);
-    }
+    // Este método ya no es necesario con el nuevo sistema de recuperación
+    // Mantener por compatibilidad pero simplificado
+    console.log(
+      'handleStaleConnection called - delegating to recoverFromLoadingError'
+    );
+    await this.recoverFromLoadingError();
   }
 
   private async recoverFromLoadingError() {
@@ -296,27 +270,43 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       // 1. Resetear estado de artworks service
       this.artworksService.resetLoadingState();
 
-      // 2. Intentar reinicializar auth si es necesario
-      if (this.isAuthLoading()) {
-        try {
-          await this.authService.reinitializeAuth();
-        } catch (error) {
-          console.warn('Auth reinitialize failed:', error);
-        }
+      // 2. Refrescar sesión de Supabase
+      try {
+        await this.authService.supabaseService.refreshSession();
+      } catch (error) {
+        console.warn('Session refresh failed:', error);
       }
 
-      // 3. Recargar datos con reintento
+      // 3. Esperar para que la conexión se estabilice
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // 4. Recargar datos con un solo intento (no múltiples reintentos)
       try {
-        await this.retryLoadArtworks();
+        console.log('Attempting to reload artworks...');
+
+        if (this.hasActiveFilters()) {
+          const ubicacionFilter =
+            this.selectedUbicaciones().length > 0
+              ? this.selectedUbicaciones()
+              : this.ubicacionFilter();
+
+          await this.artworksService.filterArtworks(
+            {
+              search: this.searchTerm(),
+              ubicacion: ubicacionFilter,
+              responsable: this.responsableFilter(),
+              autor: this.autorFilter(),
+              tecnica: this.tecnicaFilter(),
+            },
+            this.currentPage()
+          );
+        } else {
+          await this.artworksService.getAllArtworks();
+        }
+
+        console.log('Recovery successful');
       } catch (error) {
         console.error('Recovery failed:', error);
-        // Como último recurso, forzar recarga de página
-        setTimeout(() => {
-          if (this.isLoading()) {
-            console.warn('Final recovery: reloading page');
-            window.location.reload();
-          }
-        }, 5000);
       }
     } finally {
       // Siempre resetear la bandera al finalizar
@@ -324,7 +314,8 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private async retryLoadArtworks(attempts: number = 3): Promise<void> {
+  private async retryLoadArtworks(attempts: number = 2): Promise<void> {
+    // Simplificado: solo 2 intentos en lugar de 3
     for (let i = 0; i < attempts; i++) {
       try {
         console.log(`Retry attempt ${i + 1}/${attempts}`);
@@ -354,8 +345,8 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       } catch (error) {
         console.warn(`Retry attempt ${i + 1} failed:`, error);
         if (i < attempts - 1) {
-          // Esperar antes del siguiente intento
-          await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1)));
+          // Espera más corta entre intentos
+          await new Promise((resolve) => setTimeout(resolve, 1500));
         }
       }
     }
