@@ -127,26 +127,12 @@ export class ArtworksService {
 
     try {
       // CRÍTICO: Verificar y garantizar que la sesión está activa antes de hacer el request
+      // Esto también permite acceso anónimo cuando no hay sesión
       console.log('Ensuring active session before loading artworks...');
-      const sessionActive = await this.supabaseService.ensureActiveSession();
+      await this.supabaseService.ensureActiveSession();
 
       // Si el cliente fue reinicializado, actualizar referencia local
       this.supabaseClient = this.supabaseService.supabaseClient;
-
-      if (!sessionActive) {
-        console.warn('Session not active, attempting to refresh...');
-        const refreshed = await this.supabaseService.refreshSession();
-
-        if (!refreshed) {
-          // Si tampoco se puede refrescar, reintentar referencia
-          this.supabaseService.reinitializeClient();
-          this.supabaseClient = this.supabaseService.supabaseClient;
-          throw new Error('Could not establish active session');
-        }
-
-        // Esperar después de refrescar
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
 
       const page = params.page || this.state().currentPage;
       const limit = params.limit || this.state().itemsPerPage;
@@ -491,26 +477,12 @@ export class ArtworksService {
 
     try {
       // CRÍTICO: Verificar y garantizar que la sesión está activa
+      // Esto también permite acceso anónimo cuando no hay sesión
       console.log('Ensuring active session before loading artwork...');
-      const sessionActive = await this.supabaseService.ensureActiveSession();
+      await this.supabaseService.ensureActiveSession();
 
       // Si el cliente fue reinicializado, actualizar referencia local
       this.supabaseClient = this.supabaseService.supabaseClient;
-
-      if (!sessionActive) {
-        console.warn('Session not active, attempting to refresh...');
-        const refreshed = await this.supabaseService.refreshSession();
-
-        if (!refreshed) {
-          // Si tampoco se puede refrescar, reintentar referencia
-          this.supabaseService.reinitializeClient();
-          this.supabaseClient = this.supabaseService.supabaseClient;
-          throw new Error('Could not establish active session');
-        }
-
-        // Esperar después de refrescar
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
 
       this.state.update((state) => ({
         ...state,
