@@ -272,6 +272,14 @@ export class ArtworksService {
           break;
         } catch (error: any) {
           lastError = error;
+          // Detectar errores de red o estado inconsistente y reinicializar cliente Supabase
+          if (!this.isAuthError(error)) {
+            console.warn(
+              'Network or connection error detected, reinitializing Supabase client...'
+            );
+            this.supabaseService.reinitializeClient();
+            this.supabaseClient = this.supabaseService.supabaseClient;
+          }
 
           // Ignorar errores de cancelación
           if (
