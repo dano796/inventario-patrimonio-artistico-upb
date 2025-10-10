@@ -146,36 +146,42 @@ export class SupabaseService implements OnDestroy {
     }
   }
 
-  // Método para verificar y garantizar que la sesión está activa (si existe)
-  // Permite acceso anónimo cuando no hay sesión
+  // Método para verificar y garantizar que la sesión está activa
   async ensureActiveSession(): Promise<boolean> {
     try {
-      // Verificar si hay sesión
-      const {
-        data: { session },
-      } = await this.supabaseClient.auth.getSession();
-
-      // Si NO hay sesión, es acceso anónimo - permitirlo
-      if (!session) {
-        console.log('No session found - allowing anonymous access');
-        return true; // Retornar true para permitir consultas anónimas
-      }
-
-      // Si hay sesión, verificar inactividad
       const inactiveTime = Date.now() - this.lastActivityTime;
+      // Si ha pasado más del umbral de inactividad, reinicializar el cliente
       if (inactiveTime > this.INACTIVITY_THRESHOLD) {
         console.warn(
           `Inactivity detected (${Math.round(
             inactiveTime / 1000
-          )}s), refreshing session`
+          )}s), reinitializing client`
         );
+        this.reinitializeClient();
+        // Esperar un momento para que la sesión se estabilice
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
 
+      // Verificar que la sesión existe
+      const {
+        data: { session },
+      } = await this.supabaseClient.auth.getSession();
+
+      if (!session) {
         // Intentar refrescar sesión
         const refreshed = await this.refreshSession();
         if (!refreshed) {
-          console.warn('Session refresh failed, reinitializing client');
+          // Si no se puede refrescar, reinicializar cliente y forzar recarga
           this.reinitializeClient();
           await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Intentar obtener sesión de nuevo
+          const {
+            data: { session: session2 },
+          } = await this.supabaseClient.auth.getSession();
+          if (!session2) {
+            console.error('No active session after client reinit');
+            return false;
+          }
         }
       }
 
@@ -184,8 +190,8 @@ export class SupabaseService implements OnDestroy {
       return true;
     } catch (error) {
       console.error('Error ensuring active session:', error);
-      // En caso de error, permitir acceso anónimo
-      return true;
+      this.reinitializeClient();
+      return false;
     }
   }
 
