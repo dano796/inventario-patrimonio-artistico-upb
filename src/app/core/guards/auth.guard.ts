@@ -10,26 +10,16 @@ export const privateGuard: CanActivateFn = async () => {
   const authService = authServiceInjection();
 
   try {
-    // Si hay restoreUrl después de recarga forzada, permitir acceso y limpiar indicador
-    const restoreUrl = sessionStorage.getItem('restoreUrl');
-    if (restoreUrl) {
-      sessionStorage.removeItem('restoreUrl');
-      return true;
-    }
-    // Esperar máximo 1.5 segundos por la carga del perfil
-    // Si tras el timeout no sabemos, asumimos autenticado para no redirigir erróneamente
     const timeoutPromise = new Promise<boolean>((resolve) => {
       setTimeout(() => resolve(true), 1500);
     });
 
     const checkAuthPromise = new Promise<boolean>((resolve) => {
-      // Si ya está cargado
       if (!authService.isLoading()) {
         resolve(authService.isAuthenticated());
         return;
       }
 
-      // Esperar a que termine de cargar
       const checkInterval = setInterval(() => {
         if (!authService.isLoading()) {
           clearInterval(checkInterval);
@@ -37,7 +27,6 @@ export const privateGuard: CanActivateFn = async () => {
         }
       }, 100);
 
-      // Timeout de seguridad: si sigue en loading, asumimos autenticado para no bloquear tras recarga
       setTimeout(() => {
         clearInterval(checkInterval);
         resolve(authService.isAuthenticated());

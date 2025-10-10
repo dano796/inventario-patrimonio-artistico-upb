@@ -115,7 +115,6 @@ export class ArtworksService {
   private async doGetAllArtworks(params: PaginationParams = {}) {
     // Cancelar request anterior si existe
     if (this.abortController) {
-      console.log('Cancelling previous artwork request');
       this.abortController.abort();
     }
 
@@ -127,7 +126,6 @@ export class ArtworksService {
 
     try {
       // CRÍTICO: Verificar y garantizar que la sesión está activa antes de hacer el request
-      console.log('Ensuring active session before loading artworks...');
       const sessionActive = await this.supabaseService.ensureActiveSession();
 
       // Si el cliente fue reinicializado, actualizar referencia local
@@ -235,7 +233,6 @@ export class ArtworksService {
               error.message?.includes('aborted') ||
               error.name === 'AbortError'
             ) {
-              console.log('Request was cancelled');
               return;
             }
 
@@ -286,7 +283,6 @@ export class ArtworksService {
             error?.message?.includes('aborted') ||
             error?.name === 'AbortError'
           ) {
-            console.log('Request was cancelled, ignoring error');
             return;
           }
 
@@ -313,7 +309,6 @@ export class ArtworksService {
     } catch (error: any) {
       // Ignorar errores de cancelación
       if (error?.message?.includes('aborted') || error?.name === 'AbortError') {
-        console.log('Request was cancelled, ignoring error');
         return;
       }
 
@@ -341,8 +336,6 @@ export class ArtworksService {
 
   // Método para resetear estado en caso de problemas
   resetLoadingState() {
-    console.log('Resetting loading state and cancelling any pending requests');
-
     // Cancelar cualquier request pendiente
     if (this.abortController) {
       this.abortController.abort();
@@ -499,7 +492,6 @@ export class ArtworksService {
 
     try {
       // CRÍTICO: Verificar y garantizar que la sesión está activa
-      console.log('Ensuring active session before loading artwork...');
       const sessionActive = await this.supabaseService.ensureActiveSession();
 
       // Si el cliente fue reinicializado, actualizar referencia local

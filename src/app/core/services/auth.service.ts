@@ -182,9 +182,6 @@ export class AuthService {
   async reinitializeAuth() {
     // Evitar múltiples reinicializaciones simultáneas
     if (this.reinitializePromise) {
-      console.log(
-        'Reinitialization already in progress, waiting for it to complete'
-      );
       return this.reinitializePromise;
     }
 
@@ -198,8 +195,6 @@ export class AuthService {
   }
 
   private async doReinitializeAuth() {
-    console.log('Reinitializing auth and refreshing Supabase session');
-
     // 1. Intentar refrescar la sesión de Supabase primero
     const refreshed = await this.supabaseService.refreshSession();
 
@@ -215,8 +210,6 @@ export class AuthService {
 
     // 3. Reinicializar
     await this.initializeAuth();
-
-    console.log('Auth reinitialization complete');
   }
 
   session() {

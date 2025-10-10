@@ -165,28 +165,19 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
         // La página se ocultó
         this.wasPageHidden.set(true);
         this.lastVisibilityChange.set(Date.now());
-        console.log('Page hidden at', new Date().toISOString());
       } else {
         // La página volvió a estar visible
         const hiddenTime = Date.now() - this.lastVisibilityChange();
         const hiddenSeconds = Math.round(hiddenTime / 1000);
-        console.log('Page visible again after', hiddenSeconds, 'seconds');
 
         // Evitar múltiples intentos si ya está recuperando
         if (this.isRecovering()) {
-          console.log(
-            'Recovery already in progress, skipping visibility recovery'
-          );
           this.wasPageHidden.set(false);
           return;
         }
 
         // Si estuvo oculta por más de 2 minutos, hacer recuperación preventiva
         if (this.wasPageHidden() && hiddenTime > 2 * 60 * 1000) {
-          console.log(
-            `Page was hidden for ${hiddenSeconds} seconds, performing preventive recovery`
-          );
-
           // Marcar que estamos recuperando
           this.isRecovering.set(true);
 
@@ -196,8 +187,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
 
             // 2. El servicio ahora maneja automáticamente la verificación de sesión
             // antes de cada request, así que solo necesitamos recargar los datos
-            console.log('Reloading artworks after inactivity...');
-
             if (this.hasActiveFilters()) {
               const ubicacionFilter =
                 this.selectedUbicaciones().length > 0
@@ -219,20 +208,16 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
                 page: this.currentPage(),
               });
             }
-
-            console.log('Preventive recovery completed successfully');
           } catch (error) {
             console.error('Error during preventive recovery:', error);
 
             // Si falla, intentar una vez más después de una espera más larga
-            console.log('First attempt failed, waiting and retrying...');
             await new Promise((resolve) => setTimeout(resolve, 3000));
 
             try {
               await this.artworksService.getAllArtworks({
                 page: this.currentPage(),
               });
-              console.log('Retry successful');
             } catch (retryError) {
               console.error('Retry also failed:', retryError);
               // El servicio ya maneja los errores y los muestra al usuario
@@ -250,21 +235,16 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   private async handleStaleConnection() {
     // Este método ya no es necesario con el nuevo sistema de recuperación
     // Mantener por compatibilidad pero simplificado
-    console.log(
-      'handleStaleConnection called - delegating to recoverFromLoadingError'
-    );
     await this.recoverFromLoadingError();
   }
 
   private async recoverFromLoadingError() {
     // Evitar múltiples intentos simultáneos
     if (this.isRecovering()) {
-      console.log('Recovery already in progress, skipping duplicate recovery');
       return;
     }
 
     this.isRecovering.set(true);
-    console.log('Attempting to recover from loading error...');
 
     try {
       // 1. Resetear estado de artworks service
@@ -282,8 +262,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
 
       // 4. Recargar datos con un solo intento (no múltiples reintentos)
       try {
-        console.log('Attempting to reload artworks...');
-
         if (this.hasActiveFilters()) {
           const ubicacionFilter =
             this.selectedUbicaciones().length > 0
@@ -303,8 +281,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
         } else {
           await this.artworksService.getAllArtworks();
         }
-
-        console.log('Recovery successful');
       } catch (error) {
         console.error('Recovery failed:', error);
       }
@@ -318,8 +294,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     // Simplificado: solo 2 intentos en lugar de 3
     for (let i = 0; i < attempts; i++) {
       try {
-        console.log(`Retry attempt ${i + 1}/${attempts}`);
-
         if (this.hasActiveFilters()) {
           const ubicacionFilter =
             this.selectedUbicaciones().length > 0
@@ -340,7 +314,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
           await this.artworksService.getAllArtworks();
         }
 
-        console.log('Recovery successful');
         return;
       } catch (error) {
         console.warn(`Retry attempt ${i + 1} failed:`, error);

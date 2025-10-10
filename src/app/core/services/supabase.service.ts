@@ -8,9 +8,6 @@ import { Injectable, OnDestroy } from '@angular/core';
 export class SupabaseService implements OnDestroy {
   // Reinicializar completamente el cliente Supabase
   reinitializeClient() {
-    console.warn(
-      'Reinitializing Supabase client due to inactivity or session failure'
-    );
     this.stopHeartbeat();
     this.supabaseClient = createClient(
       environment.SUPABASE_URL,
@@ -66,28 +63,20 @@ export class SupabaseService implements OnDestroy {
 
   private setupSessionMonitoring() {
     this.supabaseClient.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('Supabase token refreshed successfully');
-      } else if (event === 'SIGNED_OUT') {
-        console.log('Supabase session ended');
+      if (event === 'SIGNED_OUT') {
         this.stopHeartbeat();
       } else if (event === 'SIGNED_IN') {
-        console.log('Supabase session started');
         this.startHeartbeat();
       }
     });
   }
 
   private startHeartbeat() {
-    // Limpiar heartbeat anterior si existe
     this.stopHeartbeat();
 
-    console.log('Starting Supabase connection heartbeat');
     this.isHeartbeatActive = true;
 
-    // Ejecutar heartbeat cada 4 minutos (menos intrusivo)
     this.heartbeatInterval = setInterval(async () => {
-      // Solo ejecutar si no hay requests activos
       if (!this.isHeartbeatActive) {
         return;
       }
@@ -97,12 +86,7 @@ export class SupabaseService implements OnDestroy {
           data: { session },
         } = await this.supabaseClient.auth.getSession();
 
-        if (session) {
-          // Solo refrescar la sesión, no hacer queries adicionales
-          // Esto evita interferencias con requests reales
-          console.log('Heartbeat: checking session');
-        } else {
-          // Si no hay sesión, intentar refrescar
+        if (!session) {
           await this.refreshSession();
         }
       } catch (error) {
@@ -113,7 +97,6 @@ export class SupabaseService implements OnDestroy {
 
   private stopHeartbeat() {
     if (this.heartbeatInterval) {
-      console.log('Stopping Supabase connection heartbeat');
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
       this.isHeartbeatActive = false;
@@ -137,8 +120,7 @@ export class SupabaseService implements OnDestroy {
         console.error('Error refreshing Supabase session:', error);
         return false;
       }
-      console.log('Supabase session refreshed manually');
-      this.lastActivityTime = Date.now(); // Actualizar tiempo de actividad
+      this.lastActivityTime = Date.now();
       return true;
     } catch (error) {
       console.error('Exception refreshing Supabase session:', error);
@@ -157,8 +139,7 @@ export class SupabaseService implements OnDestroy {
 
       // Si NO hay sesión, es acceso anónimo - permitirlo
       if (!session) {
-        console.log('No session found - allowing anonymous access');
-        return true; // Retornar true para permitir consultas anónimas
+        return true;
       }
 
       // Si hay sesión, verificar inactividad
