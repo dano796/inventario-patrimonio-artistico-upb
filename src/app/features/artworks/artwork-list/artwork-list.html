@@ -467,7 +467,7 @@
     </div>
 
     <!-- Controles de paginación mejorados -->
-    <div class="flex flex-col xs:flex-row items-center gap-2 w-full sm:w-auto">
+    <div class="flex items-center justify-center gap-2 w-full sm:w-auto">
       <!-- Navegación básica -->
       <div class="flex items-center gap-1">
         <!-- Primera página -->
@@ -795,64 +795,41 @@
   <!-- Controles de paginación inferiores mejorados -->
   <div
     *ngIf="!isLoading() && !error() && totalItems() > 0"
-    class="flex flex-col xs:flex-row justify-center items-center mt-8 gap-3 md:gap-6"
+    class="flex items-center justify-center mt-8 gap-2"
   >
     <!-- Navegación básica -->
-    <div class="flex items-center gap-2 w-full xs:w-auto justify-center">
-      <button
-        (click)="goToFirstPage()"
-        [disabled]="currentPage() === 1 || isLoading()"
-        class="flex-1 xs:flex-none px-3 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        title="Primera página"
-      >
-        <span class="hidden sm:inline">⟪ Primera</span>
-        <span class="sm:hidden">⟪</span>
-      </button>
-
+    <div class="flex items-center gap-2">
       <button
         (click)="previousPage()"
         [disabled]="!hasPreviousPage() || isLoading()"
-        class="flex-1 xs:flex-none px-3 md:px-4 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="px-3 md:px-4 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        <span class="hidden xs:inline">← Anterior</span>
-        <span class="xs:hidden">←</span>
+        <span class="hidden xs:inline">‹ Anterior</span>
+        <span class="xs:hidden">‹</span>
       </button>
-    </div>
 
-    <!-- Información y selector de página -->
-    <div class="flex items-center gap-2 md:gap-3 text-xs md:text-sm">
-      <span class="text-gray-600">Página</span>
-      <input
-        type="number"
-        [value]="currentPage()"
-        (change)="onPageInputChange($event)"
-        [min]="1"
-        [max]="totalPages()"
-        class="w-12 md:w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
-        [disabled]="isLoading()"
-      />
-      <span class="text-gray-600">de {{ totalPages() }}</span>
-    </div>
+      <!-- Información y selector de página -->
+      <div class="flex items-center gap-2 md:gap-3 text-xs md:text-sm">
+        <span class="text-gray-600">Página</span>
+        <input
+          type="number"
+          [value]="currentPage()"
+          (change)="onPageInputChange($event)"
+          [min]="1"
+          [max]="totalPages()"
+          class="w-12 md:w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+          [disabled]="isLoading()"
+        />
+        <span class="text-gray-600">de {{ totalPages() }}</span>
+      </div>
 
-    <!-- Navegación siguiente -->
-    <div class="flex items-center gap-2 w-full xs:w-auto justify-center">
       <button
         (click)="nextPage()"
         [disabled]="!hasNextPage() || isLoading()"
-        class="flex-1 xs:flex-none px-3 md:px-4 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="px-3 md:px-4 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        <span class="hidden xs:inline">Siguiente →</span>
-        <span class="xs:hidden">→</span>
-      </button>
-
-      <button
-        (click)="goToLastPage()"
-        [disabled]="currentPage() === totalPages() || isLoading()"
-        class="flex-1 xs:flex-none px-3 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        title="Última página"
-      >
-        <span class="hidden sm:inline">Última ⟫</span>
-        <span class="sm:hidden">⟫</span>
+        <span class="hidden xs:inline">Siguiente ›</span>
+        <span class="xs:hidden">›</span>
       </button>
     </div>
   </div>
