@@ -8,9 +8,9 @@ import {
   Validators,
 } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { ArtworksService } from '../data-access/artworks.service';
-import { ArtworkImage } from '../../../shared/models/artwork-image.model';
-import { ImageUploaderComponent } from '../../../shared/components/image-uploader/image-uploader.component';
+import { ArtworksService } from '../../services/artworks.service';
+import { ArtworkImage } from '../../../../shared/models/image.model';
+import { ImageUploaderComponent } from '../../../../shared/components/image-uploader/image-uploader.component';
 
 // Interfaz para el formulario
 interface ArtworkFormData {

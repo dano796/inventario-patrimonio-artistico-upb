@@ -4,11 +4,7 @@ import type {
   SignUpWithPasswordCredentials,
   SignInWithPasswordCredentials,
 } from '@supabase/supabase-js';
-
-interface UserProfile {
-  id: string;
-  rol: string;
-}
+import { UserProfile } from '../../shared/models/user.model';
 
 @Injectable({
   providedIn: 'root',

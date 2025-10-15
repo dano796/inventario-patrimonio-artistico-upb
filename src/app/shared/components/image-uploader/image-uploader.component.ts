@@ -16,7 +16,7 @@ import {
   ArtworkImage,
   ImageUploadRequest,
   ImageUploadResponse,
-} from '../../models/artwork-image.model';
+} from '../../models/image.model';
 
 @Component({
   selector: 'app-image-uploader',

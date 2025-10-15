@@ -1,7 +1,7 @@
-import { ArtworksService } from '../data-access/artworks.service';
+import { ArtworksService } from '../../services/artworks.service';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
-import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
+import { AuthService } from '../../../../core/services/auth.service';
+import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
 import {
   AfterViewInit,
   Component,

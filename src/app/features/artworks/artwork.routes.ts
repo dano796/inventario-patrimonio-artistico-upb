@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
-import { ArtworkListComponent } from '../artwork-list/artwork-list.component';
-import { ArtworkDetailComponent } from '../artwork-detail/artwork-detail.component';
-import { ArtworkFormComponent } from '../artwork-form/artwork-form.component';
-import { adminGuard } from '../../../core/guards/admin.guard';
+import { ArtworkListComponent } from './components/artwork-list/artwork-list.component';
+import { ArtworkDetailComponent } from './components/artwork-detail/artwork-detail.component';
+import { ArtworkFormComponent } from './components/artwork-form/artwork-form.component';
+import { adminGuard } from '../../core/guards/admin.guard';
 
 export const routes: Routes = [
   {

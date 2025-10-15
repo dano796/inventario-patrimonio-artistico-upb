@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-import { routes as AuthRoutes } from './features/auth/auth-shell/auth.routing';
+import { routes as AuthRoutes } from './features/auth/auth.routes';
+import { routes as ArtworkRoutes } from './features/artworks/artwork.routes';
 import { privateGuard, publicGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
@@ -10,9 +11,6 @@ export const routes: Routes = [
   },
   {
     path: '',
-    loadChildren: () =>
-      import('./features/artworks/artwork-shell/artwork.routing').then(
-        (m) => m.routes
-      ),
+    children: ArtworkRoutes,
   },
 ];

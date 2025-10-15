@@ -8,10 +8,10 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ArtworksService } from '../data-access/artworks.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { ArtworkImage } from '../../../shared/models/artwork-image.model';
-import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
+import { ArtworksService } from '../../services/artworks.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { ArtworkImage } from '../../../../shared/models/image.model';
+import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
 
 @Component({
   selector: 'app-artwork-detail',

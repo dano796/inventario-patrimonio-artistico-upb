@@ -1,6 +1,6 @@
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Component, inject } from '@angular/core';
-import { ValidationService } from '../../../shared/utils/validation.service';
+import { ValidationService } from '../../../../shared/utils/validation.service';
 import {
   FormBuilder,
   FormControl,

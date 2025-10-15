@@ -4,7 +4,7 @@ import {
   ArtworkImage,
   ImageUploadRequest,
   ImageUploadResponse,
-} from '../models/artwork-image.model';
+} from '../models/image.model';
 import { environment } from '../../../environments/environment.development';
 
 @Injectable({

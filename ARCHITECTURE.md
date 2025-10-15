@@ -8,42 +8,57 @@ Este proyecto ha sido reorganizado siguiendo las mejores prácticas de Angular s
 src/app/
 ├── core/                           # Servicios singleton y guards principales
 │   ├── guards/                     # Guards de autenticación y autorización
-│   │   ├── auth.guard.ts          # Guard para rutas privadas
-│   │   └── admin.guard.ts         # Guard para rutas de administrador
-│   └── services/                   # Servicios singleton principales
-│       ├── auth.service.ts        # Servicio de autenticación
-│       └── supabase.service.ts    # Cliente de Supabase
+│   │   ├── auth.guard.ts           # Guard para rutas privadas
+│   │   └── admin.guard.ts          # Guard para rutas de administrador
+│   ├── services/                   # Servicios singleton principales
+│   │   ├── auth.service.ts         # Servicio de autenticación
+│   │   ├── supabase.service.ts     # Cliente de Supabase
+│   │   └── inactivity.service.ts   # Servicio de inactividad
+│   └── interceptors/               # HTTP interceptors (preparado para futuro)
 │
-├── features/                       # Módulos de características
+├── features/                       # Módulos de características REORGANIZADO
 │   ├── artworks/                   # Feature module de obras de arte
-│   │   ├── data-access/           # Servicios específicos del feature
+│   │   ├── components/             # Componentes del feature
+│   │   │   ├── artwork-detail/     # Detalle de obra
+│   │   │   ├── artwork-form/       # Formulario CRUD de obra
+│   │   │   └── artwork-list/       # Lista de obras
+│   │   ├── services/               # Servicios específicos del feature
 │   │   │   └── artworks.service.ts
-│   │   ├── features/              # Componentes del feature
-│   │   │   ├── artwork-detail/    # Detalle de obra
-│   │   │   ├── artwork-form/      # Formulario CRUD de obra
-│   │   │   ├── artwork-list/      # Lista de obras
-│   │   │   └── artwork-shell/     # Shell y routing
+│   │   ├── models/                 # Modelos específicos del feature (preparado)
+│   │   ├── types/                  # Tipos específicos del feature (preparado)
+│   │   └── artwork.routes.ts       # Rutas del feature
 │   │
 │   └── auth/                       # Feature module de autenticación
-│       ├── auth-log-in/           # Componente de inicio de sesión
-│       ├── auth-sign-up/          # Componente de registro
-│       └── auth-shell/            # Shell y routing
+│       ├── components/             # Componentes del feature
+│       │   ├── auth-log-in/        # Componente de inicio de sesión
+│       │   └── auth-sign-up/       # Componente de registro
+│       ├── services/               # Servicios específicos (preparado)
+│       ├── models/                 # Modelos específicos (preparado)
+│       └── auth.routes.ts          # Rutas del feature
 │
-├── shared/                         # Componentes y servicios reutilizables
-│   ├── components/                # Componentes compartidos
-│   │   ├── confirm-modal/         # Modal de confirmación
-│   │   └── image-uploader/        # Componente de subida de imágenes
-│   ├── models/                    # Interfaces y modelos
-│   │   └── artwork-image.model.ts # Modelo de imágenes de obras
-│   ├── services/                  # Servicios utilitarios
-│   │   └── image.service.ts       # Servicio de manejo de imágenes
-│   └── utils/                     # Servicios de utilidades
-│       └── validation.service.ts  # Servicio de validaciones
-│
-├── app.config.ts                  # Configuración de la aplicación
-├── app.routes.ts                  # Rutas principales
-├── app.html                       # Template principal
-└── app.ts                         # Componente raíz
+├── shared/                         # Componentes y servicios reutilizables EXPANDIDO
+│   ├── components/                 # Componentes compartidos
+│   │   ├── confirm-modal/          # Modal de confirmación
+│   │   └── image-uploader/         # Componente de subida de imágenes
+│   ├── models/                     # Todos los modelos centralizados
+│   │   ├── artwork.model.ts        # Modelo principal de artwork
+│   │   ├── user.model.ts           # Modelo de usuario
+│   │   └── image.model.ts          # Modelo de imágenes (antes artwork-image)
+│   ├── types/                      # Tipos TypeScript
+│   │   ├── common.types.ts         # Tipos comunes
+│   │   └── form.types.ts           # Tipos para formularios
+│   ├── constants/                  # Constantes de la aplicación
+│   │   ├── app.constants.ts        # Constantes generales
+│   │   └── validation.constants.ts # Constantes de validación
+│   ├── services/                   # Servicios utilitarios
+│   │   └── image.service.ts        # Servicio de manejo de imágenes
+│   ├── utils/                      # Servicios de utilidades
+│   │   └── validation.service.ts   # Servicio de validaciones
+
+├── app.config.ts                   # Configuración de la aplicación
+├── app.routes.ts                   # Rutas principales
+├── app.html                        # Template principal
+└── app.ts                          # Componente raíz
 ```
 
 ## 🏗️ Principios de Arquitectura
