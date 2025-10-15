@@ -10,42 +10,73 @@ export const privateGuard: CanActivateFn = async () => {
   const authService = authServiceInjection();
 
   try {
-    const timeoutPromise = new Promise<boolean>((resolve) => {
-      setTimeout(() => resolve(true), 1500);
-    });
+    // Esperar a que la inicialización termine completamente
+    const maxWaitTime = 5000; // 5 segundos máximo
+    const startTime = Date.now();
 
-    const checkAuthPromise = new Promise<boolean>((resolve) => {
-      if (!authService.isLoading()) {
-        resolve(authService.isAuthenticated());
-        return;
-      }
-
-      const checkInterval = setInterval(() => {
-        if (!authService.isLoading()) {
-          clearInterval(checkInterval);
-          resolve(authService.isAuthenticated());
-        }
-      }, 100);
-
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve(authService.isAuthenticated());
-      }, 1200);
-    });
-
-    const isAuthenticated = await Promise.race([
-      checkAuthPromise,
-      timeoutPromise,
-    ]);
-
-    if (!isAuthenticated) {
-      router.navigateByUrl('/autenticacion/iniciar-sesion');
-      return false;
+    // Esperar a que termine la carga inicial
+    while (authService.isLoading() && Date.now() - startTime < maxWaitTime) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
 
-    return true;
+    // Si después del tiempo de espera aún está cargando, verificar sesión directamente
+    if (authService.isLoading()) {
+      console.warn(
+        'Auth service still loading in privateGuard, checking session directly'
+      );
+      const { data } = await authService.session();
+
+      if (!data.session?.user) {
+        router.navigateByUrl('/autenticacion/iniciar-sesion');
+        return false;
+      }
+
+      // Dar un poco más de tiempo para que se cargue el perfil
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    // Verificar autenticación
+    if (authService.isAuthenticated()) {
+      return true;
+    }
+
+    // Verificar una vez más la sesión antes de redirigir
+    const { data } = await authService.session();
+
+    if (data.session?.user) {
+      // Hay sesión pero el perfil no se cargó correctamente
+      console.warn(
+        'Session exists but profile not loaded in privateGuard, attempting refresh'
+      );
+      await authService.refreshUserProfile();
+
+      // Verificar nuevamente después del refresh
+      if (authService.isAuthenticated()) {
+        return true;
+      }
+    }
+
+    // No autenticado
+    router.navigateByUrl('/autenticacion/iniciar-sesion');
+    return false;
   } catch (error) {
     console.error('Error in privateGuard:', error);
+
+    // En caso de error, verificar sesión una vez más
+    try {
+      const { data } = await authService.session();
+      if (data.session?.user) {
+        // Hay sesión, intentar recuperar
+        await authService.reinitializeAuth();
+
+        if (authService.isAuthenticated()) {
+          return true;
+        }
+      }
+    } catch (retryError) {
+      console.error('Retry failed in privateGuard:', retryError);
+    }
+
     router.navigateByUrl('/autenticacion/iniciar-sesion');
     return false;
   }
@@ -56,44 +87,40 @@ export const publicGuard: CanActivateFn = async () => {
   const authService = authServiceInjection();
 
   try {
-    // Esperar máximo 1 segundo para rutas públicas
-    const timeoutPromise = new Promise<boolean>((resolve) => {
-      setTimeout(() => resolve(true), 1000); // Permitir acceso en caso de timeout
-    });
+    // Esperar a que la inicialización termine completamente, pero con menos tiempo para rutas públicas
+    const maxWaitTime = 3000; // 3 segundos máximo
+    const startTime = Date.now();
 
-    const checkAuthPromise = new Promise<boolean>((resolve) => {
-      // Si ya está cargado
-      if (!authService.isLoading()) {
-        if (authService.isAuthenticated()) {
-          router.navigateByUrl('/');
-          resolve(false);
-        } else {
-          resolve(true);
-        }
-        return;
-      }
+    // Esperar a que termine la carga inicial
+    while (authService.isLoading() && Date.now() - startTime < maxWaitTime) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
 
-      // Esperar a que termine de cargar
-      const checkInterval = setInterval(() => {
-        if (!authService.isLoading()) {
-          clearInterval(checkInterval);
-          if (authService.isAuthenticated()) {
-            router.navigateByUrl('/');
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        }
-      }, 100);
+    // Si después del tiempo de espera aún está cargando, permitir acceso
+    if (authService.isLoading()) {
+      console.warn(
+        'Auth service still loading in publicGuard, allowing access'
+      );
+      return true;
+    }
 
-      // Timeout de seguridad
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve(true); // En caso de timeout, permitir acceso a rutas públicas
-      }, 800);
-    });
+    // Si está autenticado, redirigir al home
+    if (authService.isAuthenticated()) {
+      router.navigateByUrl('/');
+      return false;
+    }
 
-    return await Promise.race([checkAuthPromise, timeoutPromise]);
+    // Verificar una vez más la sesión por si acaso
+    const { data } = await authService.session();
+
+    if (data.session?.user) {
+      // Hay sesión, redirigir al home
+      router.navigateByUrl('/');
+      return false;
+    }
+
+    // No autenticado, permitir acceso a rutas públicas
+    return true;
   } catch (error) {
     console.error('Error in publicGuard:', error);
     // En caso de error, permitir acceso a rutas públicas

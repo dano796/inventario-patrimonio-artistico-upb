@@ -29,7 +29,7 @@ interface ArtworkFormData {
   selector: 'app-artwork-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ImageUploaderComponent],
-  templateUrl: './artwork-form.component.html',
+  templateUrl: './artwork-form.html',
 })
 export class ArtworkFormComponent implements OnInit {
   private route = inject(ActivatedRoute);

@@ -7,36 +7,31 @@ export const adminGuard: CanActivateFn = async (route, state) => {
   const router = inject(Router);
 
   try {
-    // Esperar máximo 2 segundos por la carga del perfil
-    const timeoutPromise = new Promise<boolean>((resolve) => {
-      setTimeout(() => resolve(false), 2000);
-    });
+    // Esperar a que la inicialización termine completamente
+    const maxWaitTime = 5000; // 5 segundos máximo
+    const startTime = Date.now();
 
-    const checkAuthPromise = new Promise<boolean>((resolve) => {
-      // Si ya está cargado
-      if (!authService.isLoading()) {
-        resolve(authService.isAdmin());
-        return;
+    // Esperar a que termine la carga inicial
+    while (authService.isLoading() && Date.now() - startTime < maxWaitTime) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    // Si después del tiempo de espera aún está cargando, verificar sesión directamente
+    if (authService.isLoading()) {
+      console.warn('Auth service still loading, checking session directly');
+      const { data } = await authService.session();
+
+      if (!data.session?.user) {
+        router.navigate(['/autenticacion/iniciar-sesion']);
+        return false;
       }
 
-      // Esperar a que termine de cargar
-      const checkInterval = setInterval(() => {
-        if (!authService.isLoading()) {
-          clearInterval(checkInterval);
-          resolve(authService.isAdmin());
-        }
-      }, 100);
+      // Dar un poco más de tiempo para que se cargue el perfil
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
 
-      // Timeout de seguridad
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve(false);
-      }, 1500);
-    });
-
-    const isAdmin = await Promise.race([checkAuthPromise, timeoutPromise]);
-
-    if (isAdmin) {
+    // Verificar si es admin
+    if (authService.isAdmin()) {
       return true;
     }
 
@@ -46,12 +41,50 @@ export const adminGuard: CanActivateFn = async (route, state) => {
       router.navigate(['/']);
       return false;
     } else {
+      // Verificar una vez más la sesión antes de redirigir
+      const { data } = await authService.session();
+
+      if (data.session?.user) {
+        // Hay sesión pero el perfil no se cargó correctamente
+        console.warn(
+          'Session exists but profile not loaded, attempting refresh'
+        );
+        await authService.refreshUserProfile();
+
+        // Verificar nuevamente después del refresh
+        if (authService.isAdmin()) {
+          return true;
+        } else if (authService.isAuthenticated()) {
+          router.navigate(['/']);
+          return false;
+        }
+      }
+
       // No autenticado
       router.navigate(['/autenticacion/iniciar-sesion']);
       return false;
     }
   } catch (error) {
     console.error('Error in admin guard:', error);
+
+    // En caso de error, verificar sesión una vez más
+    try {
+      const { data } = await authService.session();
+      if (data.session?.user) {
+        // Hay sesión, intentar recuperar
+        await authService.reinitializeAuth();
+
+        if (authService.isAdmin()) {
+          return true;
+        } else if (authService.isAuthenticated()) {
+          router.navigate(['/']);
+          return false;
+        }
+      }
+    } catch (retryError) {
+      console.error('Retry failed:', retryError);
+    }
+
     router.navigate(['/autenticacion/iniciar-sesion']);
     return false;
   }
