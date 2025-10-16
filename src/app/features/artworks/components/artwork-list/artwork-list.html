@@ -1,155 +1,51 @@
-<div class="container mx-auto p-4 md:p-8">
-  <!-- Header responsive -->
-  <div
-    class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6"
-  >
-    <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
-      Inventario de Obras de Arte
-    </h2>
-    <div class="flex flex-wrap items-center gap-2 md:gap-4">
-      <!-- Botón "Crear Nueva Obra" visible solo si el usuario es ADMIN -->
-      <a
-        *ngIf="isAdmin()"
-        routerLink="/nueva"
-        class="flex-1 md:flex-none text-center bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm md:text-base"
-      >
-        Crear Nueva Obra
-      </a>
-      <!-- Botón de Logout visible solo si el usuario está AUTENTICADO -->
-      <button
-        *ngIf="isAuthenticated()"
-        (click)="onLogout()"
-        class="flex-1 md:flex-none bg-red-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-300 text-sm md:text-base"
-      >
-        Cerrar Sesión
-      </button>
-      <!-- Botón de Iniciar Sesión visible solo si el usuario NO está autenticado -->
-      <a
-        *ngIf="!isAuthenticated()"
-        routerLink="/autenticacion/iniciar-sesion"
-        class="flex-1 md:flex-none text-center bg-green-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-300 text-sm md:text-base"
-      >
-        Iniciar Sesión
-      </a>
-    </div>
-  </div>
-
-  <!-- Barra de búsqueda y filtros -->
-  <div class="mb-6">
-    <!-- Contenedor principal con barra de búsqueda y botón de filtros -->
+<div class="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+  <div class="w-full">
+    <!-- Header integrado con búsqueda y filtros -->
     <div
-      class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mb-4"
+      class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-8"
     >
-      <!-- Barra de búsqueda principal (izquierda) -->
-      <div class="relative flex-1 w-full sm:max-w-md">
+      <!-- Header con título, botones y búsqueda integrados -->
+      <div class="px-6 md:px-8 py-6">
+        <!-- Fila superior: Título y botones principales -->
         <div
-          class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+          class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6"
         >
-          <svg
-            class="h-4 w-4 md:h-5 md:w-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            ></path>
-          </svg>
-        </div>
-        <input
-          type="text"
-          [value]="searchTerm()"
-          (input)="onSearchInput($event)"
-          placeholder="Buscar obras por título..."
-          class="block w-full pl-9 md:pl-10 pr-10 md:pr-12 py-2.5 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm placeholder-gray-500"
-        />
-        <button
-          *ngIf="searchTerm()"
-          (click)="clearSearch()"
-          class="absolute inset-y-0 right-0 pr-2.5 md:pr-3 flex items-center text-gray-400 hover:text-gray-600"
-          title="Limpiar búsqueda"
-        >
-          <svg
-            class="h-4 w-4 md:h-5 md:w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Botón de filtros avanzados (derecha) -->
-      <div class="flex-shrink-0 w-full sm:w-auto">
-        <button
-          (click)="advancedFilters.classList.toggle('hidden')"
-          class="w-full sm:w-auto inline-flex items-center justify-center px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-        >
-          <svg
-            class="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
-            ></path>
-          </svg>
-          <span class="hidden xs:inline">Filtros Avanzados</span>
-          <span class="xs:hidden">Filtros</span>
-          <span
-            *ngIf="activeFiltersCount() > 0"
-            class="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
-          >
-            {{ activeFiltersCount() }}
-          </span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Filtros adicionales -->
-    <div class="w-full">
-      <!-- Panel de filtros avanzados -->
-      <div
-        #advancedFilters
-        class="hidden bg-gray-50 rounded-lg p-4 md:p-6 mb-4"
-      >
-        <div
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
-        >
-          <!-- Filtro por Ubicación -->
-          <div class="relative">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Ubicación</label
-            >
-            <input
-              type="text"
-              [value]="ubicacionFilter()"
-              (input)="onUbicacionInput($event)"
-              (keypress)="onUbicacionKeyPress($event)"
-              placeholder="Presiona Enter para agregar"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            />
-            <button
-              *ngIf="ubicacionFilter().trim()"
-              (click)="addUbicacion()"
-              class="absolute top-8 right-2 text-blue-600 hover:text-blue-800"
-              title="Agregar ubicación"
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center"
             >
               <svg
-                class="h-4 w-4"
+                class="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-gray-600 text-sm font-medium">
+                Inventario Patrimonio Artístico UPB
+              </p>
+              <h1 class="text-xl md:text-2xl font-bold text-gray-900">
+                Inventario de Obras de Arte
+              </h1>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 md:gap-3">
+            <!-- Botón "Crear Nueva Obra" visible solo si el usuario es ADMIN -->
+            <a
+              *ngIf="isAdmin()"
+              routerLink="/nueva"
+              class="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              <svg
+                class="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -161,29 +57,16 @@
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 ></path>
               </svg>
-            </button>
-          </div>
-
-          <!-- Filtro por Responsable -->
-          <div class="relative">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Responsable</label
-            >
-            <input
-              type="text"
-              [value]="responsableFilter()"
-              (input)="onResponsableInput($event)"
-              placeholder="Ej: María García"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            />
+              Crear Nueva Obra
+            </a>
+            <!-- Botón de Logout visible solo si el usuario está AUTENTICADO -->
             <button
-              *ngIf="responsableFilter()"
-              (click)="clearFilter('responsable')"
-              class="absolute top-8 right-2 text-gray-400 hover:text-gray-600"
-              title="Limpiar filtro"
+              *ngIf="isAuthenticated()"
+              (click)="onLogout()"
+              class="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
             >
               <svg
-                class="h-4 w-4"
+                class="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -192,32 +75,19 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                 ></path>
               </svg>
+              Cerrar Sesión
             </button>
-          </div>
-
-          <!-- Filtro por Autor -->
-          <div class="relative">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Autor</label
-            >
-            <input
-              type="text"
-              [value]="autorFilter()"
-              (input)="onAutorInput($event)"
-              placeholder="Ej: Pablo Picasso"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            />
-            <button
-              *ngIf="autorFilter()"
-              (click)="clearFilter('autor')"
-              class="absolute top-8 right-2 text-gray-400 hover:text-gray-600"
-              title="Limpiar filtro"
+            <!-- Botón de Iniciar Sesión visible solo si el usuario NO está autenticado -->
+            <a
+              *ngIf="!isAuthenticated()"
+              routerLink="/autenticacion/iniciar-sesion"
+              class="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
             >
               <svg
-                class="h-4 w-4"
+                class="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -226,56 +96,334 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
+                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
                 ></path>
               </svg>
-            </button>
-          </div>
-
-          <!-- Filtro por Técnica -->
-          <div class="relative">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Técnica</label
-            >
-            <input
-              type="text"
-              [value]="tecnicaFilter()"
-              (input)="onTecnicaInput($event)"
-              placeholder="Ej: Óleo sobre lienzo"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            />
-            <button
-              *ngIf="tecnicaFilter()"
-              (click)="clearFilter('tecnica')"
-              class="absolute top-8 right-2 text-gray-400 hover:text-gray-600"
-              title="Limpiar filtro"
-            >
-              <svg
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            </button>
+              Iniciar Sesión
+            </a>
           </div>
         </div>
 
-        <!-- Tags de ubicaciones seleccionadas -->
-        <div *ngIf="selectedUbicaciones().length > 0" class="mt-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Ubicaciones seleccionadas:
-          </label>
-          <div class="flex flex-wrap gap-2">
-            <span
-              *ngFor="let ubicacion of selectedUbicaciones()"
-              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 border border-green-200"
+        <!-- Barra de búsqueda y resultados -->
+        <div class="border-t border-gray-100 pt-6">
+          <!-- Contenedor principal con barra de búsqueda y botón de filtros -->
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mb-4"
+          >
+            <!-- Barra de búsqueda principal (izquierda) -->
+            <div class="relative flex-1 w-full sm:max-w-md">
+              <div
+                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+              >
+                <svg
+                  class="h-4 w-4 md:h-5 md:w-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  ></path>
+                </svg>
+              </div>
+              <input
+                type="text"
+                [value]="searchTerm()"
+                (input)="onSearchInput($event)"
+                placeholder="Buscar obras por título..."
+                class="block w-full pl-9 md:pl-10 pr-10 md:pr-12 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+              />
+              <button
+                *ngIf="searchTerm()"
+                (click)="clearSearch()"
+                class="absolute inset-y-0 right-0 pr-2.5 md:pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                title="Limpiar búsqueda"
+              >
+                <svg
+                  class="h-4 w-4 md:h-5 md:w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Información de resultados y filtros -->
+            <div class="flex items-center gap-4">
+              <!-- Contador de resultados -->
+              <div
+                *ngIf="!isLoading() && !error() && totalItems() > 0"
+                class="text-sm text-gray-600 whitespace-nowrap"
+              >
+                {{ totalItems() }} obras encontradas
+              </div>
+
+              <!-- Botón de filtros avanzados -->
+              <button
+                (click)="advancedFilters.classList.toggle('hidden')"
+                class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                  ></path>
+                </svg>
+                <span class="hidden xs:inline">Filtros</span>
+                <span
+                  *ngIf="activeFiltersCount() > 0"
+                  class="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+                >
+                  {{ activeFiltersCount() }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Panel de filtros avanzados -->
+          <div #advancedFilters class="hidden bg-gray-50 rounded-lg p-4 mt-4">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+            >
+              <!-- Filtro por Ubicación -->
+              <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5"
+                  >Ubicación</label
+                >
+                <input
+                  type="text"
+                  [value]="ubicacionFilter()"
+                  (input)="onUbicacionInput($event)"
+                  (keypress)="onUbicacionKeyPress($event)"
+                  placeholder="Presiona Enter para agregar"
+                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                />
+                <button
+                  *ngIf="ubicacionFilter().trim()"
+                  (click)="addUbicacion()"
+                  class="absolute top-9 right-2 text-blue-600 hover:text-blue-800"
+                  title="Agregar ubicación"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Filtro por Responsable -->
+              <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5"
+                  >Responsable</label
+                >
+                <input
+                  type="text"
+                  [value]="responsableFilter()"
+                  (input)="onResponsableInput($event)"
+                  placeholder="Ej: María García"
+                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                />
+                <button
+                  *ngIf="responsableFilter()"
+                  (click)="clearFilter('responsable')"
+                  class="absolute top-9 right-2 text-gray-400 hover:text-gray-600"
+                  title="Limpiar filtro"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Filtro por Autor -->
+              <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5"
+                  >Autor</label
+                >
+                <input
+                  type="text"
+                  [value]="autorFilter()"
+                  (input)="onAutorInput($event)"
+                  placeholder="Ej: Pablo Picasso"
+                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                />
+                <button
+                  *ngIf="autorFilter()"
+                  (click)="clearFilter('autor')"
+                  class="absolute top-9 right-2 text-gray-400 hover:text-gray-600"
+                  title="Limpiar filtro"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Filtro por Técnica -->
+              <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5"
+                  >Técnica</label
+                >
+                <input
+                  type="text"
+                  [value]="tecnicaFilter()"
+                  (input)="onTecnicaInput($event)"
+                  placeholder="Ej: Óleo sobre lienzo"
+                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                />
+                <button
+                  *ngIf="tecnicaFilter()"
+                  (click)="clearFilter('tecnica')"
+                  class="absolute top-9 right-2 text-gray-400 hover:text-gray-600"
+                  title="Limpiar filtro"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tags de ubicaciones seleccionadas -->
+            <div *ngIf="selectedUbicaciones().length > 0" class="mt-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Ubicaciones seleccionadas:
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <span
+                  *ngFor="let ubicacion of selectedUbicaciones()"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 border border-green-200"
+                >
+                  <svg
+                    class="w-4 h-4 mr-1"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                      clip-rule="evenodd"
+                    ></path>
+                  </svg>
+                  {{ ubicacion }}
+                  <button
+                    (click)="removeUbicacion(ubicacion)"
+                    class="ml-2 text-green-600 hover:text-green-800 focus:outline-none"
+                    title="Eliminar ubicación"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            <!-- Botón limpiar todos los filtros -->
+            <div class="flex justify-center mt-4" *ngIf="hasActiveFilters()">
+              <button
+                (click)="clearAllFilters()"
+                class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+                Limpiar todos los filtros
+              </button>
+            </div>
+          </div>
+
+          <!-- Chips de filtros activos (en línea con la búsqueda) -->
+          <div *ngIf="hasActiveFilters()" class="flex flex-wrap gap-2 mt-4">
+            <!-- Chip búsqueda -->
+            <div
+              *ngIf="searchTerm()"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+            >
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+              Título: "{{ searchTerm() }}"
+              <button
+                (click)="clearSearch()"
+                class="ml-2 text-blue-600 hover:text-blue-800"
+              >
+                ×
+              </button>
+            </div>
+
+            <!-- Chip ubicación individual -->
+            <div
+              *ngIf="ubicacionFilter() && selectedUbicaciones().length === 0"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
             >
               <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -284,377 +432,207 @@
                   clip-rule="evenodd"
                 ></path>
               </svg>
-              {{ ubicacion }}
+              Ubicación: "{{ ubicacionFilter() }}"
               <button
-                (click)="removeUbicacion(ubicacion)"
-                class="ml-2 text-green-600 hover:text-green-800 focus:outline-none"
-                title="Eliminar ubicación"
+                (click)="clearFilter('ubicacion')"
+                class="ml-2 text-green-600 hover:text-green-800"
               >
                 ×
               </button>
-            </span>
+            </div>
+
+            <!-- Chips de ubicaciones múltiples -->
+            <div
+              *ngFor="let ubicacion of selectedUbicaciones()"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
+            >
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+              Ubicación: "{{ ubicacion }}"
+              <button
+                (click)="removeUbicacion(ubicacion)"
+                class="ml-2 text-green-600 hover:text-green-800"
+              >
+                ×
+              </button>
+            </div>
+
+            <!-- Chip responsable -->
+            <div
+              *ngIf="responsableFilter()"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800"
+            >
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+              Responsable: "{{ responsableFilter() }}"
+              <button
+                (click)="clearFilter('responsable')"
+                class="ml-2 text-purple-600 hover:text-purple-800"
+              >
+                ×
+              </button>
+            </div>
+
+            <!-- Chip autor -->
+            <div
+              *ngIf="autorFilter()"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800"
+            >
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+              Autor: "{{ autorFilter() }}"
+              <button
+                (click)="clearFilter('autor')"
+                class="ml-2 text-yellow-600 hover:text-yellow-800"
+              >
+                ×
+              </button>
+            </div>
+
+            <!-- Chip técnica -->
+            <div
+              *ngIf="tecnicaFilter()"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800"
+            >
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+              Técnica: "{{ tecnicaFilter() }}"
+              <button
+                (click)="clearFilter('tecnica')"
+                class="ml-2 text-indigo-600 hover:text-indigo-800"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          <!-- Paginación compacta integrada -->
+          <div
+            *ngIf="!isLoading() && !error() && totalItems() > 0"
+            class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-100"
+          >
+            <div class="text-sm text-gray-600 text-center sm:text-left">
+              Mostrando {{ startItem() }}-{{ endItem() }} de
+              {{ totalItems() }} obras
+            </div>
+
+            <!-- Controles de paginación -->
+            <div class="flex items-center gap-2">
+              <!-- Página anterior -->
+              <button
+                (click)="previousPage()"
+                [disabled]="!hasPreviousPage() || isLoading()"
+                class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                ‹ Anterior
+              </button>
+
+              <!-- Páginas -->
+              <div class="hidden sm:flex items-center gap-1">
+                <button
+                  *ngFor="let pageNum of pageRange; let i = index"
+                  (click)="pageNum > 0 ? goToSpecificPage(pageNum) : null"
+                  [disabled]="isLoading() || pageNum < 0"
+                  class="px-3 py-1 text-sm border rounded-lg transition-colors min-w-[40px]"
+                  [class.bg-blue-600]="pageNum === currentPage()"
+                  [class.text-white]="pageNum === currentPage()"
+                  [class.border-blue-600]="pageNum === currentPage()"
+                  [class.bg-white]="pageNum !== currentPage() && pageNum > 0"
+                  [class.border-gray-300]="
+                    pageNum !== currentPage() && pageNum > 0
+                  "
+                  [class.hover:bg-gray-50]="
+                    pageNum !== currentPage() && pageNum > 0
+                  "
+                  [class.cursor-default]="pageNum < 0"
+                  [class.border-transparent]="pageNum < 0"
+                >
+                  <span *ngIf="pageNum > 0">{{ pageNum }}</span>
+                  <span *ngIf="pageNum < 0">...</span>
+                </button>
+              </div>
+
+              <!-- Selector de página móvil -->
+              <div class="sm:hidden flex items-center gap-2 text-sm">
+                <input
+                  type="number"
+                  [value]="currentPage()"
+                  (change)="onPageInputChange($event)"
+                  [min]="1"
+                  [max]="totalPages()"
+                  class="w-16 px-2 py-1 text-center border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  [disabled]="isLoading()"
+                />
+                <span class="text-gray-600">de {{ totalPages() }}</span>
+              </div>
+
+              <!-- Página siguiente -->
+              <button
+                (click)="nextPage()"
+                [disabled]="!hasNextPage() || isLoading()"
+                class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Siguiente ›
+              </button>
+            </div>
           </div>
         </div>
-
-        <!-- Botón limpiar todos los filtros -->
-        <div
-          class="flex justify-center mt-4 md:mt-6"
-          *ngIf="hasActiveFilters()"
-        >
-          <button
-            (click)="clearAllFilters()"
-            class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            <svg
-              class="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              ></path>
-            </svg>
-            Limpiar todos los filtros
-          </button>
-        </div>
-      </div>
-
-      <!-- Chips de filtros activos -->
-      <div
-        *ngIf="hasActiveFilters()"
-        class="flex flex-wrap gap-2 mb-4 justify-center"
-      >
-        <!-- Chip búsqueda -->
-        <div
-          *ngIf="searchTerm()"
-          class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
-        >
-          <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          Título: "{{ searchTerm() }}"
-          <button
-            (click)="clearSearch()"
-            class="ml-2 text-blue-600 hover:text-blue-800"
-          >
-            ×
-          </button>
-        </div>
-
-        <!-- Chip ubicación individual -->
-        <div
-          *ngIf="ubicacionFilter() && selectedUbicaciones().length === 0"
-          class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
-        >
-          <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          Ubicación: "{{ ubicacionFilter() }}"
-          <button
-            (click)="clearFilter('ubicacion')"
-            class="ml-2 text-green-600 hover:text-green-800"
-          >
-            ×
-          </button>
-        </div>
-
-        <!-- Chips de ubicaciones múltiples -->
-        <div
-          *ngFor="let ubicacion of selectedUbicaciones()"
-          class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
-        >
-          <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          Ubicación: "{{ ubicacion }}"
-          <button
-            (click)="removeUbicacion(ubicacion)"
-            class="ml-2 text-green-600 hover:text-green-800"
-          >
-            ×
-          </button>
-        </div>
-
-        <!-- Chip responsable -->
-        <div
-          *ngIf="responsableFilter()"
-          class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800"
-        >
-          <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          Responsable: "{{ responsableFilter() }}"
-          <button
-            (click)="clearFilter('responsable')"
-            class="ml-2 text-purple-600 hover:text-purple-800"
-          >
-            ×
-          </button>
-        </div>
-
-        <!-- Chip autor -->
-        <div
-          *ngIf="autorFilter()"
-          class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800"
-        >
-          <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          Autor: "{{ autorFilter() }}"
-          <button
-            (click)="clearFilter('autor')"
-            class="ml-2 text-yellow-600 hover:text-yellow-800"
-          >
-            ×
-          </button>
-        </div>
-
-        <!-- Chip técnica -->
-        <div
-          *ngIf="tecnicaFilter()"
-          class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800"
-        >
-          <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          Técnica: "{{ tecnicaFilter() }}"
-          <button
-            (click)="clearFilter('tecnica')"
-            class="ml-2 text-indigo-600 hover:text-indigo-800"
-          >
-            ×
-          </button>
-        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Información y controles de paginación -->
-  <div
-    *ngIf="!isLoading() && !error() && totalItems() > 0"
-    class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 p-3 md:p-4 bg-gray-50 rounded-lg"
-  >
-    <div class="text-xs md:text-sm text-gray-600 text-center sm:text-left">
-      Mostrando {{ startItem() }}-{{ endItem() }} de {{ totalItems() }} obras
-    </div>
-
-    <!-- Controles de paginación mejorados -->
-    <div class="flex items-center justify-center gap-2 w-full sm:w-auto">
-      <!-- Navegación básica -->
-      <div class="flex items-center gap-1">
-        <!-- Primera página -->
-        <button
-          *ngIf="currentPage() > 2"
-          (click)="goToFirstPage()"
-          class="px-2 py-1 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-          [disabled]="isLoading()"
-          title="Primera página"
-        >
-          ««
-        </button>
-
-        <!-- Página anterior -->
-        <button
-          (click)="previousPage()"
-          [disabled]="!hasPreviousPage() || isLoading()"
-          class="px-2 md:px-3 py-1 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title="Página anterior"
-        >
-          <span class="hidden xs:inline">‹ Anterior</span>
-          <span class="xs:hidden">‹</span>
-        </button>
-      </div>
-
-      <!-- Selector inteligente de páginas -->
-      <div class="flex items-center gap-1">
-        <button
-          *ngFor="let pageNum of pageRange; let i = index"
-          (click)="pageNum > 0 ? goToSpecificPage(pageNum) : null"
-          [disabled]="isLoading() || pageNum < 0"
-          class="px-2 md:px-3 py-1 text-xs md:text-sm border rounded-md transition-colors min-w-[32px] md:min-w-[40px]"
-          [class.bg-blue-600]="pageNum === currentPage()"
-          [class.text-white]="pageNum === currentPage()"
-          [class.border-blue-600]="pageNum === currentPage()"
-          [class.bg-white]="pageNum !== currentPage() && pageNum > 0"
-          [class.border-gray-300]="pageNum !== currentPage() && pageNum > 0"
-          [class.hover:bg-gray-50]="pageNum !== currentPage() && pageNum > 0"
-          [class.cursor-default]="pageNum < 0"
-          [class.border-transparent]="pageNum < 0"
-        >
-          <span *ngIf="pageNum > 0">{{ pageNum }}</span>
-          <span *ngIf="pageNum < 0">...</span>
-        </button>
-      </div>
-
-      <!-- Navegación rápida -->
-      <div class="flex items-center gap-1">
-        <!-- Página siguiente -->
-        <button
-          (click)="nextPage()"
-          [disabled]="!hasNextPage() || isLoading()"
-          class="px-2 md:px-3 py-1 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title="Página siguiente"
-        >
-          <span class="hidden xs:inline">Siguiente ›</span>
-          <span class="xs:hidden">›</span>
-        </button>
-
-        <!-- Última página -->
-        <button
-          *ngIf="currentPage() < totalPages() - 1"
-          (click)="goToLastPage()"
-          class="px-2 py-1 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-          [disabled]="isLoading()"
-          title="Última página"
-        >
-          »»
-        </button>
-      </div>
-
-      <!-- Input para ir a página específica -->
-      <div class="hidden sm:flex items-center gap-2 text-xs md:text-sm">
-        <span class="text-gray-600 whitespace-nowrap">Ir a:</span>
-        <input
-          type="number"
-          [value]="currentPage()"
-          (change)="onPageInputChange($event)"
-          [min]="1"
-          [max]="totalPages()"
-          class="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
-          [disabled]="isLoading()"
-          title="Escriba el número de página"
-        />
-        <span class="text-gray-600">de {{ totalPages() }}</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Mensaje de éxito -->
-  <div
-    *ngIf="successMessage()"
-    class="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm"
-    role="alert"
-  >
-    <div class="flex items-center">
-      <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fill-rule="evenodd"
-          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-          clip-rule="evenodd"
-        ></path>
-      </svg>
-      {{ successMessage() }}
-    </div>
-  </div>
-
-  <!-- Skeleton loader -->
-  <ul
-    *ngIf="isLoading()"
-    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-  >
-    <li
-      *ngFor="let i of [1, 2, 3, 4, 5, 6]"
-      class="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse"
+    <!-- Mensaje de éxito -->
+    <div
+      *ngIf="successMessage()"
+      class="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm"
+      role="alert"
     >
-      <!-- Imagen skeleton -->
-      <div
-        class="h-56 relative overflow-hidden rounded-lg bg-gray-300 flex items-center justify-center"
-      >
-        <svg
-          class="w-12 h-12 text-gray-400"
-          aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="currentColor"
-          viewBox="0 0 16 20"
-        >
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
           <path
-            d="M14.066 0H7v5a2 2 0 0 1-2 2H0v11a1.97 1.97 0 0 0 1.934 2h12.132A1.97 1.97 0 0 0 16 18V2a1.97 1.97 0 0 0-1.934-2ZM10.5 6a1.5 1.5 0 1 1 0 2.999A1.5 1.5 0 0 1 10.5 6Zm2.221 10.515a1 1 0 0 1-.858.485h-8a1 1 0 0 1-.9-1.43L5.6 10.039a.978.978 0 0 1 .936-.57 1 1 0 0 1 .9.632l1.181 2.981.541-1a.945.945 0 0 1 .883-.522 1 1 0 0 1 .879.529l1.832 3.438a1 1 0 0 1-.031.988Z"
-          />
-          <path
-            d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.98 2.98 0 0 0 .13 5H5Z"
-          />
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+            clip-rule="evenodd"
+          ></path>
         </svg>
+        {{ successMessage() }}
       </div>
-
-      <div class="p-6">
-        <!-- Título skeleton -->
-        <div class="h-5 bg-gray-300 rounded-md w-3/4 mb-3"></div>
-
-        <!-- Autor skeleton -->
-        <div class="h-3 bg-gray-300 rounded-md w-1/2 mb-6"></div>
-
-        <!-- Botones skeleton -->
-        <div class="flex justify-end space-x-2">
-          <div class="h-8 bg-gray-300 rounded-md w-16"></div>
-          <div class="h-8 bg-gray-300 rounded-md w-16"></div>
-        </div>
-      </div>
-    </li>
-  </ul>
-
-  <!-- Error state -->
-  <div
-    *ngIf="error()"
-    class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative"
-    role="alert"
-  >
-    <div>
-      <strong class="font-bold">Error:</strong>
-      <span class="block sm:inline"
-        >Hubo un problema al cargar las obras de arte.</span
-      >
     </div>
-  </div>
 
-  <!-- Lista de obras -->
-  <ul
-    *ngIf="artworks().length > 0 && !isLoading()"
-    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-  >
-    <li
-      *ngFor="let artwork of artworks()"
-      class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+    <!-- Skeleton loader -->
+    <div
+      *ngIf="isLoading()"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
     >
-      <!-- Sección de imagen/carrusel -->
       <div
-        class="h-56 relative overflow-hidden rounded-lg cursor-pointer"
-        (click)="viewArtworkDetails(artwork.id)"
+        *ngFor="let i of [1, 2, 3, 4, 5, 6]"
+        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-pulse"
       >
-        <!-- Sin imágenes -->
+        <!-- Imagen skeleton -->
         <div
-          *ngIf="!artwork.imagenes || artwork.imagenes.length === 0"
-          class="absolute w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center"
+          class="h-56 relative overflow-hidden rounded-t-xl bg-gray-300 flex items-center justify-center"
         >
           <svg
-            class="w-16 h-16 text-gray-400"
+            class="w-12 h-12 text-gray-400"
             aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             fill="currentColor"
@@ -669,233 +647,399 @@
           </svg>
         </div>
 
-        <!-- Carrusel de imágenes -->
-        <div
-          *ngIf="artwork.imagenes && artwork.imagenes.length > 0"
-          class="relative w-full h-full"
-        >
-          <!-- Imagen actual -->
-          <div class="w-full h-full">
-            <img
-              [src]="getCurrentImage(artwork).url"
-              [alt]="artwork.titulo"
-              class="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
+        <div class="p-6">
+          <!-- Título skeleton -->
+          <div class="h-5 bg-gray-300 rounded-lg w-3/4 mb-3"></div>
 
-          <!-- Navegación (solo si hay más de una imagen) -->
-          <div
-            *ngIf="artwork.imagenes.length > 1"
-            class="absolute inset-0 flex items-center justify-between p-2"
-          >
-            <button
-              type="button"
-              class="bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75 transition-all"
-              (click)="$event.stopPropagation(); prevImage(artwork.id)"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                ></path>
-              </svg>
-            </button>
-            <button
-              type="button"
-              class="bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75 transition-all"
-              (click)="$event.stopPropagation(); nextImage(artwork.id)"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                ></path>
-              </svg>
-            </button>
-          </div>
+          <!-- Autor skeleton -->
+          <div class="h-3 bg-gray-300 rounded-lg w-1/2 mb-6"></div>
 
-          <!-- Indicadores -->
-          <div
-            *ngIf="artwork.imagenes.length > 1"
-            class="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1"
-          >
-            <div
-              *ngFor="let img of artwork.imagenes; let i = index"
-              class="w-2 h-2 rounded-full transition-colors"
-              [class.bg-white]="getCurrentImageIndex(artwork.id) === i"
-              [class.bg-gray-400]="getCurrentImageIndex(artwork.id) !== i"
-            ></div>
-          </div>
-
-          <!-- Contador -->
-          <div
-            *ngIf="artwork.imagenes.length > 1"
-            class="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded"
-          >
-            {{ getCurrentImageIndex(artwork.id) + 1 }}/{{
-              artwork.imagenes.length
-            }}
+          <!-- Botones skeleton -->
+          <div class="flex justify-end space-x-2">
+            <div class="h-8 bg-gray-300 rounded-lg w-16"></div>
+            <div class="h-8 bg-gray-300 rounded-lg w-16"></div>
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Error state -->
+    <div
+      *ngIf="error()"
+      class="bg-white rounded-lg shadow-sm border border-red-200 overflow-hidden"
+    >
       <div class="p-6">
-        <h3
-          class="text-lg md:text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-blue-700 line-clamp-2"
+        <div
+          class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+        >
+          <div class="flex items-center">
+            <svg
+              class="w-5 h-5 mr-2 text-red-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+            <div>
+              <strong class="font-bold">Error:</strong>
+              <span class="block sm:inline"
+                >Hubo un problema al cargar las obras de arte.</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de obras -->
+    <div
+      *ngIf="artworks().length > 0 && !isLoading()"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+    >
+      <div
+        *ngFor="let artwork of artworks()"
+        class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 group"
+      >
+        <!-- Sección de imagen/carrusel -->
+        <div
+          class="h-56 relative overflow-hidden cursor-pointer group-hover:scale-[1.02] transition-transform duration-300"
           (click)="viewArtworkDetails(artwork.id)"
         >
-          {{ artwork.titulo }}
-        </h3>
+          <!-- Sin imágenes -->
+          <div
+            *ngIf="!artwork.imagenes || artwork.imagenes.length === 0"
+            class="absolute w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center"
+          >
+            <svg
+              class="w-16 h-16 text-gray-400"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="currentColor"
+              viewBox="0 0 16 20"
+            >
+              <path
+                d="M14.066 0H7v5a2 2 0 0 1-2 2H0v11a1.97 1.97 0 0 0 1.934 2h12.132A1.97 1.97 0 0 0 16 18V2a1.97 1.97 0 0 0-1.934-2ZM10.5 6a1.5 1.5 0 1 1 0 2.999A1.5 1.5 0 0 1 10.5 6Zm2.221 10.515a1 1 0 0 1-.858.485h-8a1 1 0 0 1-.9-1.43L5.6 10.039a.978.978 0 0 1 .936-.57 1 1 0 0 1 .9.632l1.181 2.981.541-1a.945.945 0 0 1 .883-.522 1 1 0 0 1 .879.529l1.832 3.438a1 1 0 0 1-.031.988Z"
+              />
+              <path
+                d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.98 2.98 0 0 0 .13 5H5Z"
+              />
+            </svg>
+          </div>
 
-        <!-- Información básica: solo autor si existe -->
-        <div class="mb-4">
-          <p class="text-gray-600 text-sm md:text-base" *ngIf="artwork.autor">
-            <span class="text-xs md:text-sm">por </span>
-            <span class="font-medium">{{ artwork.autor }}</span>
-          </p>
+          <!-- Carrusel de imágenes -->
+          <div
+            *ngIf="artwork.imagenes && artwork.imagenes.length > 0"
+            class="relative w-full h-full"
+          >
+            <!-- Imagen actual -->
+            <div class="w-full h-full">
+              <img
+                [src]="getCurrentImage(artwork).url"
+                [alt]="artwork.titulo"
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+
+            <!-- Navegación (solo si hay más de una imagen) -->
+            <div
+              *ngIf="artwork.imagenes.length > 1"
+              class="absolute inset-0 flex items-center justify-between p-2"
+            >
+              <button
+                type="button"
+                class="bg-black bg-opacity-50 text-white rounded-full p-1.5 hover:bg-opacity-75 transition-all"
+                (click)="$event.stopPropagation(); prevImage(artwork.id)"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  ></path>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="bg-black bg-opacity-50 text-white rounded-full p-1.5 hover:bg-opacity-75 transition-all"
+                (click)="$event.stopPropagation(); nextImage(artwork.id)"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Indicadores -->
+            <div
+              *ngIf="artwork.imagenes.length > 1"
+              class="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1"
+            >
+              <div
+                *ngFor="let img of artwork.imagenes; let i = index"
+                class="w-2 h-2 rounded-full transition-colors"
+                [class.bg-white]="getCurrentImageIndex(artwork.id) === i"
+                [class.bg-gray-400]="getCurrentImageIndex(artwork.id) !== i"
+              ></div>
+            </div>
+
+            <!-- Contador -->
+            <div
+              *ngIf="artwork.imagenes.length > 1"
+              class="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-lg"
+            >
+              {{ getCurrentImageIndex(artwork.id) + 1 }}/{{
+                artwork.imagenes.length
+              }}
+            </div>
+          </div>
         </div>
 
-        <!-- Acciones: visibles solo si el usuario es ADMIN -->
-        <div
-          *ngIf="isAdmin()"
-          class="flex flex-col xs:flex-row gap-2 xs:justify-end mt-4"
-        >
-          <a
-            [routerLink]="['/editar', artwork.id]"
-            class="flex-1 xs:flex-none text-center bg-indigo-500 text-white px-3 py-2 text-sm rounded-md hover:bg-indigo-600 transition-colors"
+        <div class="p-6">
+          <h3
+            class="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-blue-700 line-clamp-2 transition-colors"
+            (click)="viewArtworkDetails(artwork.id)"
           >
-            Editar
-          </a>
+            {{ artwork.titulo }}
+          </h3>
+
+          <!-- Información básica: solo autor si existe -->
+          <div class="mb-4">
+            <p class="text-gray-600 text-base" *ngIf="artwork.autor">
+              <span class="text-sm">por </span>
+              <span class="font-medium">{{ artwork.autor }}</span>
+            </p>
+          </div>
+
+          <!-- Acciones: visibles solo si el usuario es ADMIN -->
+          <div
+            *ngIf="isAdmin()"
+            class="flex flex-col xs:flex-row gap-2 xs:justify-end mt-4"
+          >
+            <a
+              [routerLink]="['/editar', artwork.id]"
+              class="flex items-center justify-center gap-2 bg-indigo-600 text-white px-3 py-2 text-sm rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                ></path>
+              </svg>
+              Editar
+            </a>
+            <button
+              (click)="onDeleteArtwork(artwork.id)"
+              class="flex items-center justify-center gap-2 bg-red-600 text-white px-3 py-2 text-sm rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                ></path>
+              </svg>
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controles de paginación inferiores -->
+    <div
+      *ngIf="!isLoading() && !error() && totalItems() > 0"
+      class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-6"
+    >
+      <div class="px-6 py-4">
+        <div class="flex items-center justify-center gap-2">
+          <!-- Página anterior -->
           <button
-            (click)="onDeleteArtwork(artwork.id)"
-            class="flex-1 xs:flex-none bg-red-500 text-white px-3 py-2 text-sm rounded-md hover:bg-red-600 transition-colors"
+            (click)="previousPage()"
+            [disabled]="!hasPreviousPage() || isLoading()"
+            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Eliminar
+            ‹ Anterior
           </button>
+
+          <!-- Números de página -->
+          <div class="flex items-center gap-1">
+            <button
+              *ngFor="let pageNum of pageRange; let i = index"
+              (click)="pageNum > 0 ? goToSpecificPage(pageNum) : null"
+              [disabled]="isLoading() || pageNum < 0"
+              class="px-3 py-1 text-sm border rounded-lg transition-colors min-w-[40px]"
+              [class.bg-blue-600]="pageNum === currentPage()"
+              [class.text-white]="pageNum === currentPage()"
+              [class.border-blue-600]="pageNum === currentPage()"
+              [class.bg-white]="pageNum !== currentPage() && pageNum > 0"
+              [class.border-gray-300]="pageNum !== currentPage() && pageNum > 0"
+              [class.hover:bg-gray-50]="
+                pageNum !== currentPage() && pageNum > 0
+              "
+              [class.cursor-default]="pageNum < 0"
+              [class.border-transparent]="pageNum < 0"
+            >
+              <span *ngIf="pageNum > 0">{{ pageNum }}</span>
+              <span *ngIf="pageNum < 0">...</span>
+            </button>
+          </div>
+
+          <!-- Página siguiente -->
+          <button
+            (click)="nextPage()"
+            [disabled]="!hasNextPage() || isLoading()"
+            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Siguiente ›
+          </button>
+
+          <!-- Ir a página específica -->
+          <div class="flex items-center gap-2 text-sm ml-4">
+            <span class="text-gray-600">Ir a:</span>
+            <input
+              type="number"
+              [value]="currentPage()"
+              (change)="onPageInputChange($event)"
+              [min]="1"
+              [max]="totalPages()"
+              class="w-16 px-2 py-1 text-center border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              [disabled]="isLoading()"
+            />
+            <span class="text-gray-600">de {{ totalPages() }}</span>
+          </div>
         </div>
       </div>
-    </li>
-  </ul>
-
-  <!-- Controles de paginación inferiores mejorados -->
-  <div
-    *ngIf="!isLoading() && !error() && totalItems() > 0"
-    class="flex items-center justify-center mt-8 gap-2"
-  >
-    <!-- Navegación básica -->
-    <div class="flex items-center gap-2">
-      <button
-        (click)="previousPage()"
-        [disabled]="!hasPreviousPage() || isLoading()"
-        class="px-3 md:px-4 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        <span class="hidden xs:inline">‹ Anterior</span>
-        <span class="xs:hidden">‹</span>
-      </button>
-
-      <!-- Información y selector de página -->
-      <div class="flex items-center gap-2 md:gap-3 text-xs md:text-sm">
-        <span class="text-gray-600">Página</span>
-        <input
-          type="number"
-          [value]="currentPage()"
-          (change)="onPageInputChange($event)"
-          [min]="1"
-          [max]="totalPages()"
-          class="w-12 md:w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
-          [disabled]="isLoading()"
-        />
-        <span class="text-gray-600">de {{ totalPages() }}</span>
-      </div>
-
-      <button
-        (click)="nextPage()"
-        [disabled]="!hasNextPage() || isLoading()"
-        class="px-3 md:px-4 py-2 text-xs md:text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        <span class="hidden xs:inline">Siguiente ›</span>
-        <span class="xs:hidden">›</span>
-      </button>
     </div>
-  </div>
 
-  <!-- Estado vacío -->
-  <div
-    *ngIf="artworks().length === 0 && !isLoading() && !error()"
-    class="text-center text-gray-500 p-10"
-  >
-    <div class="max-w-md mx-auto">
-      <svg
-        class="w-24 h-24 mx-auto text-gray-300 mb-4"
-        aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="currentColor"
-        viewBox="0 0 16 20"
-      >
-        <path
-          d="M14.066 0H7v5a2 2 0 0 1-2 2H0v11a1.97 1.97 0 0 0 1.934 2h12.132A1.97 1.97 0 0 0 16 18V2a1.97 1.97 0 0 0-1.934-2ZM10.5 6a1.5 1.5 0 1 1 0 2.999A1.5 1.5 0 0 1 10.5 6Zm2.221 10.515a1 1 0 0 1-.858.485h-8a1 1 0 0 1-.9-1.43L5.6 10.039a.978.978 0 0 1 .936-.57 1 1 0 0 1 .9.632l1.181 2.981.541-1a.945.945 0 0 1 .883-.522 1 1 0 0 1 .879.529l1.832 3.438a1 1 0 0 1-.031.988Z"
-        />
-        <path
-          d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.98 2.98 0 0 0 .13 5H5Z"
-        />
-      </svg>
-      <!-- Mensaje para filtros sin resultados -->
-      <div *ngIf="hasActiveFilters(); else noArtworksMessage">
-        <p class="text-lg mb-4">
-          No se encontraron obras que coincidan con los filtros aplicados
-        </p>
-        <div class="mb-4 text-sm text-gray-600">
-          <p *ngIf="searchTerm()">Título: "{{ searchTerm() }}"</p>
-          <p *ngIf="ubicacionFilter()">Ubicación: "{{ ubicacionFilter() }}"</p>
-          <p *ngIf="responsableFilter()">
-            Responsable: "{{ responsableFilter() }}"
-          </p>
-          <p *ngIf="autorFilter()">Autor: "{{ autorFilter() }}"</p>
-          <p *ngIf="tecnicaFilter()">Técnica: "{{ tecnicaFilter() }}"</p>
+    <!-- Estado vacío -->
+    <div
+      *ngIf="artworks().length === 0 && !isLoading() && !error()"
+      class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+    >
+      <div class="p-12 text-center text-gray-500">
+        <div class="max-w-md mx-auto">
+          <svg
+            class="w-24 h-24 mx-auto text-gray-300 mb-6"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="currentColor"
+            viewBox="0 0 16 20"
+          >
+            <path
+              d="M14.066 0H7v5a2 2 0 0 1-2 2H0v11a1.97 1.97 0 0 0 1.934 2h12.132A1.97 1.97 0 0 0 16 18V2a1.97 1.97 0 0 0-1.934-2ZM10.5 6a1.5 1.5 0 1 1 0 2.999A1.5 1.5 0 0 1 10.5 6Zm2.221 10.515a1 1 0 0 1-.858.485h-8a1 1 0 0 1-.9-1.43L5.6 10.039a.978.978 0 0 1 .936-.57 1 1 0 0 1 .9.632l1.181 2.981.541-1a.945.945 0 0 1 .883-.522 1 1 0 0 1 .879.529l1.832 3.438a1 1 0 0 1-.031.988Z"
+            />
+            <path
+              d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.98 2.98 0 0 0 .13 5H5Z"
+            />
+          </svg>
+          <!-- Mensaje para filtros sin resultados -->
+          <div *ngIf="hasActiveFilters(); else noArtworksMessage">
+            <p class="font-medium mb-4 text-gray-700">
+              No se encontraron obras que coincidan con los filtros aplicados
+            </p>
+            <div class="mb-6 text-sm text-gray-600 space-y-1">
+              <p *ngIf="searchTerm()">Título: "{{ searchTerm() }}"</p>
+              <p *ngIf="ubicacionFilter()">
+                Ubicación: "{{ ubicacionFilter() }}"
+              </p>
+              <p *ngIf="responsableFilter()">
+                Responsable: "{{ responsableFilter() }}"
+              </p>
+              <p *ngIf="autorFilter()">Autor: "{{ autorFilter() }}"</p>
+              <p *ngIf="tecnicaFilter()">Técnica: "{{ tecnicaFilter() }}"</p>
+            </div>
+            <button
+              (click)="clearAllFilters()"
+              class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                ></path>
+              </svg>
+              Limpiar todos los filtros
+            </button>
+          </div>
+
+          <!-- Mensaje cuando no hay obras en general -->
+          <ng-template #noArtworksMessage>
+            <p class="text-lg mb-6 text-gray-700">
+              No hay obras de arte registradas.
+            </p>
+            <a
+              *ngIf="isAdmin()"
+              routerLink="/nueva"
+              class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                ></path>
+              </svg>
+              Crear primera obra
+            </a>
+          </ng-template>
         </div>
-        <button
-          (click)="clearAllFilters()"
-          class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-        >
-          Limpiar todos los filtros
-        </button>
       </div>
-
-      <!-- Mensaje cuando no hay obras en general -->
-      <ng-template #noArtworksMessage>
-        <p class="text-lg mb-4">No hay obras de arte registradas.</p>
-        <a
-          *ngIf="isAdmin()"
-          routerLink="/nueva"
-          class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-        >
-          Crear primera obra
-        </a>
-      </ng-template>
     </div>
-  </div>
 
-  <!-- Modal de confirmación para eliminar obra -->
-  <app-confirm-modal
-    [isOpen]="isModalOpen()"
-    [title]="getDeleteConfirmMessage()"
-    [isLoading]="isDeleting()"
-    [errorMessage]="deleteError()"
-    (confirm)="handleConfirmation($event)"
-  ></app-confirm-modal>
+    <!-- Modal de confirmación para eliminar obra -->
+    <app-confirm-modal
+      [isOpen]="isModalOpen()"
+      [title]="getDeleteConfirmMessage()"
+      [isLoading]="isDeleting()"
+      [errorMessage]="deleteError()"
+      (confirm)="handleConfirmation($event)"
+    ></app-confirm-modal>
+  </div>
 </div>

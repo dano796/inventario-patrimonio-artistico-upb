@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ValidationService } from '../../../../shared/utils/validation.service';
 import {
   FormBuilder,
@@ -16,7 +17,7 @@ interface LogInForm {
 
 @Component({
   selector: 'app-auth-log-in',
-  imports: [RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule],
   templateUrl: './auth-log-in.html',
 })
 export class AuthLogInComponent {
