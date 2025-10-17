@@ -513,7 +513,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
 
       try {
         await this.artworksService.deleteArtwork(this.artworkToDelete()!);
-        console.log('Obra eliminada exitosamente');
 
         // Mostrar mensaje de éxito
         this.successMessage.set('Obra eliminada exitosamente');

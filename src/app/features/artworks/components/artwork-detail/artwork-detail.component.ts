@@ -90,7 +90,6 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
 
       try {
         await this.artworksService.deleteArtwork(this.artwork()!.id);
-        console.log('Obra eliminada exitosamente');
 
         // Mostrar mensaje de éxito
         this.successMessage.set('Obra eliminada exitosamente');

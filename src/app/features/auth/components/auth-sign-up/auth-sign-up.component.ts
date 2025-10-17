@@ -83,7 +83,6 @@ export class AuthSignUpComponent {
       });
 
       if (authResponse.error) {
-        console.error('Error de Supabase:', authResponse.error);
         this.globalErrorMessage = this.getSupabaseErrorMessage(
           authResponse.error
         );
@@ -91,7 +90,6 @@ export class AuthSignUpComponent {
       }
 
       // Registro exitoso
-      console.log('Registro exitoso');
       this.successMessage.set('Cuenta creada exitosamente');
 
       // Redirigir al inicio de sesión después de un breve delay para mostrar el mensaje
@@ -99,7 +97,6 @@ export class AuthSignUpComponent {
         this.router.navigate(['/autenticacion/iniciar-sesion']);
       }, 2000);
     } catch (error: any) {
-      console.error('Error en el registro:', error);
       this.globalErrorMessage =
         'Ocurrió un error inesperado. Por favor, intenta de nuevo.';
     }

@@ -16,7 +16,8 @@ export class SupabaseService implements OnDestroy {
         auth: {
           autoRefreshToken: true,
           persistSession: true,
-          detectSessionInUrl: false,
+          // Allow supabase-js to detect and process session tokens present in the URL
+          detectSessionInUrl: true,
         },
         global: {
           headers: {
@@ -44,7 +45,8 @@ export class SupabaseService implements OnDestroy {
         auth: {
           autoRefreshToken: true,
           persistSession: true,
-          detectSessionInUrl: false,
+          // Allow supabase-js to detect and process session tokens present in the URL
+          detectSessionInUrl: true,
         },
         global: {
           headers: {

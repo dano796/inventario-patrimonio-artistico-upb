@@ -5,6 +5,7 @@ import type {
   SignInWithPasswordCredentials,
 } from '@supabase/supabase-js';
 import { UserProfile } from '../../shared/models/user.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -232,5 +233,118 @@ export class AuthService {
   // Método para escuchar cambios en la autenticación
   onAuthStateChange(callback: (event: string, session: any) => void) {
     return this.supabaseClient.auth.onAuthStateChange(callback);
+  }
+
+  // Método para solicitar reseteo de contraseña
+  async resetPassword(email: string) {
+    const redirectUrl = `${window.location.protocol}//${window.location.host}/autenticacion/actualizar-contrasena`;
+
+    const result = await this.supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+
+    return result;
+  }
+
+  // Método para actualizar contraseña
+  updatePassword(newPassword: string) {
+    return this.supabaseClient.auth.updateUser({
+      password: newPassword,
+    });
+  }
+
+  // Método para verificar si hay una sesión de recuperación activa
+  async isRecoverySession(): Promise<boolean> {
+    try {
+      const { data } = await this.session();
+
+      if (!data.session) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Método para procesar automáticamente enlaces de recuperación
+  async processRecoveryUrl(): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Intentar usar API oficial para procesar la URL (supabase-js v2+)
+      // @ts-ignore - métodos dependientes de la versión
+      if (typeof this.supabaseClient.auth.getSessionFromUrl === 'function') {
+        const result = await (
+          this.supabaseClient.auth as any
+        ).getSessionFromUrl();
+        if (result?.data?.session) {
+          return { success: true };
+        }
+        if (result?.error) {
+          return {
+            success: false,
+            error: result.error.message || 'Error procesando URL',
+          };
+        }
+      }
+
+      // Alternativa: si detectSessionInUrl está activado, llamar a getSession
+      const { data, error } = await this.supabaseClient.auth.getSession();
+      if (error) return { success: false, error: error.message };
+      if (data.session) return { success: true };
+
+      // Fallback manual: parsear fragment (#access_token=...&refresh_token=...)
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash) {
+        const params = new URLSearchParams(hash);
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+
+        if (access_token) {
+          try {
+            if (refresh_token) {
+              await this.supabaseClient.auth.setSession({
+                access_token,
+                refresh_token,
+              });
+            } else {
+              await this.supabaseClient.auth.setSession({
+                access_token,
+                refresh_token: '' as any,
+              });
+            }
+
+            // Limpiar fragmento de URL para evitar reprocesos
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname + window.location.search
+            );
+
+            // Confirmar que la sesión ahora existe
+            const { data: newData } =
+              await this.supabaseClient.auth.getSession();
+            if (newData.session) return { success: true };
+          } catch (e: any) {
+            return {
+              success: false,
+              error:
+                e?.message ||
+                'Error al establecer la sesión desde el fragmento',
+            };
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: 'No se encontró una sesión válida en el enlace',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Error procesando el enlace de recuperación',
+      };
+    }
   }
 }

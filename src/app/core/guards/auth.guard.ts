@@ -1,6 +1,12 @@
 import { AuthService } from '../services/auth.service';
 import { inject } from '@angular/core';
-import { CanActivate, CanActivateFn, Router } from '@angular/router';
+import {
+  CanActivate,
+  CanActivateFn,
+  Router,
+  ActivatedRouteSnapshot,
+  RouterStateSnapshot,
+} from '@angular/router';
 
 const routerInjection = () => inject(Router);
 const authServiceInjection = () => inject(AuthService);
@@ -82,11 +88,17 @@ export const privateGuard: CanActivateFn = async () => {
   }
 };
 
-export const publicGuard: CanActivateFn = async () => {
+export const publicGuard: CanActivateFn = async (route, state) => {
   const router = routerInjection();
   const authService = authServiceInjection();
 
   try {
+    // Permitir acceso a la ruta de actualización de contraseña incluso si hay sesión
+    // Esta es una excepción necesaria para el flujo de recuperación de contraseña
+    if (state.url.includes('/autenticacion/actualizar-contrasena')) {
+      return true;
+    }
+
     // Esperar a que la inicialización termine completamente, pero con menos tiempo para rutas públicas
     const maxWaitTime = 3000; // 3 segundos máximo
     const startTime = Date.now();
