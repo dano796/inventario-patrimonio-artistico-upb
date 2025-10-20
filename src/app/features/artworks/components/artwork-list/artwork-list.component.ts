@@ -69,6 +69,9 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   // Signal para controlar la visibilidad de filtros avanzados
   showAdvancedFilters = signal<boolean>(false);
 
+  // Signal para el número de columnas en la grid
+  selectedColumns = signal<number>(3);
+
   // Clave para localStorage
   private readonly FILTERS_STORAGE_KEY = 'artwork-filters';
 
@@ -335,6 +338,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       responsableFilter: this.responsableFilter(),
       autorFilter: this.autorFilter(),
       tecnicaFilter: this.tecnicaFilter(),
+      selectedColumns: this.selectedColumns(),
       currentPage: this.currentPage(),
       showAdvancedFilters: this.showAdvancedFilters(),
       timestamp: Date.now(),
@@ -371,6 +375,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       this.responsableFilter.set(filters.responsableFilter || '');
       this.autorFilter.set(filters.autorFilter || '');
       this.tecnicaFilter.set(filters.tecnicaFilter || '');
+      this.selectedColumns.set(filters.selectedColumns || 3);
       this.showAdvancedFilters.set(filters.showAdvancedFilters || false);
 
       return true;
@@ -798,6 +803,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     this.responsableFilter.set('');
     this.autorFilter.set('');
     this.tecnicaFilter.set('');
+    this.selectedColumns.set(3);
 
     // Limpiar localStorage
     this.clearFiltersFromStorage();
@@ -890,5 +896,23 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       }
     }
     return '¿Está seguro de que desea eliminar esta obra de arte?';
+  }
+
+  // Método para obtener las clases de la grid basadas en el número de columnas seleccionado
+  getGridClasses(): string {
+    const cols = this.selectedColumns();
+    return `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${cols} gap-6`;
+  }
+
+  // Método para cambiar el número de columnas
+  changeColumns(columns: number) {
+    this.selectedColumns.set(columns);
+    this.saveFiltersToStorage();
+  }
+
+  // Método para manejar el cambio en el selector de columnas
+  onColumnsChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.changeColumns(parseInt(select.value));
   }
 }
