@@ -901,7 +901,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   // Método para obtener las clases de la grid basadas en el número de columnas seleccionado
   getGridClasses(): string {
     const cols = this.selectedColumns();
-    return `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${cols} gap-6`;
+    return `grid grid-cols-1 md:grid-cols-${cols} gap-6`;
   }
 
   // Método para cambiar el número de columnas
