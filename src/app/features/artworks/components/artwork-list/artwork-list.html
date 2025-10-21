@@ -42,7 +42,7 @@
             <a
               *ngIf="isAdmin()"
               routerLink="/nueva"
-              class="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              class="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
               <svg
                 class="w-4 h-4"
@@ -63,7 +63,7 @@
             <button
               *ngIf="isAuthenticated()"
               (click)="onLogout()"
-              class="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              class="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
             >
               <svg
                 class="w-4 h-4"
@@ -84,7 +84,7 @@
             <a
               *ngIf="!isAuthenticated()"
               routerLink="/autenticacion/iniciar-sesion"
-              class="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              class="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
             >
               <svg
                 class="w-4 h-4"
@@ -111,7 +111,9 @@
             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3 mb-3"
           >
             <!-- Barra de búsqueda principal (izquierda) -->
-            <div class="relative flex-1 w-full sm:max-w-md">
+            <div
+              class="relative flex-1 w-full sm:max-w-md flex items-center min-w-0"
+            >
               <div
                 class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
               >
@@ -134,12 +136,13 @@
                 [value]="searchTerm()"
                 (input)="onSearchInput($event)"
                 placeholder="Buscar obras por título..."
-                class="block w-full pl-9 md:pl-10 pr-10 md:pr-12 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                class="flex-1 min-w-0 block w-full pl-9 md:pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
               />
+              <!-- Botón limpiar (ahora inline para evitar solapamientos con el botón de filtros) -->
               <button
                 *ngIf="searchTerm()"
                 (click)="clearSearch()"
-                class="absolute inset-y-0 right-0 pr-2.5 md:pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                class="ml-2 flex items-center text-gray-400 hover:text-gray-600"
                 title="Limpiar búsqueda"
               >
                 <svg
@@ -155,6 +158,33 @@
                     d="M6 18L18 6M6 6l12 12"
                   ></path>
                 </svg>
+              </button>
+
+              <button
+                (click)="advancedFilters.classList.toggle('hidden')"
+                class="ml-2 inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                title="Mostrar filtros"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                  ></path>
+                </svg>
+                <span class="hidden xs:inline">Filtros</span>
+                <span
+                  *ngIf="activeFiltersCount() > 0"
+                  class="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+                >
+                  {{ activeFiltersCount() }}
+                </span>
               </button>
             </div>
 
@@ -185,33 +215,7 @@
                 </select>
               </div>
 
-              <!-- Botón de filtros avanzados -->
-              <button
-                (click)="advancedFilters.classList.toggle('hidden')"
-                class="inline-flex items-center justify-center border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors px-2 py-2 xs:px-4 xs:py-2.5 min-w-[40px] min-h-[40px]"
-                aria-label="Mostrar filtros avanzados"
-              >
-                <svg
-                  class="w-5 h-5 xs:w-4 xs:h-4 mr-0 xs:mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
-                  ></path>
-                </svg>
-                <span class="hidden xs:inline">Filtros</span>
-                <span
-                  *ngIf="activeFiltersCount() > 0"
-                  class="ml-1 xs:ml-2 bg-blue-100 text-blue-800 text-xs px-1.5 xs:px-2 py-0.5 rounded-full"
-                >
-                  {{ activeFiltersCount() }}
-                </span>
-              </button>
+              <!-- (Filtro movido junto a la barra de búsqueda en pantallas pequeñas para evitar que se corte) -->
             </div>
           </div>
 
@@ -234,7 +238,7 @@
                   (input)="onUbicacionInput($event)"
                   (keypress)="onUbicacionKeyPress($event)"
                   placeholder="Presiona Enter para agregar"
-                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  class="block w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                 />
                 <button
                   *ngIf="ubicacionFilter().trim()"
@@ -268,7 +272,7 @@
                   [value]="responsableFilter()"
                   (input)="onResponsableInput($event)"
                   placeholder="Ej: María García"
-                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  class="block w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                 />
                 <button
                   *ngIf="responsableFilter()"
@@ -302,7 +306,7 @@
                   [value]="autorFilter()"
                   (input)="onAutorInput($event)"
                   placeholder="Ej: Pablo Picasso"
-                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  class="block w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                 />
                 <button
                   *ngIf="autorFilter()"
@@ -336,7 +340,7 @@
                   [value]="tecnicaFilter()"
                   (input)="onTecnicaInput($event)"
                   placeholder="Ej: Óleo sobre lienzo"
-                  class="block w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  class="block w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                 />
                 <button
                   *ngIf="tecnicaFilter()"
@@ -1060,7 +1064,7 @@
             <a
               *ngIf="isAdmin()"
               routerLink="/nueva"
-              class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <svg
                 class="w-4 h-4"
