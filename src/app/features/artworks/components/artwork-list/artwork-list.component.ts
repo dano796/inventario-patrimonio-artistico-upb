@@ -229,6 +229,9 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   // Clave para localStorage
   private readonly FILTERS_STORAGE_KEY = 'artwork-filters';
 
+  // Página guardada en localStorage
+  private savedPage = signal<number>(1);
+
   // Computed para saber si hay filtros activos
   hasActiveFilters = computed(() => {
     return (
@@ -531,6 +534,7 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       this.tecnicaFilter.set(filters.tecnicaFilter || '');
       this.selectedColumns.set(filters.selectedColumns || 3);
       this.showAdvancedFilters.set(filters.showAdvancedFilters || false);
+      this.savedPage.set(filters.currentPage || 1);
 
       return true;
     } catch (error) {
@@ -746,22 +750,32 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   // Métodos de navegación de páginas
   async goToPage(page: number) {
     await this.artworksService.goToPage(page);
+    this.savedPage.set(this.currentPage());
+    this.saveFiltersToStorage();
   }
 
   async nextPage() {
     await this.artworksService.nextPage();
+    this.savedPage.set(this.currentPage());
+    this.saveFiltersToStorage();
   }
 
   async previousPage() {
     await this.artworksService.previousPage();
+    this.savedPage.set(this.currentPage());
+    this.saveFiltersToStorage();
   }
 
   async firstPage() {
     await this.artworksService.firstPage();
+    this.savedPage.set(this.currentPage());
+    this.saveFiltersToStorage();
   }
 
   async lastPage() {
     await this.artworksService.lastPage();
+    this.savedPage.set(this.currentPage());
+    this.saveFiltersToStorage();
   }
 
   // Generar array de números de página para mostrar
@@ -791,6 +805,8 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
   async goToSpecificPage(page: number) {
     if (this.artworksService.isValidPageNumber(page)) {
       await this.artworksService.goToPage(page);
+      this.savedPage.set(this.currentPage());
+      this.saveFiltersToStorage();
     }
   }
 
@@ -906,7 +922,11 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       };
 
       // Solo realizar filtrado, sin actualizar URL
-      await this.artworksService.filterArtworks(filters, 1);
+      await this.artworksService.filterArtworks(filters, this.savedPage());
+
+      // Actualizar savedPage con la página actual (puede haber sido ajustada)
+      this.savedPage.set(this.currentPage());
+      this.saveFiltersToStorage();
     } finally {
       this.filteringInProgress.set(false);
     }

@@ -16,6 +16,8 @@ import {
   providedIn: 'root',
 })
 export class ArtworksService {
+  // Guardar filtros activos
+  private activeFilters: Omit<PaginationParams, 'page' | 'limit'> | null = null;
   // Obtener todas las obras sin paginación (para exportar)
   async getAllArtworksNoPagination(): Promise<Artwork[]> {
     await this.supabaseService.ensureActiveSession();
@@ -74,7 +76,20 @@ export class ArtworksService {
       return this.loadingPromise;
     }
 
-    this.loadingPromise = this.doGetAllArtworks(params);
+    // Si hay filtros activos y no se pasan filtros explícitos, usarlos
+    let finalParams = { ...params };
+    if (
+      this.activeFilters &&
+      !('search' in params) &&
+      !('ubicacion' in params) &&
+      !('responsable' in params) &&
+      !('autor' in params) &&
+      !('tecnica' in params)
+    ) {
+      finalParams = { ...this.activeFilters, ...params };
+    }
+
+    this.loadingPromise = this.doGetAllArtworks(finalParams);
     return this.loadingPromise;
   }
 
@@ -219,12 +234,19 @@ export class ArtworksService {
             const totalItems = count || 0;
             const totalPages = Math.ceil(totalItems / limit);
 
+            // Ajustar página si es mayor que totalPages
+            let adjustedPage = page;
+            if (page > totalPages && totalPages > 0) {
+              adjustedPage = totalPages;
+            }
+
             this.state.update((state) => ({
               ...state,
               artworks: data,
               totalItems,
               totalPages,
               itemsPerPage: limit,
+              currentPage: adjustedPage,
             }));
 
             // Marcar actividad exitosa
@@ -353,11 +375,13 @@ export class ArtworksService {
     filters: Omit<PaginationParams, 'page' | 'limit'>,
     page: number = 1
   ) {
+    this.activeFilters = filters;
     await this.getAllArtworks({ ...filters, page });
   }
 
   // Método para limpiar todos los filtros
   async clearAllFilters() {
+    this.activeFilters = null;
     await this.getAllArtworks({
       search: '',
       ubicacion: '',
