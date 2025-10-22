@@ -74,7 +74,7 @@ export class ArtworkFormComponent implements OnInit {
       Validators.maxLength(50),
     ]),
     ano: this.formBuilder.control<number | null>(null, [
-      Validators.min(1800),
+      Validators.min(1700),
       Validators.max(new Date().getFullYear()),
     ]),
     ubicacion: this.formBuilder.control<string | null>(null, [

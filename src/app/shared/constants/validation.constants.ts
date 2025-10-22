@@ -24,7 +24,7 @@ export const VALIDATION_RULES = {
       MAX_LENGTH: 100,
     },
     ANO: {
-      MIN: 1800,
+      MIN: 1700,
       MAX: new Date().getFullYear(),
     },
     VALOR: {
