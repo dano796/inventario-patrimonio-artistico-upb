@@ -16,6 +16,16 @@ import {
   providedIn: 'root',
 })
 export class ArtworksService {
+  // Obtener todas las obras sin paginación (para exportar)
+  async getAllArtworksNoPagination(): Promise<Artwork[]> {
+    await this.supabaseService.ensureActiveSession();
+    this.supabaseClient = this.supabaseService.supabaseClient;
+    const { data, error } = await this.supabaseClient
+      .from('obras')
+      .select('*, imagenes(*)');
+    if (error) throw error;
+    return data || [];
+  }
   private supabaseService = inject(SupabaseService);
   private supabaseClient = this.supabaseService.supabaseClient;
   private imageService = inject(ImageService);

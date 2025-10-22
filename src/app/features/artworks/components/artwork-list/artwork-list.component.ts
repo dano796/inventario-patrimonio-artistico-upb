@@ -1,3 +1,5 @@
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { ArtworksService } from '../../services/artworks.service';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -21,6 +23,158 @@ import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
   templateUrl: './artwork-list.html',
 })
 export class ArtworkListComponent implements AfterViewInit, OnDestroy {
+  // Exportar todas las obras a Excel
+  async exportArtworksToExcel() {
+    try {
+      const allArtworks =
+        await this.artworksService.getAllArtworksNoPagination();
+      if (!allArtworks || allArtworks.length === 0) {
+        alert('No hay obras para exportar.');
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Obras');
+
+      // Definir columnas
+      worksheet.columns = [
+        { header: 'NÚMERO DE INVENTARIO', key: 'id', width: 15 },
+        { header: 'AUTOR', key: 'autor', width: 20 },
+        { header: 'TÍTULO', key: 'titulo', width: 20 },
+        { header: 'TÉCNICA', key: 'tecnica', width: 18 },
+        { header: 'DIMENSIONES (cm)', key: 'dimension', width: 15 },
+        { header: 'AÑO DE ELABORACIÓN', key: 'ano', width: 15 },
+        { header: 'UBICACIÓN', key: 'ubicacion', width: 30 },
+        { header: 'VALOR', key: 'valor', width: 15 },
+        { header: 'OBSERVACIONES', key: 'observaciones', width: 30 },
+        { header: 'RESPONSABLE', key: 'responsable', width: 20 },
+        { header: 'IMAGEN 1', key: 'imagen1', width: 20 },
+        { header: 'IMAGEN 2', key: 'imagen2', width: 20 },
+        { header: 'IMAGEN 3', key: 'imagen3', width: 20 },
+      ];
+
+      // Agregar filas (sin imagen aún)
+      allArtworks.forEach((obra: any, idx: number) => {
+        const row = worksheet.addRow({
+          id: obra.id,
+          autor: obra.autor ?? '',
+          titulo: obra.titulo ?? '',
+          tecnica: obra.tecnica ?? '',
+          dimension: obra.dimension ?? '',
+          ano: obra.ano ?? '',
+          ubicacion: obra.ubicacion ?? '',
+          valor: obra.valor ? parseFloat(obra.valor) : '',
+          observaciones: obra.observaciones ?? '',
+          responsable: obra.responsable ?? '',
+          imagen1: '',
+          imagen2: '',
+          imagen3: '',
+        });
+        // Estilos de fila
+        row.eachCell((cell) => {
+          cell.font = { name: 'Arial', size: 10 };
+          cell.alignment = {
+            vertical: 'middle',
+            wrapText: true,
+          };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+        // Aplicar formato de moneda sin decimales a la columna de valor
+        const valorCell = row.getCell(8);
+        if (obra.valor) {
+          valorCell.numFmt = '"$"#,##0';
+        }
+        // Ajustar el alto de la fila para las imágenes
+        worksheet.getRow(idx + 2).height = 90;
+      });
+
+      // Estilos de header
+      worksheet.getRow(1).eachCell((cell) => {
+        cell.font = {
+          name: 'Arial',
+          size: 10,
+          color: { argb: 'FF632523' },
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF2DCDB' },
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+          wrapText: true,
+        };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+
+      // Ajustar el alto del header
+      worksheet.getRow(1).height = 60;
+
+      // Descargar e insertar hasta 3 imágenes por obra
+      for (let i = 0; i < allArtworks.length; i++) {
+        const obra = allArtworks[i];
+        if (obra.imagenes && obra.imagenes.length > 0) {
+          for (let j = 0; j < Math.min(3, obra.imagenes.length); j++) {
+            const img = obra.imagenes[j];
+            if (img && img.url) {
+              try {
+                const imageUrl = img.url;
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const arrayBuffer = await blob.arrayBuffer();
+                const extension = imageUrl.split('.').pop()?.toLowerCase();
+                let imageType: 'jpeg' | 'png' = 'jpeg';
+                if (extension === 'png') imageType = 'png';
+                const imageId = workbook.addImage({
+                  buffer: new Uint8Array(arrayBuffer) as any,
+                  extension: imageType,
+                });
+                // Obtener tamaño real de la imagen
+                const imgBitmap = await createImageBitmap(blob);
+                const maxCellWidthPx = 133;
+                const maxCellHeightPx = 125;
+                let drawWidth = imgBitmap.width;
+                let drawHeight = imgBitmap.height;
+                // Escalar proporcionalmente si es necesario
+                const widthRatio = maxCellWidthPx / drawWidth;
+                const heightRatio = maxCellHeightPx / drawHeight;
+                const scale = Math.min(1, widthRatio, heightRatio);
+                drawWidth = drawWidth * scale;
+                drawHeight = drawHeight * scale;
+                worksheet.addImage(imageId, {
+                  tl: { col: 10 + j, row: i + 1 } as any,
+                  ext: { width: drawWidth, height: drawHeight },
+                  editAs: 'oneCell',
+                });
+              } catch (imgErr) {
+                // Si falla la imagen, dejar celda vacía
+              }
+            }
+          }
+        }
+      }
+
+      // Descargar el archivo
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      saveAs(blob, 'inventario-obras.xlsx');
+    } catch (error: any) {
+      alert('Error exportando a Excel: ' + (error?.message || error));
+    }
+  }
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
