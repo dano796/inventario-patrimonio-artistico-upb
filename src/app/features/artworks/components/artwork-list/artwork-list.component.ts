@@ -146,12 +146,36 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
                 const maxCellHeightPx = 125;
                 let drawWidth = imgBitmap.width;
                 let drawHeight = imgBitmap.height;
-                // Escalar proporcionalmente si es necesario
+
+                // Escalar proporcionalmente para que la imagen nunca exceda la altura disponible
+                const targetRow = worksheet.getRow(i + 2);
+                const defaultRowHeightPoints = 90;
+                const existingHeightPoints = (targetRow.height ??
+                  defaultRowHeightPoints) as number;
+                // Conversión aproximada: 1px ≈ 0.75pt
+                const pxToPt = 0.75;
+                const existingHeightPx = Math.floor(
+                  existingHeightPoints / pxToPt
+                );
+                const paddingPx = 24; // padding vertical conservador
+                // No usar más altura que el máximo teórico
+                const availableHeightPx = Math.max(
+                  1,
+                  Math.min(maxCellHeightPx, existingHeightPx - paddingPx)
+                );
+
                 const widthRatio = maxCellWidthPx / drawWidth;
-                const heightRatio = maxCellHeightPx / drawHeight;
+                const heightRatio = availableHeightPx / drawHeight;
                 const scale = Math.min(1, widthRatio, heightRatio);
-                drawWidth = drawWidth * scale;
-                drawHeight = drawHeight * scale;
+
+                drawWidth = Math.round(drawWidth * scale);
+                drawHeight = Math.round(drawHeight * scale);
+
+                // Clamp de seguridad final
+                if (drawWidth > maxCellWidthPx) drawWidth = maxCellWidthPx;
+                if (drawHeight > availableHeightPx)
+                  drawHeight = availableHeightPx;
+
                 worksheet.addImage(imageId, {
                   tl: { col: 10 + j, row: i + 1 } as any,
                   ext: { width: drawWidth, height: drawHeight },
