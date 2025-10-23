@@ -1,5 +1,3 @@
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
 import { ArtworksService } from '../../services/artworks.service';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -23,9 +21,17 @@ import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
   templateUrl: './artwork-list.html',
 })
 export class ArtworkListComponent implements AfterViewInit, OnDestroy {
+  // Signal para mostrar loader durante la exportación
+  isExporting = signal<boolean>(false);
   // Exportar todas las obras a Excel
   async exportArtworksToExcel() {
+    this.isExporting.set(true);
     try {
+      // Importaciones dinámicas para reducir el tamaño del bundle inicial y evitar errores de exportación
+      const ExcelJS = (await import('exceljs')).default;
+      const fileSaverModule = await import('file-saver');
+      const saveAs = fileSaverModule.saveAs || fileSaverModule.default;
+
       const allArtworks =
         await this.artworksService.getAllArtworksNoPagination();
       if (!allArtworks || allArtworks.length === 0) {
@@ -197,6 +203,8 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
       saveAs(blob, 'inventario-obras.xlsx');
     } catch (error: any) {
       alert('Error exportando a Excel: ' + (error?.message || error));
+    } finally {
+      this.isExporting.set(false);
     }
   }
   private authService = inject(AuthService);
