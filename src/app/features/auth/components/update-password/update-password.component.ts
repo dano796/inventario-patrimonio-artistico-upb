@@ -68,7 +68,7 @@ export class UpdatePasswordComponent implements OnInit {
         'El enlace de recuperación ha expirado o no es válido. Por favor, solicita uno nuevo.';
       setTimeout(() => {
         this.router.navigate(['/autenticacion/recuperar-contrasena']);
-      }, 3000);
+      }, 10000);
     } catch (error) {
       this.globalErrorMessage =
         'Error al verificar la sesión. Por favor, solicita un nuevo enlace de recuperación.';
@@ -140,7 +140,7 @@ export class UpdatePasswordComponent implements OnInit {
       }
 
       this.successMessage.set(
-        'Tu contraseña ha sido actualizada exitosamente.'
+        'Tu contraseña ha sido actualizada exitosamente.',
       );
 
       setTimeout(() => {
