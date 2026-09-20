@@ -258,6 +258,25 @@ export class AuthService {
     return this.supabaseClient.auth.signInWithPassword(credentials);
   }
 
+  /**
+   * Entrada con la cuenta institucional. El proveedor esta configurado como
+   * single tenant, asi que el directorio de la UPB es quien decide si la
+   * persona existe; aqui no se comprueba el dominio del correo.
+   *
+   * Que la cuenta pueda entrar no le da permisos: el rol vive en
+   * `usuarios.rol` y lo concede un administrador. Una cuenta nueva entra
+   * como 'usuario', que ve lo mismo que un visitante anonimo.
+   */
+  logInWithMicrosoft() {
+    return this.supabaseClient.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        scopes: 'openid profile email',
+        redirectTo: `${window.location.protocol}//${window.location.host}/`,
+      },
+    });
+  }
+
   signOut() {
     return this.supabaseClient.auth.signOut();
   }

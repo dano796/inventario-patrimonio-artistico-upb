@@ -92,6 +92,23 @@ export class AuthLogInComponent implements OnInit {
     return control ? this.validationService.showErrorMessage(control) : false;
   }
 
+  /**
+   * No navega: signInWithOAuth se lleva el navegador a Microsoft y la vuelta
+   * la procesa supabase-js. Solo se llega a la linea del error si la peticion
+   * ni siquiera sale.
+   */
+  async onMicrosoftLogIn() {
+    this.globalErrorMessage.set('');
+
+    const { error } = await this.authService.logInWithMicrosoft();
+
+    if (error) {
+      this.globalErrorMessage.set(
+        'No se pudo iniciar sesión con Microsoft. Inténtalo de nuevo.'
+      );
+    }
+  }
+
   async onSubmit() {
     if (this.form.invalid) return;
 
