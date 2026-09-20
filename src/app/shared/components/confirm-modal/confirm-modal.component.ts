@@ -1,10 +1,21 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+} from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroExclamationCircle } from '@ng-icons/heroicons/outline';
+import { heroInformationCircleSolid } from '@ng-icons/heroicons/solid';
+
 
 @Component({
   selector: 'app-confirm-modal',
-  imports: [CommonModule],
+  imports: [NgIcon],
   templateUrl: './confirm-modal.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroExclamationCircle, heroInformationCircleSolid })],
 })
 export class ConfirmModalComponent {
   @Input() isOpen = false;

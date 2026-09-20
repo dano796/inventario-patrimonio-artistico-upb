@@ -6,9 +6,18 @@ import { Injectable, OnDestroy } from '@angular/core';
   providedIn: 'root',
 })
 export class SupabaseService implements OnDestroy {
-  // Reinicializar completamente el cliente Supabase
+  /**
+   * Sustituye el cliente por uno nuevo.
+   *
+   * Antes de crearlo hay que parar el anterior: cada createClient() levanta un
+   * GoTrueClient con su propio temporizador de refresco sobre la MISMA clave de
+   * almacenamiento, y supabase-js avisa con "Multiple GoTrueClient instances
+   * detected". Acumularlos provoca refrescos concurrentes y fugas de temporizador.
+   */
   reinitializeClient() {
     this.stopHeartbeat();
+    void this.supabaseClient?.auth.stopAutoRefresh();
+    this.supabaseClient?.removeAllChannels();
     this.supabaseClient = createClient(
       environment.SUPABASE_URL,
       environment.SUPABASE_KEY,
@@ -117,6 +126,16 @@ export class SupabaseService implements OnDestroy {
 
   async refreshSession() {
     try {
+      // Un visitante anonimo no tiene sesion que refrescar. Sin esta guarda,
+      // supabase-js lanza AuthSessionMissingError y la consola se llena de
+      // errores en cada cambio de visibilidad de la pestana.
+      const {
+        data: { session },
+      } = await this.supabaseClient.auth.getSession();
+      if (!session) {
+        return false;
+      }
+
       const { data, error } = await this.supabaseClient.auth.refreshSession();
       if (error) {
         console.error('Error refreshing Supabase session:', error);

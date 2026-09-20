@@ -1,25 +1,36 @@
 import { Routes } from '@angular/router';
-import { AuthSignUpComponent } from './components/auth-sign-up/auth-sign-up.component';
-import { AuthLogInComponent } from './components/auth-log-in/auth-log-in.component';
-import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
-import { UpdatePasswordComponent } from './components/update-password/update-password.component';
 
+/**
+ * El registro publico de usuarios esta deshabilitado a proposito: este es un
+ * inventario institucional interno y las cuentas las crea un administrador
+ * desde el panel de Supabase. Recordar desactivar tambien los signups en
+ * Supabase -> Authentication -> Sign In / Providers, porque quitar la ruta
+ * no impide llamar a supabase.auth.signUp() directamente.
+ */
 export const routes: Routes = [
   {
-    path: 'registro',
-    component: AuthSignUpComponent,
-  },
-  {
     path: 'iniciar-sesion',
-    component: AuthLogInComponent,
+    title: 'Iniciar sesión | Inventario Patrimonio Artístico UPB',
+    loadComponent: () =>
+      import('./components/auth-log-in/auth-log-in.component').then(
+        (m) => m.AuthLogInComponent
+      ),
   },
   {
     path: 'recuperar-contrasena',
-    component: ForgotPasswordComponent,
+    title: 'Recuperar contraseña | Inventario Patrimonio Artístico UPB',
+    loadComponent: () =>
+      import('./components/forgot-password/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent
+      ),
   },
   {
     path: 'actualizar-contrasena',
-    component: UpdatePasswordComponent,
+    title: 'Actualizar contraseña | Inventario Patrimonio Artístico UPB',
+    loadComponent: () =>
+      import('./components/update-password/update-password.component').then(
+        (m) => m.UpdatePasswordComponent
+      ),
   },
   {
     path: '**',

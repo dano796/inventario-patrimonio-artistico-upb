@@ -5,12 +5,31 @@ import {
   ImageUploadRequest,
 } from '../../../shared/models/image.model';
 import { ImageService } from '../../../shared/services/image.service';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   Artwork,
   ArtworkCreateData,
   ArtworkState,
   PaginationParams,
 } from '../../../shared/models/artwork.model';
+
+/**
+ * Columnas visibles para cualquier visitante.
+ * Se excluyen a proposito `ubicacion`, `valor` y `responsable`: juntas forman
+ * un mapa de que obra vale cuanto, donde esta y quien la custodia.
+ */
+const COLUMNAS_PUBLICAS =
+  'id, titulo, autor, tecnica, dimension, ano, observaciones, fecha_creacion, fecha_actualizacion';
+
+/** Los administradores ven la ficha completa. */
+const COLUMNAS_ADMIN = '*';
+
+/**
+ * Columnas por las que puede filtrar un visitante anonimo.
+ * Debe ser un subconjunto de COLUMNAS_PUBLICAS: filtrar por una columna oculta
+ * permitiria deducir su valor por ensayo y error.
+ */
+const FILTROS_PUBLICOS = ['search', 'autor', 'tecnica'] as const;
 
 @Injectable({
   providedIn: 'root',
@@ -24,13 +43,15 @@ export class ArtworksService {
     this.supabaseClient = this.supabaseService.supabaseClient;
     const { data, error } = await this.supabaseClient
       .from('obras')
-      .select('*, imagenes(*)');
+      .select('*, imagenes(*)')
+      .returns<Artwork[]>();
     if (error) throw error;
     return data || [];
   }
   private supabaseService = inject(SupabaseService);
   private supabaseClient = this.supabaseService.supabaseClient;
   private imageService = inject(ImageService);
+  private authService = inject(AuthService);
 
   private state = signal<ArtworkState>({
     artworks: [],
@@ -45,7 +66,7 @@ export class ArtworksService {
 
   // Variable para evitar llamadas concurrentes
   private loadingPromise: Promise<any> | null = null;
-  private loadingTimeout: NodeJS.Timeout | null = null;
+  private loadingTimeout: ReturnType<typeof setTimeout> | null = null;
   private abortController: AbortController | null = null;
 
   // Selectores
@@ -70,10 +91,56 @@ export class ArtworksService {
   hasPreviousPage = computed(() => this.currentPage() > 1);
   hasNextPage = computed(() => this.currentPage() < this.totalPages());
 
+  /**
+   * Columnas a pedir segun el rol. La defensa real son los GRANT por columna /
+   * la vista publica en Postgres; esto evita ademas que los datos sensibles
+   * viajen al navegador de un visitante.
+   */
+  private selectColumns(): string {
+    return this.authService.isAdmin() ? COLUMNAS_ADMIN : COLUMNAS_PUBLICAS;
+  }
+
+  /** Descarta los filtros que un visitante anonimo no puede usar. */
+  private sanitizeParams(params: PaginationParams): PaginationParams {
+    if (this.authService.isAdmin()) return params;
+
+    const permitido: PaginationParams = {
+      page: params.page,
+      limit: params.limit,
+    };
+    for (const clave of FILTROS_PUBLICOS) {
+      if (params[clave] !== undefined) {
+        permitido[clave] = params[clave] as any;
+      }
+    }
+    return permitido;
+  }
+
+  /**
+   * PostgREST interpreta `,`, `(` y `)` como estructura dentro de or=(...),
+   * asi que un valor sin escapar permite inyectar condiciones arbitrarias.
+   * Entrecomillar y escapar `\` y `"` deja el valor como dato literal.
+   */
+  private quoteFilterValue(value: string): string {
+    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  }
+
+  /**
+   * Garantiza sesion activa y refresca la referencia al cliente, que
+   * SupabaseService puede haber sustituido con reinitializeClient().
+   * Toda operacion de escritura debe llamarlo antes de tocar la base.
+   */
+  private async prepareClient(): Promise<void> {
+    await this.supabaseService.ensureActiveSession();
+    this.supabaseClient = this.supabaseService.supabaseClient;
+  }
+
   async getAllArtworks(params: PaginationParams = {}) {
-    // Evitar llamadas concurrentes
-    if (this.loadingPromise) {
-      return this.loadingPromise;
+    // Una peticion en vuelo no puede descartar parametros nuevos: si cambian
+    // la pagina o los filtros mientras carga, se cancela la anterior y se
+    // lanza la nueva. Antes se devolvia la promesa antigua y el clic se perdia.
+    if (this.loadingPromise && this.abortController) {
+      this.abortController.abort();
     }
 
     // Si hay filtros activos y no se pasan filtros explícitos, usarlos
@@ -89,7 +156,7 @@ export class ArtworksService {
       finalParams = { ...this.activeFilters, ...params };
     }
 
-    this.loadingPromise = this.doGetAllArtworks(finalParams);
+    this.loadingPromise = this.doGetAllArtworks(this.sanitizeParams(finalParams));
     return this.loadingPromise;
   }
 
@@ -143,13 +210,11 @@ export class ArtworksService {
       const endIndex = startIndex + limit - 1;
 
       // Construir la consulta base con count estimado para mejor performance
-      let query = this.supabaseClient.from('obras').select(
-        `
-          *,
-          imagenes(*)
-        `,
-        { count: 'estimated' } // Cambio de 'exact' a 'estimated' para mejor performance
-      );
+      // `estimated` devolvia un conteo del planificador, asi que totalPages
+      // podia ofrecer paginas vacias en consultas filtradas.
+      let query = this.supabaseClient
+        .from('obras')
+        .select(`${this.selectColumns()}, imagenes(*)`, { count: 'exact' });
 
       // Aplicar filtros de búsqueda si existen (optimización: solo aplicar filtros no vacíos)
       const activeFilters = [];
@@ -166,7 +231,8 @@ export class ArtworksService {
           const ubicacionesValidas = ubicacion.filter((u) => u?.trim());
           if (ubicacionesValidas.length > 0) {
             const ubicacionConditions = ubicacionesValidas.map(
-              (u) => `ubicacion.ilike.%${u.trim()}%`
+              (u) =>
+                `ubicacion.ilike.${this.quoteFilterValue(`%${u.trim()}%`)}`
             );
             query = query.or(ubicacionConditions.join(','));
             activeFilters.push('ubicacion');
@@ -197,7 +263,8 @@ export class ArtworksService {
       const queryPromise = query
         .order('fecha_creacion', { ascending: false })
         .range(startIndex, endIndex)
-        .abortSignal(this.abortController.signal); // Agregar signal para cancelación
+        .abortSignal(this.abortController.signal) // Agregar signal para cancelación
+        .returns<Artwork[]>();
 
       // Ejecutar la consulta con reintentos automáticos
       let retries = 0;
@@ -518,14 +585,10 @@ export class ArtworksService {
         try {
           const { data, error } = await this.supabaseClient
             .from('obras')
-            .select(
-              `
-              *,
-              imagenes(*)
-            `
-            )
+            .select(`${this.selectColumns()}, imagenes(*)`)
             .eq('id', id)
-            .single();
+            .single()
+            .returns<Artwork>();
 
           if (error) {
             // Si es un error de autenticación/sesión, intentar refrescar
@@ -610,6 +673,10 @@ export class ArtworksService {
 
   async createArtwork(artworkData: ArtworkCreateData, imageFiles: File[] = []) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -689,6 +756,10 @@ export class ArtworksService {
     existingImages: ArtworkImage[] = []
   ) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -809,6 +880,10 @@ export class ArtworksService {
 
   async deleteArtwork(id: number) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -873,6 +948,10 @@ export class ArtworksService {
   // Método para eliminar una imagen específica
   async deleteSpecificImage(imageId: number, artworkId: number) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -926,6 +1005,10 @@ export class ArtworksService {
   // Método para agregar imágenes a una obra existente
   async addImagesToArtwork(artworkId: number, imageFiles: File[]) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,

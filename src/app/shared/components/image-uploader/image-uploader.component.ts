@@ -9,21 +9,23 @@ import {
   signal,
   computed,
   OnChanges,
+  OnInit,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ImageService } from '../../services/image.service';
-import {
-  ArtworkImage,
-  ImageUploadRequest,
-  ImageUploadResponse,
-} from '../../models/image.model';
+import { ArtworkImage } from '../../models/image.model';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroPhoto, heroTrash, heroXMark } from '@ng-icons/heroicons/outline';
 
 @Component({
   selector: 'app-image-uploader',
-  imports: [CommonModule],
+  imports: [CommonModule, NgIcon],
   templateUrl: './image-uploader.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroPhoto, heroTrash, heroXMark })],
 })
-export class ImageUploaderComponent implements OnChanges {
+export class ImageUploaderComponent implements OnInit, OnChanges {
   private imageService = inject(ImageService);
 
   @Input() existingImages: ArtworkImage[] = [];
@@ -35,8 +37,15 @@ export class ImageUploaderComponent implements OnChanges {
   // Signals para el estado del componente
   private selectedFiles = signal<File[]>([]);
   private isDragging = signal(false);
-  private uploadProgress = signal(0);
   private allImages = signal<ArtworkImage[]>([]);
+  /** Motivos de rechazo a mostrar al usuario (antes solo iban a console.warn). */
+  rejectedFiles = signal<string[]>([]);
+  /**
+   * Imagenes existentes que el usuario quito del formulario. No se borran del
+   * Storage aqui: solo al guardar. Asi, cancelar el formulario no destruye
+   * archivos de forma irreversible.
+   */
+  private removedImages = signal<ArtworkImage[]>([]);
 
   // Computed properties
   hasFiles = computed(() => this.selectedFiles().length > 0);
@@ -55,6 +64,8 @@ export class ImageUploaderComponent implements OnChanges {
     // Reinicializar cuando cambien las imágenes existentes
     this.allImages.set([...this.existingImages]);
     this.selectedFiles.set([]);
+    this.removedImages.set([]);
+    this.rejectedFiles.set([]);
     this.clearFileInput();
   }
 
@@ -90,65 +101,28 @@ export class ImageUploaderComponent implements OnChanges {
     }
   }
 
-  async uploadImages(): Promise<ArtworkImage[]> {
-    if (this.selectedFiles().length === 0) {
-      return this.allImages();
-    }
-
-    this.isUploading.emit(true);
-    this.uploadProgress.set(0);
-
-    try {
-      const uploadRequests: ImageUploadRequest[] = this.selectedFiles().map(
-        (file) => ({
-          file,
-          filename: file.name,
-        })
-      );
-
-      const uploadResults = await this.imageService.uploadMultipleImages(
-        uploadRequests
-      );
-
-      const newImages: ArtworkImage[] = uploadResults.map((result) => ({
-        url: result.url,
-        nombre: result.filename,
-        tamano:
-          this.selectedFiles().find((f) => f.name === result.filename)?.size ||
-          0,
-      }));
-
-      this.allImages.update((current) => [...current, ...newImages]);
-      this.selectedFiles.set([]);
-      this.clearFileInput();
-
-      this.imagesChanged.emit(this.allImages());
-      return this.allImages();
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      throw error;
-    } finally {
-      this.isUploading.emit(false);
-      this.uploadProgress.set(0);
-    }
-  }
-
-  async removeImage(index: number): Promise<void> {
+  /**
+   * Quita la imagen de la lista pero NO la borra del Storage: eso ocurre al
+   * guardar el formulario. Antes se borraba aqui mismo, asi que pulsar
+   * "Cancelar" despues dejaba el archivo destruido y la fila apuntando a nada.
+   */
+  removeImage(index: number): void {
     const images = this.allImages();
     const imageToRemove = images[index];
+    if (!imageToRemove) return;
 
-    if (imageToRemove.url) {
-      try {
-        const path = this.imageService.getPathFromUrl(imageToRemove.url);
-        await this.imageService.deleteImage(path);
-      } catch (error) {
-        console.error('Error deleting image from storage:', error);
-      }
+    if (imageToRemove.id !== undefined) {
+      this.removedImages.update((prev) => [...prev, imageToRemove]);
     }
 
     const updatedImages = images.filter((_, i) => i !== index);
     this.allImages.set(updatedImages);
     this.imagesChanged.emit(updatedImages);
+  }
+
+  /** Imagenes existentes marcadas para borrar al guardar. */
+  getRemovedImages(): ArtworkImage[] {
+    return this.removedImages();
   }
 
   removeSelectedFile(index: number): void {
@@ -167,19 +141,47 @@ export class ImageUploaderComponent implements OnChanges {
   }
 
   private validateFiles(files: File[]): File[] {
-    return files.filter((file) => {
+    const rechazados: string[] = [];
+
+    const validos = files.filter((file) => {
       const isValidType = this.imageService.isValidImageType(file);
       const isValidSize = this.imageService.isValidImageSize(file, 5); // 5MB max
 
       if (!isValidType) {
-        console.warn(`Archivo ${file.name} no es un tipo de imagen válido`);
-      }
-      if (!isValidSize) {
-        console.warn(`Archivo ${file.name} es demasiado grande (máximo 5MB)`);
+        rechazados.push(
+          `${file.name}: formato no admitido (usa JPG, PNG o WebP)`
+        );
+      } else if (!isValidSize) {
+        // Se indica el tamano real porque el limite es de 5 MiB (5.242.880 B)
+        // y el Finder/Explorador muestra MB decimales: un archivo que el
+        // sistema llama "5,1 MB" en realidad si cabe, y sin este dato el
+        // mensaje parece equivocado.
+        rechazados.push(
+          `${file.name}: pesa ${this.formatearTamano(
+            file.size
+          )} y el máximo son 5 MiB (5,24 MB)`
+        );
       }
 
       return isValidType && isValidSize;
     });
+
+    // Antes esto solo se registraba en consola, asi que al usuario le parecia
+    // que arrastrar un archivo grande simplemente no hacia nada.
+    this.rejectedFiles.set(rechazados);
+    return validos;
+  }
+
+  dismissRejected(): void {
+    this.rejectedFiles.set([]);
+  }
+
+  /** Tamano legible, en las mismas unidades decimales que muestra el sistema. */
+  private formatearTamano(bytes: number): string {
+    return `${(bytes / 1e6).toLocaleString('es', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })} MB`;
   }
 
   // Getters para el template

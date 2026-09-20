@@ -21,6 +21,39 @@ export class AuthService {
     string,
     { profile: UserProfile; timestamp: number }
   >();
+
+  /**
+   * Se lee de forma sincrona al construir el servicio porque supabase-js
+   * (detectSessionInUrl) consume y limpia el fragmento de la URL enseguida.
+   * Sin esta foto no quedaria rastro de que la visita venia de un enlace
+   * de recuperacion.
+   */
+  private readonly recoveryLinkDetected = ((): boolean => {
+    if (typeof window === 'undefined') return false;
+    const hash = window.location.hash.replace(/^#/, '');
+    const search = window.location.search.replace(/^\?/, '');
+    const params = new URLSearchParams(
+      [hash, search].filter(Boolean).join('&')
+    );
+    if (params.get('type') === 'recovery') return true;
+    // Flujo PKCE: ?code=... sobre la ruta de actualizar contrasena
+    return (
+      params.has('code') &&
+      window.location.pathname.includes('actualizar-contrasena')
+    );
+  })();
+
+  /** Supabase emite PASSWORD_RECOVERY al procesar un enlace de recuperacion. */
+  private passwordRecoveryEvent = signal(false);
+
+  /**
+   * True solo si esta carga de pagina proviene de un enlace de recuperacion.
+   * Tener una sesion abierta NO basta: si bastara, cualquiera que encontrara
+   * un navegador con sesion iniciada podria cambiar la contrasena.
+   */
+  isRecoveryFlow = computed(
+    () => this.recoveryLinkDetected || this.passwordRecoveryEvent()
+  );
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
   // Computed para verificar si el usuario es admin
@@ -76,6 +109,10 @@ export class AuthService {
     // Escuchar cambios de autenticación
     this.onAuthStateChange(async (event, session) => {
       try {
+        if (event === 'PASSWORD_RECOVERY') {
+          this.passwordRecoveryEvent.set(true);
+        }
+
         if (event === 'SIGNED_IN' && session?.user) {
           await this.loadUserProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
@@ -262,7 +299,7 @@ export class AuthService {
         return false;
       }
 
-      return true;
+      return this.isRecoveryFlow();
     } catch (error) {
       return false;
     }
@@ -271,6 +308,13 @@ export class AuthService {
   // Método para procesar automáticamente enlaces de recuperación
   async processRecoveryUrl(): Promise<{ success: boolean; error?: string }> {
     try {
+      if (!this.isRecoveryFlow()) {
+        return {
+          success: false,
+          error: 'Esta página solo es accesible desde un enlace de recuperación',
+        };
+      }
+
       // Intentar usar API oficial para procesar la URL (supabase-js v2+)
       // @ts-ignore - métodos dependientes de la versión
       if (typeof this.supabaseClient.auth.getSessionFromUrl === 'function') {
@@ -288,10 +332,12 @@ export class AuthService {
         }
       }
 
-      // Alternativa: si detectSessionInUrl está activado, llamar a getSession
+      // Alternativa: si detectSessionInUrl está activado, la sesión ya existe.
+      // Solo se acepta cuando esta carga viene de un enlace de recuperación:
+      // una sesión normal no autoriza a cambiar la contraseña.
       const { data, error } = await this.supabaseClient.auth.getSession();
       if (error) return { success: false, error: error.message };
-      if (data.session) return { success: true };
+      if (data.session && this.isRecoveryFlow()) return { success: true };
 
       // Fallback manual: parsear fragment (#access_token=...&refresh_token=...)
       const hash = window.location.hash.replace(/^#/, '');

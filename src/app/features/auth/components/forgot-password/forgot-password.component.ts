@@ -1,5 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+
 import {
   FormBuilder,
   FormControl,
@@ -9,6 +9,9 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ValidationService } from '../../../../shared/utils/validation.service';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroArrowLeftOnRectangle, heroAtSymbol, heroCheck, heroChevronLeft, heroEnvelope, heroInformationCircle, heroKey } from '@ng-icons/heroicons/outline';
+import { heroInformationCircleSolid } from '@ng-icons/heroicons/solid';
 
 interface ForgotPasswordForm {
   correo: FormControl<string>;
@@ -16,8 +19,10 @@ interface ForgotPasswordForm {
 
 @Component({
   selector: 'app-forgot-password',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [RouterLink, ReactiveFormsModule, NgIcon],
   templateUrl: './forgot-password.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroArrowLeftOnRectangle, heroAtSymbol, heroCheck, heroChevronLeft, heroEnvelope, heroInformationCircle, heroInformationCircleSolid, heroKey })],
 })
 export class ForgotPasswordComponent {
   private validationService = inject(ValidationService);
@@ -25,7 +30,7 @@ export class ForgotPasswordComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  globalErrorMessage: string | null = null;
+  globalErrorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
   isLoading = signal<boolean>(false);
 
@@ -54,7 +59,7 @@ export class ForgotPasswordComponent {
     if (this.form.invalid) return;
 
     this.isLoading.set(true);
-    this.globalErrorMessage = null;
+    this.globalErrorMessage.set(null);
     this.successMessage.set(null);
 
     try {
@@ -62,7 +67,7 @@ export class ForgotPasswordComponent {
       const { error } = await this.authService.resetPassword(email);
 
       if (error) {
-        this.globalErrorMessage = this.getSupabaseErrorMessage(error);
+        this.globalErrorMessage.set(this.getSupabaseErrorMessage(error));
         return;
       }
 
@@ -74,22 +79,17 @@ export class ForgotPasswordComponent {
         this.router.navigate(['/autenticacion/iniciar-sesion']);
       }, 8000);
     } catch (error: any) {
-      this.globalErrorMessage =
-        'Ocurrió un error inesperado. Por favor, intenta de nuevo.';
+      this.globalErrorMessage.set(
+        'Ocurrió un error inesperado. Por favor, intenta de nuevo.'
+      );
     } finally {
       this.isLoading.set(false);
     }
   }
 
   private getSupabaseErrorMessage(error: any): string {
-    if (error.message?.includes('Email not confirmed')) {
-      return 'Tu cuenta aún no ha sido confirmada. Por favor, revisa tu correo electrónico.';
-    }
     if (error.message?.includes('Invalid email')) {
       return 'El formato del correo electrónico no es válido.';
-    }
-    if (error.message?.includes('User not found')) {
-      return 'No se encontró una cuenta asociada a este correo electrónico.';
     }
     if (error.message?.includes('Email rate limit')) {
       return 'Has solicitado demasiados emails de recuperación. Espera unos minutos antes de intentar de nuevo.';
@@ -101,7 +101,9 @@ export class ForgotPasswordComponent {
       return 'El registro de nuevos usuarios está deshabilitado temporalmente.';
     }
 
-    const errorMsg = error.message || 'Error desconocido';
-    return `Error al enviar el correo de recuperación: ${errorMsg}. Si el problema persiste, contacta al administrador.`;
+    // Sin detalles del error: distinguir "usuario no existe" de otros fallos
+    // permitiria enumerar que correos estan registrados.
+    console.warn('resetPassword falló:', error?.message);
+    return 'No se pudo enviar el correo de recuperación. Si el problema persiste, contacta al administrador.';
   }
 }

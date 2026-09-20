@@ -1,4 +1,11 @@
-import { Component, inject, OnInit, ViewChild, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  ViewChild,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   FormBuilder,
@@ -7,10 +14,13 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { ArtworksService } from '../../services/artworks.service';
 import { ArtworkImage } from '../../../../shared/models/image.model';
 import { ImageUploaderComponent } from '../../../../shared/components/image-uploader/image-uploader.component';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroArrowsPointingOut, heroCalendarDays, heroCheck, heroCheckBadge, heroInformationCircle, heroLightBulb, heroMapPin, heroPencil, heroPencilSquare, heroPhoto, heroUser } from '@ng-icons/heroicons/outline';
+import { heroCheckCircleSolid, heroInformationCircleSolid } from '@ng-icons/heroicons/solid';
 
 // Interfaz para el formulario
 interface ArtworkFormData {
@@ -28,8 +38,10 @@ interface ArtworkFormData {
 @Component({
   selector: 'app-artwork-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ImageUploaderComponent],
+  imports: [ReactiveFormsModule, ImageUploaderComponent, NgIcon],
   templateUrl: './artwork-form.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroArrowsPointingOut, heroCalendarDays, heroCheck, heroCheckBadge, heroCheckCircleSolid, heroInformationCircle, heroInformationCircleSolid, heroLightBulb, heroMapPin, heroPencil, heroPencilSquare, heroPhoto, heroUser })],
 })
 export class ArtworkFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
@@ -181,11 +193,13 @@ export class ArtworkFormComponent implements OnInit {
 
       if (this.isEditMode()) {
         const id = Number(this.route.snapshot.paramMap.get('id'));
+        // Las imagenes que se conservan son las que siguen en el uploader y ya
+        // tienen id en base de datos. Antes se comparaba por nombre de archivo,
+        // asi que subir una imagen con el mismo nombre que una existente
+        // marcaba la existente para borrado.
         const existingImages = this.imageUploader
           .getAllImages()
-          .filter(
-            (img) => !newImageFiles.some((file) => file.name === img.nombre)
-          );
+          .filter((img) => img.id !== undefined);
 
         await this.artworksService.updateArtwork(
           id,

@@ -1,5 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+
 import { ValidationService } from '../../../../shared/utils/validation.service';
 import {
   FormBuilder,
@@ -9,6 +9,9 @@ import {
 } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroArrowLeftOnRectangle, heroAtSymbol, heroChevronLeft, heroLockClosed, heroUser } from '@ng-icons/heroicons/outline';
+import { heroInformationCircleSolid } from '@ng-icons/heroicons/solid';
 
 interface LogInForm {
   correo: FormControl<string>;
@@ -17,8 +20,10 @@ interface LogInForm {
 
 @Component({
   selector: 'app-auth-log-in',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [RouterLink, ReactiveFormsModule, NgIcon],
   templateUrl: './auth-log-in.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroArrowLeftOnRectangle, heroAtSymbol, heroChevronLeft, heroInformationCircleSolid, heroLockClosed, heroUser })],
 })
 export class AuthLogInComponent implements OnInit {
   private validationService = inject(ValidationService);
@@ -26,7 +31,7 @@ export class AuthLogInComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  globalErrorMessage: string | null = null;
+  globalErrorMessage = signal<string | null>(null);
 
   form = this.formBuilder.group<LogInForm>({
     correo: this.formBuilder.nonNullable.control('', [
@@ -51,8 +56,9 @@ export class AuthLogInComponent implements OnInit {
       fragment.includes('error=access_denied') &&
       fragment.includes('error_code=otp_expired')
     ) {
-      this.globalErrorMessage =
-        'El enlace de recuperación de contraseña ha expirado. Por favor, solicita uno nuevo.';
+      this.globalErrorMessage.set(
+        'El enlace de recuperación de contraseña ha expirado. Por favor, solicita uno nuevo.'
+      );
 
       // Limpiar la URL del error
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -74,9 +80,6 @@ export class AuthLogInComponent implements OnInit {
   }
   get contrasena() {
     return this.form.get('contrasena');
-  }
-  get nombre() {
-    return this.form.get('nombre');
   }
 
   getErrorMessage(controlName: string): string {
@@ -103,7 +106,7 @@ export class AuthLogInComponent implements OnInit {
       this.router.navigateByUrl('/');
     } catch (error) {
       if (error instanceof Error) {
-        this.globalErrorMessage = error.message;
+        this.globalErrorMessage.set(error.message);
       }
     }
   }

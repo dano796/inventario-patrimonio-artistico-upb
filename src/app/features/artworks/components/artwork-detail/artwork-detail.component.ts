@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   inject,
   OnDestroy,
@@ -12,11 +13,16 @@ import { ArtworksService } from '../../services/artworks.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ArtworkImage } from '../../../../shared/models/image.model';
 import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroChevronLeft, heroChevronRight } from '@ng-icons/heroicons/outline';
+import { heroArrowLeftSolid, heroCheckCircleSolid } from '@ng-icons/heroicons/solid';
 
 @Component({
   selector: 'app-artwork-detail',
-  imports: [CommonModule, ConfirmModalComponent],
+  imports: [CommonModule, ConfirmModalComponent, NgIcon],
   templateUrl: './artwork-detail.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroArrowLeftSolid, heroCheckCircleSolid, heroChevronLeft, heroChevronRight })],
 })
 export class ArtworkDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);

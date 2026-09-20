@@ -1,212 +1,55 @@
 import { ArtworksService } from '../../services/artworks.service';
+import { ArtworkExportService } from '../../services/artwork-export.service';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
 import {
-  AfterViewInit,
   Component,
   computed,
   inject,
   signal,
   OnDestroy,
-  effect,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroAdjustmentsVertical, heroArrowLeftOnRectangle, heroArrowRightOnRectangle, heroChevronLeft, heroChevronRight, heroMagnifyingGlass, heroPencilSquare, heroPlus, heroTrash, heroXMark } from '@ng-icons/heroicons/outline';
+import { heroCheckCircleSolid, heroCog6ToothSolid, heroInformationCircleSolid, heroMagnifyingGlassSolid, heroMapPinSolid, heroUserCircleSolid, heroUserSolid } from '@ng-icons/heroicons/solid';
 
 @Component({
   selector: 'app-artwork-list',
-  imports: [CommonModule, RouterLink, ConfirmModalComponent, FormsModule],
+  imports: [CommonModule, RouterLink, ConfirmModalComponent, FormsModule, NgIcon],
   templateUrl: './artwork-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroAdjustmentsVertical, heroArrowLeftOnRectangle, heroArrowRightOnRectangle, heroCheckCircleSolid, heroChevronLeft, heroChevronRight, heroCog6ToothSolid, heroInformationCircleSolid, heroMagnifyingGlass, heroMagnifyingGlassSolid, heroMapPinSolid, heroPencilSquare, heroPlus, heroTrash, heroUserCircleSolid, heroUserSolid, heroXMark })],
 })
-export class ArtworkListComponent implements AfterViewInit, OnDestroy {
+export class ArtworkListComponent implements OnDestroy {
   // Signal para mostrar loader durante la exportación
   isExporting = signal<boolean>(false);
-  // Exportar todas las obras a Excel
+  exportError = signal<string | null>(null);
+
+  /** Delega en ArtworkExportService; ver ese archivo para el detalle del xlsx. */
   async exportArtworksToExcel() {
     this.isExporting.set(true);
+    this.exportError.set(null);
     try {
-      // Importaciones dinámicas para reducir el tamaño del bundle inicial y evitar errores de exportación
-      const ExcelJS = (await import('exceljs')).default;
-      const fileSaverModule = await import('file-saver');
-      const saveAs = fileSaverModule.saveAs || fileSaverModule.default;
-
-      const allArtworks =
-        await this.artworksService.getAllArtworksNoPagination();
-      if (!allArtworks || allArtworks.length === 0) {
-        alert('No hay obras para exportar.');
-        return;
+      const total = await this.exportService.exportToExcel();
+      if (total === 0) {
+        this.exportError.set('No hay obras para exportar.');
       }
-
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Obras');
-
-      // Definir columnas
-      worksheet.columns = [
-        { header: 'NÚMERO DE INVENTARIO', key: 'id', width: 15 },
-        { header: 'AUTOR', key: 'autor', width: 20 },
-        { header: 'TÍTULO', key: 'titulo', width: 20 },
-        { header: 'TÉCNICA', key: 'tecnica', width: 18 },
-        { header: 'DIMENSIONES (cm)', key: 'dimension', width: 15 },
-        { header: 'AÑO DE ELABORACIÓN', key: 'ano', width: 15 },
-        { header: 'UBICACIÓN', key: 'ubicacion', width: 30 },
-        { header: 'VALOR', key: 'valor', width: 15 },
-        { header: 'OBSERVACIONES', key: 'observaciones', width: 30 },
-        { header: 'RESPONSABLE', key: 'responsable', width: 20 },
-        { header: 'IMAGEN 1', key: 'imagen1', width: 20 },
-        { header: 'IMAGEN 2', key: 'imagen2', width: 20 },
-        { header: 'IMAGEN 3', key: 'imagen3', width: 20 },
-      ];
-
-      // Agregar filas (sin imagen aún)
-      allArtworks.forEach((obra: any, idx: number) => {
-        const row = worksheet.addRow({
-          id: obra.id,
-          autor: obra.autor ?? '',
-          titulo: obra.titulo ?? '',
-          tecnica: obra.tecnica ?? '',
-          dimension: obra.dimension ?? '',
-          ano: obra.ano ?? '',
-          ubicacion: obra.ubicacion ?? '',
-          valor: obra.valor ? parseFloat(obra.valor) : '',
-          observaciones: obra.observaciones ?? '',
-          responsable: obra.responsable ?? '',
-          imagen1: '',
-          imagen2: '',
-          imagen3: '',
-        });
-        // Estilos de fila
-        row.eachCell((cell) => {
-          cell.font = { name: 'Arial', size: 10 };
-          cell.alignment = {
-            vertical: 'middle',
-            wrapText: true,
-          };
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' },
-          };
-        });
-        // Aplicar formato de moneda sin decimales a la columna de valor
-        const valorCell = row.getCell(8);
-        if (obra.valor) {
-          valorCell.numFmt = '"$"#,##0';
-        }
-        // Ajustar el alto de la fila para las imágenes
-        worksheet.getRow(idx + 2).height = 90;
-      });
-
-      // Estilos de header
-      worksheet.getRow(1).eachCell((cell) => {
-        cell.font = {
-          name: 'Arial',
-          size: 10,
-          color: { argb: 'FF632523' },
-        };
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFF2DCDB' },
-        };
-        cell.alignment = {
-          vertical: 'middle',
-          horizontal: 'center',
-          wrapText: true,
-        };
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' },
-        };
-      });
-
-      // Ajustar el alto del header
-      worksheet.getRow(1).height = 60;
-
-      // Descargar e insertar hasta 3 imágenes por obra
-      for (let i = 0; i < allArtworks.length; i++) {
-        const obra = allArtworks[i];
-        if (obra.imagenes && obra.imagenes.length > 0) {
-          for (let j = 0; j < Math.min(3, obra.imagenes.length); j++) {
-            const img = obra.imagenes[j];
-            if (img && img.url) {
-              try {
-                const imageUrl = img.url;
-                const response = await fetch(imageUrl);
-                const blob = await response.blob();
-                const arrayBuffer = await blob.arrayBuffer();
-                const extension = imageUrl.split('.').pop()?.toLowerCase();
-                let imageType: 'jpeg' | 'png' = 'jpeg';
-                if (extension === 'png') imageType = 'png';
-                const imageId = workbook.addImage({
-                  buffer: new Uint8Array(arrayBuffer) as any,
-                  extension: imageType,
-                });
-                // Obtener tamaño real de la imagen
-                const imgBitmap = await createImageBitmap(blob);
-                const maxCellWidthPx = 133;
-                const maxCellHeightPx = 125;
-                let drawWidth = imgBitmap.width;
-                let drawHeight = imgBitmap.height;
-
-                // Escalar proporcionalmente para que la imagen nunca exceda la altura disponible
-                const targetRow = worksheet.getRow(i + 2);
-                const defaultRowHeightPoints = 90;
-                const existingHeightPoints = (targetRow.height ??
-                  defaultRowHeightPoints) as number;
-                // Conversión aproximada: 1px ≈ 0.75pt
-                const pxToPt = 0.75;
-                const existingHeightPx = Math.floor(
-                  existingHeightPoints / pxToPt
-                );
-                const paddingPx = 24; // padding vertical conservador
-                // No usar más altura que el máximo teórico
-                const availableHeightPx = Math.max(
-                  1,
-                  Math.min(maxCellHeightPx, existingHeightPx - paddingPx)
-                );
-
-                const widthRatio = maxCellWidthPx / drawWidth;
-                const heightRatio = availableHeightPx / drawHeight;
-                const scale = Math.min(1, widthRatio, heightRatio);
-
-                drawWidth = Math.round(drawWidth * scale);
-                drawHeight = Math.round(drawHeight * scale);
-
-                // Clamp de seguridad final
-                if (drawWidth > maxCellWidthPx) drawWidth = maxCellWidthPx;
-                if (drawHeight > availableHeightPx)
-                  drawHeight = availableHeightPx;
-
-                worksheet.addImage(imageId, {
-                  tl: { col: 10 + j, row: i + 1 } as any,
-                  ext: { width: drawWidth, height: drawHeight },
-                  editAs: 'oneCell',
-                });
-              } catch (imgErr) {
-                // Si falla la imagen, dejar celda vacía
-              }
-            }
-          }
-        }
-      }
-
-      // Descargar el archivo
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      saveAs(blob, 'inventario-obras.xlsx');
     } catch (error: any) {
-      alert('Error exportando a Excel: ' + (error?.message || error));
+      console.error('Error exportando a Excel:', error);
+      this.exportError.set(
+        'No se pudo generar el archivo de Excel. Intenta de nuevo.'
+      );
     } finally {
       this.isExporting.set(false);
     }
   }
+
+  private exportService = inject(ArtworkExportService);
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -236,13 +79,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
 
   // Signal para manejar índices de imágenes de cada obra
   private imageIndices = signal<Record<number, number>>({});
-
-  // Signal para detectar si la página estaba oculta
-  private wasPageHidden = signal<boolean>(false);
-  private lastVisibilityChange = signal<number>(Date.now());
-
-  // Bandera para evitar múltiples intentos de recuperación simultáneos
-  private isRecovering = signal<boolean>(false);
 
   // Signals para filtros
   searchTerm = signal<string>('');
@@ -306,217 +142,19 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     // AuthService maneja automáticamente la autenticación
     this.setupFilters();
     this.listenToQueryParams();
-    this.setupErrorRecovery();
-    this.setupPageVisibilityHandler();
   }
 
-  // Sistema de recuperación de errores - simplificado y menos agresivo
-  private setupErrorRecovery() {
-    // Monitorear estado de loading para detectar problemas
-    let loadingTimeoutId: NodeJS.Timeout | null = null;
-    let rescueTimeoutId: NodeJS.Timeout | null = null;
-
-    effect(() => {
-      const loading = this.isLoading();
-
-      if (loading) {
-        // Timeout de rescate rápido tras inactividad o reinicio de sesión
-        rescueTimeoutId = setTimeout(() => {
-          if (this.isLoading()) {
-            console.warn(
-              'Rescue timeout: Forcing reset and reload after 30s stuck loading'
-            );
-            this.artworksService.resetLoadingState();
-            this.artworksService.getAllArtworks({ page: this.currentPage() });
-          }
-        }, 30000); // 30 segundos
-
-        // Timeout de seguridad MUY largo (último recurso)
-        loadingTimeoutId = setTimeout(() => {
-          console.warn('Detected very long loading - attempting recovery');
-          this.recoverFromLoadingError();
-        }, 120000); // 2 minutos
-      } else {
-        // Si terminó de cargar, limpiar timeouts
-        if (loadingTimeoutId) {
-          clearTimeout(loadingTimeoutId);
-          loadingTimeoutId = null;
-        }
-        if (rescueTimeoutId) {
-          clearTimeout(rescueTimeoutId);
-          rescueTimeoutId = null;
-        }
-      }
-    });
-  }
-
-  private setupPageVisibilityHandler() {
-    // Detectar cuando la página vuelve a estar visible después de estar oculta
-    document.addEventListener('visibilitychange', async () => {
-      if (document.hidden) {
-        // La página se ocultó
-        this.wasPageHidden.set(true);
-        this.lastVisibilityChange.set(Date.now());
-      } else {
-        // La página volvió a estar visible
-        const hiddenTime = Date.now() - this.lastVisibilityChange();
-        const hiddenSeconds = Math.round(hiddenTime / 1000);
-
-        // Evitar múltiples intentos si ya está recuperando
-        if (this.isRecovering()) {
-          this.wasPageHidden.set(false);
-          return;
-        }
-
-        // Si estuvo oculta por más de 2 minutos, hacer recuperación preventiva
-        if (this.wasPageHidden() && hiddenTime > 2 * 60 * 1000) {
-          // Marcar que estamos recuperando
-          this.isRecovering.set(true);
-
-          try {
-            // 1. Cancelar cualquier request pendiente
-            this.artworksService.resetLoadingState();
-
-            // 2. El servicio ahora maneja automáticamente la verificación de sesión
-            // antes de cada request, así que solo necesitamos recargar los datos
-            if (this.hasActiveFilters()) {
-              const ubicacionFilter =
-                this.selectedUbicaciones().length > 0
-                  ? this.selectedUbicaciones()
-                  : this.ubicacionFilter();
-
-              await this.artworksService.filterArtworks(
-                {
-                  search: this.searchTerm(),
-                  ubicacion: ubicacionFilter,
-                  responsable: this.responsableFilter(),
-                  autor: this.autorFilter(),
-                  tecnica: this.tecnicaFilter(),
-                },
-                this.currentPage()
-              );
-            } else {
-              await this.artworksService.getAllArtworks({
-                page: this.currentPage(),
-              });
-            }
-          } catch (error) {
-            console.error('Error during preventive recovery:', error);
-
-            // Si falla, intentar una vez más después de una espera más larga
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-
-            try {
-              await this.artworksService.getAllArtworks({
-                page: this.currentPage(),
-              });
-            } catch (retryError) {
-              console.error('Retry also failed:', retryError);
-              // El servicio ya maneja los errores y los muestra al usuario
-            }
-          } finally {
-            this.isRecovering.set(false);
-          }
-        }
-
-        this.wasPageHidden.set(false);
-      }
-    });
-  }
-
-  private async handleStaleConnection() {
-    // Este método ya no es necesario con el nuevo sistema de recuperación
-    // Mantener por compatibilidad pero simplificado
-    await this.recoverFromLoadingError();
-  }
-
-  private async recoverFromLoadingError() {
-    // Evitar múltiples intentos simultáneos
-    if (this.isRecovering()) {
-      return;
-    }
-
-    this.isRecovering.set(true);
-
-    try {
-      // 1. Resetear estado de artworks service
-      this.artworksService.resetLoadingState();
-
-      // 2. Refrescar sesión de Supabase
-      try {
-        await this.authService.supabaseService.refreshSession();
-      } catch (error) {
-        console.warn('Session refresh failed:', error);
-      }
-
-      // 3. Esperar para que la conexión se estabilice
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // 4. Recargar datos con un solo intento (no múltiples reintentos)
-      try {
-        if (this.hasActiveFilters()) {
-          const ubicacionFilter =
-            this.selectedUbicaciones().length > 0
-              ? this.selectedUbicaciones()
-              : this.ubicacionFilter();
-
-          await this.artworksService.filterArtworks(
-            {
-              search: this.searchTerm(),
-              ubicacion: ubicacionFilter,
-              responsable: this.responsableFilter(),
-              autor: this.autorFilter(),
-              tecnica: this.tecnicaFilter(),
-            },
-            this.currentPage()
-          );
-        } else {
-          await this.artworksService.getAllArtworks();
-        }
-      } catch (error) {
-        console.error('Recovery failed:', error);
-      }
-    } finally {
-      // Siempre resetear la bandera al finalizar
-      this.isRecovering.set(false);
-    }
-  }
-
-  private async retryLoadArtworks(attempts: number = 2): Promise<void> {
-    // Simplificado: solo 2 intentos en lugar de 3
-    for (let i = 0; i < attempts; i++) {
-      try {
-        if (this.hasActiveFilters()) {
-          const ubicacionFilter =
-            this.selectedUbicaciones().length > 0
-              ? this.selectedUbicaciones()
-              : this.ubicacionFilter();
-
-          await this.artworksService.filterArtworks(
-            {
-              search: this.searchTerm(),
-              ubicacion: ubicacionFilter,
-              responsable: this.responsableFilter(),
-              autor: this.autorFilter(),
-              tecnica: this.tecnicaFilter(),
-            },
-            this.currentPage()
-          );
-        } else {
-          await this.artworksService.getAllArtworks();
-        }
-
-        return;
-      } catch (error) {
-        console.warn(`Retry attempt ${i + 1} failed:`, error);
-        if (i < attempts - 1) {
-          // Espera más corta entre intentos
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-        }
-      }
-    }
-    throw new Error('All retry attempts failed');
-  }
+  // Antes habia aqui tres sistemas de recuperacion compitiendo entre si:
+  // setupErrorRecovery() (effect con timeouts de 30s/120s),
+  // setupPageVisibilityHandler() (listener de visibilitychange que ademas
+  // nunca se desuscribia, filtrando el componente en cada navegacion),
+  // recoverFromLoadingError() y retryLoadArtworks().
+  //
+  // Todo eso se solapaba con InactivityService, que ya reinicializa cliente y
+  // sesion al volver la pestana, y con los reintentos de ArtworksService; al
+  // coincidir llegaban a cancelarse peticiones entre si. Ahora cada cosa tiene
+  // un unico responsable: InactivityService la sesion, ArtworksService los
+  // reintentos, y este componente solo presenta.
 
   // Métodos para persistencia de filtros
   private saveFiltersToStorage() {
@@ -559,9 +197,16 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
 
       // Restaurar filtros sin triggear búsquedas
       this.searchTerm.set(filters.searchTerm || '');
-      this.ubicacionFilter.set(filters.ubicacionFilter || '');
-      this.selectedUbicaciones.set(filters.selectedUbicaciones || []);
-      this.responsableFilter.set(filters.responsableFilter || '');
+      const puedeFiltrarRestringido = this.isAdmin();
+      this.ubicacionFilter.set(
+        puedeFiltrarRestringido ? filters.ubicacionFilter || '' : ''
+      );
+      this.selectedUbicaciones.set(
+        puedeFiltrarRestringido ? filters.selectedUbicaciones || [] : []
+      );
+      this.responsableFilter.set(
+        puedeFiltrarRestringido ? filters.responsableFilter || '' : ''
+      );
       this.autorFilter.set(filters.autorFilter || '');
       this.tecnicaFilter.set(filters.tecnicaFilter || '');
       this.selectedColumns.set(filters.selectedColumns || 3);
@@ -643,11 +288,20 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
         }
 
         const search = params['search'] || '';
-        const ubicacion = params['ubicacion'] || '';
-        const ubicaciones = params['ubicaciones']
-          ? params['ubicaciones'].split(',')
-          : [];
-        const responsable = params['responsable'] || '';
+        // ubicacion y responsable son columnas restringidas: si no se ignoran
+        // aqui, un visitante podria usar la URL para deducir su contenido
+        // aunque la interfaz no muestre esos filtros.
+        const puedeFiltrarRestringido = this.isAdmin();
+        const ubicacion = puedeFiltrarRestringido
+          ? params['ubicacion'] || ''
+          : '';
+        const ubicaciones =
+          puedeFiltrarRestringido && params['ubicaciones']
+            ? params['ubicaciones'].split(',')
+            : [];
+        const responsable = puedeFiltrarRestringido
+          ? params['responsable'] || ''
+          : '';
         const autor = params['autor'] || '';
         const tecnica = params['tecnica'] || '';
 
@@ -732,11 +386,6 @@ export class ArtworkListComponent implements AfterViewInit, OnDestroy {
     this.artworkToDelete.set(null);
     this.isDeleting.set(false);
     this.deleteError.set(null);
-  }
-
-  ngAfterViewInit(): void {
-    // Ya no necesario - la carga se hace en listenToQueryParams
-    // Esto evita cargas duplicadas que causaban lentitud
   }
 
   // Métodos para manejar el carrusel de imágenes
