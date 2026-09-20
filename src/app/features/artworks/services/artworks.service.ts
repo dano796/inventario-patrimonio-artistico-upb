@@ -42,8 +42,8 @@ export class ArtworksService {
     await this.supabaseService.ensureActiveSession();
     this.supabaseClient = this.supabaseService.supabaseClient;
     const { data, error } = await this.supabaseClient
-      .from('obras')
-      .select('*, imagenes(*)')
+      .from(this.tablaLectura())
+      .select(`${this.selectColumns()}, imagenes(*)`)
       .returns<Artwork[]>();
     if (error) throw error;
     return data || [];
@@ -92,12 +92,23 @@ export class ArtworksService {
   hasNextPage = computed(() => this.currentPage() < this.totalPages());
 
   /**
-   * Columnas a pedir segun el rol. La defensa real son los GRANT por columna /
-   * la vista publica en Postgres; esto evita ademas que los datos sensibles
-   * viajen al navegador de un visitante.
+   * Columnas a pedir segun el rol. La defensa real son los GRANT por columna
+   * en Postgres; esto evita ademas que los datos sensibles viajen al
+   * navegador de un visitante.
    */
   private selectColumns(): string {
     return this.authService.isAdmin() ? COLUMNAS_ADMIN : COLUMNAS_PUBLICAS;
+  }
+
+  /**
+   * Relacion de la que leer. `authenticated` no tiene concedidas ubicacion,
+   * valor ni responsable sobre la tabla `obras`, porque los permisos por
+   * columna son por rol y un administrador tambien es `authenticated`. Esas
+   * columnas solo las sirve la vista `obras_admin`, que comprueba el rol
+   * dentro. Las escrituras siguen yendo contra `obras`.
+   */
+  private tablaLectura(): 'obras' | 'obras_admin' {
+    return this.authService.isAdmin() ? 'obras_admin' : 'obras';
   }
 
   /** Descarta los filtros que un visitante anonimo no puede usar. */
@@ -213,7 +224,7 @@ export class ArtworksService {
       // `estimated` devolvia un conteo del planificador, asi que totalPages
       // podia ofrecer paginas vacias en consultas filtradas.
       let query = this.supabaseClient
-        .from('obras')
+        .from(this.tablaLectura())
         .select(`${this.selectColumns()}, imagenes(*)`, { count: 'exact' });
 
       // Aplicar filtros de búsqueda si existen (optimización: solo aplicar filtros no vacíos)
@@ -584,7 +595,7 @@ export class ArtworksService {
       while (retries <= maxRetries) {
         try {
           const { data, error } = await this.supabaseClient
-            .from('obras')
+            .from(this.tablaLectura())
             .select(`${this.selectColumns()}, imagenes(*)`)
             .eq('id', id)
             .single()
@@ -688,7 +699,9 @@ export class ArtworksService {
         await this.supabaseClient
           .from('obras')
           .insert(artworkData)
-          .select()
+          // Solo el id: devolver la fila entera exigiria SELECT sobre las
+          // columnas restringidas, que no estan concedidas en la tabla base.
+          .select('id')
           .single();
 
       if (artworkError) {
@@ -777,7 +790,7 @@ export class ArtworksService {
           .from('obras')
           .update(updateData)
           .eq('id', id)
-          .select()
+          .select('id')
           .single();
 
       if (artworkError) {
