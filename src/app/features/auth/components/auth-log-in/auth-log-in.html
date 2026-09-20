@@ -80,6 +80,12 @@
         </div>
 
         <!-- Entrada con la cuenta institucional -->
+        <p class="text-sm text-gray-600 leading-relaxed mb-6">
+          Entra con tu cuenta institucional
+          <span class="font-semibold text-blue-600">&#64;upb.edu.co</span> para
+          gestionar el inventario.
+        </p>
+
         <button
           type="button"
           (click)="onMicrosoftLogIn()"
@@ -93,6 +99,20 @@
           </svg>
           Continuar con Microsoft
         </button>
+
+        @if (globalErrorMessage()) {
+        <div
+          class="text-red-500 text-sm mt-4 font-medium flex items-center justify-center"
+        >
+          <ng-icon name="heroInformationCircleSolid" size="1rem" class="mr-2" />
+          {{ globalErrorMessage() }}
+        </div>
+        }
+
+        <p class="mt-6 text-center text-sm text-gray-500 leading-relaxed">
+          Solo accesible para personal autorizado de la Universidad Pontificia
+          Bolivariana.
+        </p>
 
         @if (accesoPorContrasena) {
         <div class="flex items-center gap-4 my-6">
