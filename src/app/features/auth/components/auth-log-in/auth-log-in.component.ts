@@ -38,9 +38,13 @@ export class AuthLogInComponent implements OnInit {
       Validators.required,
       Validators.email,
     ]),
+    // Sin reglas de longitud: al entrar, la contrasena o es la correcta o no
+    // lo es, y quien la teclea ya la tiene. Exigir un minimo aqui solo sirve
+    // para anunciar la politica de contrasenas y para regañar a quien aun no
+    // ha terminado de escribir. Las reglas viven donde se establece la
+    // contrasena, en actualizar-contrasena.
     contrasena: this.formBuilder.nonNullable.control('', [
       Validators.required,
-      Validators.minLength(8),
     ]),
   });
 
