@@ -6,6 +6,14 @@ import { Routes } from '@angular/router';
  * desde el panel de Supabase. Recordar desactivar tambien los signups en
  * Supabase -> Authentication -> Sign In / Providers, porque quitar la ruta
  * no impide llamar a supabase.auth.signUp() directamente.
+ *
+ * El acceso por contrasena se retira en favor de la cuenta institucional. Las
+ * rutas de recuperar y actualizar contrasena quedan comentadas, no borradas:
+ * sus componentes siguen en el repositorio y basta con devolverlas aqui y
+ * poner accesoPorContrasena en true en auth-log-in.component.ts.
+ *
+ * Igual que con los signups, quitar las rutas es solo interfaz. Lo que cierra
+ * esa via es desactivar el proveedor Email en Supabase.
  */
 export const routes: Routes = [
   {
@@ -16,22 +24,22 @@ export const routes: Routes = [
         (m) => m.AuthLogInComponent
       ),
   },
-  {
-    path: 'recuperar-contrasena',
-    title: 'Recuperar contraseña | Inventario Patrimonio Artístico UPB',
-    loadComponent: () =>
-      import('./components/forgot-password/forgot-password.component').then(
-        (m) => m.ForgotPasswordComponent
-      ),
-  },
-  {
-    path: 'actualizar-contrasena',
-    title: 'Actualizar contraseña | Inventario Patrimonio Artístico UPB',
-    loadComponent: () =>
-      import('./components/update-password/update-password.component').then(
-        (m) => m.UpdatePasswordComponent
-      ),
-  },
+  // {
+  //   path: 'recuperar-contrasena',
+  //   title: 'Recuperar contraseña | Inventario Patrimonio Artístico UPB',
+  //   loadComponent: () =>
+  //     import('./components/forgot-password/forgot-password.component').then(
+  //       (m) => m.ForgotPasswordComponent
+  //     ),
+  // },
+  // {
+  //   path: 'actualizar-contrasena',
+  //   title: 'Actualizar contraseña | Inventario Patrimonio Artístico UPB',
+  //   loadComponent: () =>
+  //     import('./components/update-password/update-password.component').then(
+  //       (m) => m.UpdatePasswordComponent
+  //     ),
+  // },
   {
     path: '**',
     redirectTo: 'iniciar-sesion',

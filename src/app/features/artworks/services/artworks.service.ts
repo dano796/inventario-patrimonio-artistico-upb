@@ -699,8 +699,6 @@ export class ArtworksService {
         await this.supabaseClient
           .from('obras')
           .insert(artworkData)
-          // Solo el id: devolver la fila entera exigiria SELECT sobre las
-          // columnas restringidas, que no estan concedidas en la tabla base.
           .select('id')
           .single();
 

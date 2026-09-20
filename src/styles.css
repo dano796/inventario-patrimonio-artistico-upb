@@ -6,12 +6,7 @@ body {
   font-family: "Manrope", Arial, Helvetica, sans-serif;
 }
 
-/*
- * Casi todos los <ng-icon> viven dentro de un contenedor flex, junto a un
- * texto que puede partirse en varias lineas. Por defecto un hijo de flex
- * puede encogerse por debajo de su tamano, y el icono se ve recortado.
- * Se arregla una vez aqui en lugar de repetir shrink-0 en cada plantilla.
- */
+/* Sin esto el icono se recorta cuando el texto de al lado ocupa varias lineas. */
 ng-icon {
   flex-shrink: 0;
 }

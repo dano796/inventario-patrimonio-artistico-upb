@@ -38,11 +38,6 @@ export class AuthLogInComponent implements OnInit {
       Validators.required,
       Validators.email,
     ]),
-    // Sin reglas de longitud: al entrar, la contrasena o es la correcta o no
-    // lo es, y quien la teclea ya la tiene. Exigir un minimo aqui solo sirve
-    // para anunciar la politica de contrasenas y para regañar a quien aun no
-    // ha terminado de escribir. Las reglas viven donde se establece la
-    // contrasena, en actualizar-contrasena.
     contrasena: this.formBuilder.nonNullable.control('', [
       Validators.required,
     ]),
@@ -101,6 +96,14 @@ export class AuthLogInComponent implements OnInit {
    * la procesa supabase-js. Solo se llega a la linea del error si la peticion
    * ni siquiera sale.
    */
+  /**
+   * Las cuentas son institucionales y se entra por Microsoft. El formulario
+   * de correo y contrasena se conserva pero no se muestra; ponerlo en true
+   * lo devuelve. Ocultarlo es solo interfaz: lo que cierra de verdad esa via
+   * es desactivar el proveedor Email en Supabase.
+   */
+  protected readonly accesoPorContrasena = false;
+
   async onMicrosoftLogIn() {
     this.globalErrorMessage.set('');
 
