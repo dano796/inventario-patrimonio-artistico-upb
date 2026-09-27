@@ -85,6 +85,42 @@ describe('planificarImportacion', () => {
     ]);
   });
 
+  it('no borra en la base un campo que la hoja trae vacío', () => {
+    const plan = planDe({
+      filas: [fila(2, { titulo: 'Obra', observaciones: null })],
+      emparejamientos: [par(2, 5)],
+      obras: [obra(5, { titulo: 'Obra', observaciones: 'Busto de mujer' })],
+    });
+    expect(plan.actualizaciones).toEqual([]);
+    expect(plan.conservados).toEqual([{ fila: 2, obraId: 5, campo: 'observaciones' }]);
+  });
+
+  it('conserva el campo vacío y a la vez actualiza los demás que sí difieren', () => {
+    const plan = planDe({
+      filas: [fila(2, { titulo: 'Obra', observaciones: null, ubicacion: 'Bloque 11' })],
+      emparejamientos: [par(2, 5)],
+      obras: [obra(5, { titulo: 'Obra', observaciones: 'Busto de mujer', ubicacion: 'Bloque 6' })],
+    });
+    expect(plan.actualizaciones).toEqual([
+      { fila: 2, obraId: 5, valores: { ubicacion: 'Bloque 11' }, cambios: [{ campo: 'ubicacion', base: 'Bloque 6', hoja: 'Bloque 11' }] },
+    ]);
+    expect(plan.conservados).toEqual([{ fila: 2, obraId: 5, campo: 'observaciones' }]);
+  });
+
+  it('la excepción de otra moneda sigue vaciando el valor en una obra emparejada', () => {
+    const f = fila(2, { titulo: 'Obra', valor: null }, { noConvertibles: ['valor'] });
+    const plan = planDe({
+      filas: [f],
+      avisos: [{ fila: 2, campo: 'valor', motivo: MOTIVO_OTRA_MONEDA, original: 'USD 5,000' }],
+      emparejamientos: [par(2, 5)],
+      obras: [obra(5, { titulo: 'Obra', valor: 1200000, observaciones: 'Valor original: USD 5,000' })],
+    });
+    expect(plan.actualizaciones).toEqual([
+      { fila: 2, obraId: 5, valores: { valor: null }, cambios: [{ campo: 'valor', base: 1200000, hoja: null }] },
+    ]);
+    expect(plan.conservados).toEqual([]);
+  });
+
   it('reúne los responsables por nombre normalizado y detecta cargos distintos', () => {
     const plan = planDe({
       filas: [

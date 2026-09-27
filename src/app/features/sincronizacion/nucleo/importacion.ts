@@ -48,6 +48,11 @@ export interface Excepcion {
   obraId: number;
   campo: Campo;
 }
+export interface CampoConservado {
+  fila: number;
+  obraId: number;
+  campo: Campo;
+}
 export interface PlanImportacion {
   responsables: ResponsableHoja[];
   cargosEnConflicto: CargoEnConflicto[];
@@ -55,6 +60,7 @@ export interface PlanImportacion {
   altas: Alta[];
   imagenes: ImagenAImportar[];
   imagenesRechazadas: ImagenRechazada[];
+  conservados: CampoConservado[];
   avisos: AvisoFila[];
   obrasSinFila: number[];
 }
@@ -86,7 +92,8 @@ export function planificarImportacion(entrada: EntradaImportacion): PlanImportac
   const personas = new Map<string, Persona>();
   const plan: PlanImportacion = {
     responsables: [], cargosEnConflicto: [], actualizaciones: [], altas: [],
-    imagenes: [], imagenesRechazadas: [], avisos: entrada.avisos, obrasSinFila: entrada.obrasSinFila,
+    imagenes: [], imagenesRechazadas: [], conservados: [],
+    avisos: entrada.avisos, obrasSinFila: entrada.obrasSinFila,
   };
 
   for (const fila of entrada.filas) {
@@ -112,6 +119,11 @@ export function planificarImportacion(entrada: EntradaImportacion): PlanImportac
     for (const campo of CAMPOS) {
       const noConvertible = fila.noConvertibles.includes(campo) && !(campo === 'valor' && moneda);
       if (noConvertible || excepciones.has(`${obra.id}|${campo}`)) continue;
+      const esOtraMoneda = campo === 'valor' && !!moneda;
+      if (valores[campo] === null && obra.campos[campo] !== null && !esOtraMoneda) {
+        plan.conservados.push({ fila: fila.fila, obraId: obra.id, campo });
+        continue;
+      }
       if (iguales(campo, obra.campos[campo], valores[campo])) continue;
       cambios.push({ campo, base: obra.campos[campo], hoja: valores[campo] });
       (aplicar as Record<Campo, unknown>)[campo] = valores[campo];
