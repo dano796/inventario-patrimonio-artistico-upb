@@ -52,3 +52,10 @@ Thumbs.db
 /docs
 /scripts/*.sql
 .mcp.json
+
+# Copias de la hoja oficial: contienen columnas restringidas
+*.xlsx
+
+# Importación inicial: clave service_role y archivos de trabajo con datos restringidos
+.env.importacion
+/importacion/
