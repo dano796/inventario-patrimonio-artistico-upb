@@ -1,0 +1,88 @@
+@if (seleccion(); as actual) {
+  <div class="flex items-center justify-between gap-2 px-3 py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-50">
+    <span class="truncate text-gray-900">
+      @if (actual.tipo === 'existente') {
+        {{ actual.responsable.nombre }}{{ actual.responsable.cargo ? " — " + actual.responsable.cargo : "" }}
+      } @else {
+        {{ actual.nombre }}{{ actual.cargo ? " — " + actual.cargo : "" }}
+      }
+    </span>
+    <button type="button" (click)="quitar()" aria-label="Quitar responsable" class="text-gray-500 hover:text-gray-800">✕</button>
+  </div>
+  @if (actual.tipo === 'nuevo') {
+    <p class="mt-1.5 text-xs text-blue-700">Nuevo · se creará al guardar la obra</p>
+  }
+} @else if (creando()) {
+  <div class="rounded-lg border border-blue-200 bg-blue-50/40 p-4 space-y-3">
+    <p class="text-sm font-semibold text-gray-900">Nuevo responsable</p>
+    <div>
+      <label for="responsable-nombre" class="block text-sm font-medium text-gray-700 mb-1.5">Nombre completo</label>
+      <input id="responsable-nombre" type="text" [value]="nombreNuevo()"
+        (input)="nombreNuevo.set($any($event.target).value)"
+        (keydown.enter)="$event.preventDefault(); confirmarCreacion()"
+        class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    </div>
+    <div>
+      <label for="responsable-cargo" class="block text-sm font-medium text-gray-700 mb-1.5">Cargo</label>
+      <input id="responsable-cargo" type="text" list="cargos-responsables" [value]="cargoNuevo()"
+        (input)="cargoNuevo.set($any($event.target).value)"
+        (keydown.enter)="$event.preventDefault(); confirmarCreacion()"
+        class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <datalist id="cargos-responsables">
+        @for (cargo of cargos(); track cargo) {
+          <option [value]="cargo"></option>
+        }
+      </datalist>
+    </div>
+    @if (parecidos().length) {
+      <div class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-900 space-y-1">
+        <p class="font-medium">¿Es alguna de estas personas?</p>
+        @for (parecido of parecidos(); track parecido.id) {
+          <div class="flex items-center justify-between gap-2">
+            <span class="truncate">{{ parecido.nombre }}{{ parecido.cargo ? " — " + parecido.cargo : "" }}</span>
+            <button type="button" (click)="elegir(parecido)" class="shrink-0 font-medium text-blue-700 hover:text-blue-900">Usar esta</button>
+          </div>
+        }
+      </div>
+    }
+    <div class="flex justify-end gap-2">
+      <button type="button" (click)="cancelarCreacion()"
+        class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50">Cancelar</button>
+      <button type="button" (click)="confirmarCreacion()" [disabled]="!nombreNuevo().trim()"
+        class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">Usar este responsable</button>
+    </div>
+  </div>
+} @else {
+  <div class="relative">
+    <input id="responsable" type="text" autocomplete="off" placeholder="Buscar responsable"
+      [value]="texto()"
+      (input)="texto.set($any($event.target).value); listaAbierta.set(true)"
+      (focus)="listaAbierta.set(true)"
+      (blur)="cerrarLista()"
+      (keydown.enter)="$event.preventDefault(); elegirPrimera()"
+      class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+    @if (listaAbierta()) {
+      <ul class="absolute z-10 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg text-sm">
+        @for (responsable of coincidencias(); track responsable.id) {
+          <li>
+            <button type="button" (click)="elegir(responsable)" class="w-full text-left px-3 py-2 hover:bg-gray-50">
+              <span class="text-gray-900">{{ responsable.nombre }}</span>
+              @if (responsable.cargo) {
+                <span class="text-gray-500"> — {{ responsable.cargo }}</span>
+              }
+            </button>
+          </li>
+        } @empty {
+          <li class="px-3 py-2 text-gray-500">Ningún responsable coincide.</li>
+        }
+        @if (texto().trim() && !existeExacto()) {
+          <li class="border-t border-gray-100">
+            <button type="button" (click)="abrirCreacion()" class="w-full text-left px-3 py-2 font-medium text-blue-700 hover:bg-blue-50">
+              + Crear responsable «{{ texto().trim() }}»
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}

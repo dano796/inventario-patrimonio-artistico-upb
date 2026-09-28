@@ -42,9 +42,12 @@ export class ArtworkExportService {
       { header: 'DIMENSIONES (cm)', key: 'dimension', width: 15 },
       { header: 'AÑO DE ELABORACIÓN', key: 'ano', width: 15 },
       { header: 'UBICACIÓN', key: 'ubicacion', width: 30 },
+      { header: 'BLOQUE ASIGNADO', key: 'bloque_asignado', width: 15 },
       { header: 'VALOR', key: 'valor', width: 15 },
       { header: 'OBSERVACIONES', key: 'observaciones', width: 30 },
+      { header: 'DESCRIPCION', key: 'descripcion', width: 30 },
       { header: 'RESPONSABLE', key: 'responsable', width: 20 },
+      { header: 'CARGO', key: 'cargo', width: 20 },
       { header: 'IMAGEN 1', key: 'imagen1', width: 20 },
       { header: 'IMAGEN 2', key: 'imagen2', width: 20 },
       { header: 'IMAGEN 3', key: 'imagen3', width: 20 },
@@ -60,9 +63,12 @@ export class ArtworkExportService {
         dimension: obra.dimension ?? '',
         ano: obra.ano ?? '',
         ubicacion: obra.ubicacion ?? '',
+        bloque_asignado: obra.bloque_asignado ?? '',
         valor: obra.valor ? parseFloat(obra.valor) : '',
         observaciones: obra.observaciones ?? '',
+        descripcion: obra.descripcion ?? '',
         responsable: obra.responsable ?? '',
+        cargo: obra.cargo ?? '',
         imagen1: '',
         imagen2: '',
         imagen3: '',
@@ -82,7 +88,7 @@ export class ArtworkExportService {
         };
       });
       // Aplicar formato de moneda sin decimales a la columna de valor
-      const valorCell = row.getCell(8);
+      const valorCell = row.getCell('valor');
       if (obra.valor) {
         valorCell.numFmt = '"$"#,##0';
       }
@@ -117,6 +123,9 @@ export class ArtworkExportService {
 
     // Ajustar el alto del header
     worksheet.getRow(1).height = 60;
+
+    // Las columnas nuevas desplazan la posicion de IMAGEN 1; calcularla en vez de asumirla fija.
+    const primeraColumnaImagen = worksheet.getColumn('imagen1').number - 1;
 
     // Descargar e insertar hasta 3 imágenes por obra
     for (let i = 0; i < allArtworks.length; i++) {
@@ -174,7 +183,7 @@ export class ArtworkExportService {
                 drawHeight = availableHeightPx;
 
               worksheet.addImage(imageId, {
-                tl: { col: 10 + j, row: i + 1 } as any,
+                tl: { col: primeraColumnaImagen + j, row: i + 1 } as any,
                 ext: { width: drawWidth, height: drawHeight },
                 editAs: 'oneCell',
               });

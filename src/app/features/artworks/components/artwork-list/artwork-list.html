@@ -688,7 +688,7 @@
                               <div class="w-full h-full">
                                 <img
                                   [src]="getCurrentImage(artwork).url"
-                                  [alt]="artwork.titulo"
+                                  [alt]="artwork.titulo || 'Sin título'"
                                   class="w-full h-full object-cover"
                                   loading="lazy"
                                   />
@@ -746,7 +746,7 @@
                             class="text-xl font-semibold text-gray-900 mb-3 cursor-pointer hover:text-blue-600 line-clamp-2 transition-colors duration-300"
                             (click)="viewArtworkDetails(artwork.id)"
                             >
-                            {{ artwork.titulo }}
+                            {{ artwork.titulo || "Sin título" }}
                           </h3>
                           <!-- Información básica: solo autor si existe -->
                           <div class="mb-4">

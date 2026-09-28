@@ -94,7 +94,7 @@
                     >
                     <img
                       [src]="getCurrentImage().url"
-                      [alt]="artwork()!.titulo"
+                      [alt]="artwork()!.titulo || 'Sin título'"
                       class="w-full h-full object-contain"
                       loading="lazy"
                       />
@@ -161,7 +161,7 @@
               class="flex flex-col md:flex-row md:justify-between md:items-start gap-4"
               >
               <h1 class="text-2xl md:text-3xl font-bold text-gray-900">
-                {{ artwork()!.titulo }}
+                {{ artwork()!.titulo || "Sin título" }}
               </h1>
               <!-- Botones de acción visible solo si el usuario es ADMIN -->
               @if (isAdmin()) {
@@ -205,7 +205,7 @@
                 </p>
               </div>
               <!--
-              Ubicacion, valor y responsable solo para administradores: juntos
+              Ubicacion, valor, responsable, bloque y cargo solo para administradores: juntos
               indican que obra vale cuanto y donde encontrarla. El backend no
               envia estas columnas a un visitante anonimo (ver COLUMNAS_PUBLICAS
               en artworks.service.ts); esto ademas las oculta en pantalla.
@@ -233,8 +233,22 @@
                     {{ artwork()!.responsable || "No especificado" }}
                   </p>
                 </div>
+                <div class="col-span-1">
+                  <h3 class="text-base font-medium text-gray-900">Cargo</h3>
+                  <p class="text-base text-gray-700">{{ artwork()!.cargo || "No especificado" }}</p>
+                </div>
+                <div class="col-span-1">
+                  <h3 class="text-base font-medium text-gray-900">Bloque asignado</h3>
+                  <p class="text-base text-gray-700">{{ artwork()!.bloque_asignado || "No especificado" }}</p>
+                </div>
               }
             </div>
+            @if (artwork()!.descripcion) {
+              <div class="mb-6">
+                <h3 class="text-base font-medium text-gray-900 mb-2">Descripción</h3>
+                <p class="text-base text-gray-700 whitespace-pre-line">{{ artwork()!.descripcion }}</p>
+              </div>
+            }
             <div class="mb-6">
               <h3 class="text-base font-medium text-gray-900 mb-2">
                 Observaciones

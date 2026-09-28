@@ -19,7 +19,7 @@ import {
  * un mapa de que obra vale cuanto, donde esta y quien la custodia.
  */
 const COLUMNAS_PUBLICAS =
-  'id, titulo, autor, tecnica, dimension, ano, observaciones, fecha_creacion, fecha_actualizacion';
+  'id, titulo, autor, tecnica, dimension, ano, observaciones, descripcion, fecha_creacion, fecha_actualizacion';
 
 /** Los administradores ven la ficha completa. */
 const COLUMNAS_ADMIN = '*';
