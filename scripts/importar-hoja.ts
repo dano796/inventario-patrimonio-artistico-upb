@@ -12,7 +12,7 @@
  */
 import { DOMParser } from '@xmldom/xmldom';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { descomprimirXlsx, leerHoja, tamanosDeMedios, XmlParser } from '../src/app/features/sincronizacion/nucleo/leer-xlsx';
 import { CamposObra, leerFilasObras } from '../src/app/features/sincronizacion/nucleo/hoja-obras';
@@ -35,6 +35,8 @@ interface Registro {
   obrasCreadas: number[];
   imagenes: { ruta: string; imagenId: number | null }[];
   fotos: number[];
+  // Falso hasta que «revertir» termina con éxito: «aplicar» se niega a correr mientras exista un registro sin revertir.
+  revertido: boolean;
 }
 
 function cargarEntorno(): { url: string; clave: string } {
@@ -67,6 +69,38 @@ function comprobar<T>(respuesta: { data: T; error: unknown }): T {
   return respuesta.data;
 }
 
+/**
+ * Compara dos copias de una tabla por conjunto de ids: cuántas filas son nuevas,
+ * cuántas faltan y (si se da `cambio`) cuántas de las que siguen ahí cambiaron.
+ * Solo devuelve totales — nunca los datos de la fila — para no filtrar columnas
+ * restringidas al reportar la diferencia.
+ */
+function compararConjunto<T>(
+  etiqueta: string,
+  idDe: (item: T) => number,
+  actuales: T[],
+  respaldo: T[],
+  cambio?: (actual: T, previo: T) => boolean
+): string[] {
+  const problemas: string[] = [];
+  const idsActuales = new Set(actuales.map(idDe));
+  const idsRespaldo = new Set(respaldo.map(idDe));
+  const nuevos = [...idsActuales].filter((id) => !idsRespaldo.has(id)).length;
+  const borrados = [...idsRespaldo].filter((id) => !idsActuales.has(id)).length;
+  if (nuevos) problemas.push(`${etiqueta}: ${nuevos} nuevas desde el respaldo`);
+  if (borrados) problemas.push(`${etiqueta}: ${borrados} borradas desde el respaldo`);
+  if (cambio) {
+    const previoPorId = new Map(respaldo.map((r) => [idDe(r), r]));
+    let cambiados = 0;
+    for (const a of actuales) {
+      const previo = previoPorId.get(idDe(a));
+      if (previo && cambio(a, previo)) cambiados++;
+    }
+    if (cambiados) problemas.push(`${etiqueta}: ${cambiados} modificadas desde el respaldo`);
+  }
+  return problemas;
+}
+
 function leerCopia(ruta: string, incluirMedios: boolean) {
   const datos = new Uint8Array(readFileSync(ruta));
   const archivos = descomprimirXlsx(datos, incluirMedios);
@@ -97,30 +131,67 @@ async function obrasDeLaBase(db: SupabaseClient): Promise<ObraBase[]> {
 async function comandoRespaldar(db: SupabaseClient) {
   const directorio = join(SALIDA, `respaldo-${new Date().toISOString().replace(/[:.]/g, '-')}`);
   mkdirSync(join(directorio, 'imagenes'), { recursive: true });
-  const obras = comprobar(await db.from('obras').select('*').order('id')) as unknown[];
+  const obras = comprobar(await db.from('obras').select('*').order('id')) as { id: number }[];
   const imagenes = comprobar(await db.from('imagenes').select('*').order('id')) as { id: number; url: string }[];
   const responsables = comprobar(await db.from('responsables').select('*').order('id')) as unknown[];
-  writeFileSync(join(directorio, 'datos.json'), JSON.stringify({ obras, imagenes, responsables }, null, 2));
+  const sincronizacionEstado = comprobar(
+    await db.from('sincronizacion_estado').select('*').order('obra_id')
+  ) as { obra_id: number }[];
+  const sincronizacionHoja = comprobar(await db.from('sincronizacion_hoja').select('*')) as { id: number }[];
+  writeFileSync(
+    join(directorio, 'datos.json'),
+    JSON.stringify({ obras, imagenes, responsables, sincronizacionEstado, sincronizacionHoja }, null, 2)
+  );
   for (const imagen of imagenes) {
     const ruta = rutaEnBucket(imagen.url);
     if (!ruta) throw new Error(`La imagen ${imagen.id} no está en el bucket ${BUCKET}: ${imagen.url}`);
     const archivo = comprobar(await db.storage.from(BUCKET).download(ruta)) as Blob;
     writeFileSync(join(directorio, 'imagenes', archivoDeRespaldo(ruta)), new Uint8Array(await archivo.arrayBuffer()));
   }
-  console.log(`Respaldo en ${directorio}: ${obras.length} obras, ${imagenes.length} imágenes, ${responsables.length} responsables.`);
+  console.log(
+    `Respaldo en ${directorio}: ${obras.length} obras, ${imagenes.length} imágenes, ${responsables.length} responsables, ${sincronizacionEstado.length} estados de sincronización.`
+  );
 }
 
 async function comandoVaciar(directorio: string, db: SupabaseClient) {
-  const { obras, imagenes } = JSON.parse(readFileSync(join(directorio, 'datos.json'), 'utf8')) as {
-    obras: { id: number }[];
+  const { obras, imagenes, sincronizacionEstado, sincronizacionHoja } = JSON.parse(
+    readFileSync(join(directorio, 'datos.json'), 'utf8')
+  ) as {
+    obras: { id: number; fecha_actualizacion: string | null }[];
     imagenes: { id: number; url: string }[];
+    sincronizacionEstado: { obra_id: number; fecha: string }[];
+    sincronizacionHoja: { id: number; fecha_ultima: string | null; etag: string | null }[];
   };
-  const actuales = comprobar(await db.from('obras').select('id')) as { id: number }[];
+  const actuales = comprobar(
+    await db.from('obras').select('id, fecha_actualizacion')
+  ) as { id: number; fecha_actualizacion: string | null }[];
   const actualesImagenes = comprobar(await db.from('imagenes').select('id')) as { id: number }[];
-  if (actuales.length !== obras.length || actualesImagenes.length !== imagenes.length) {
-    throw new Error(
-      `La base tiene ${actuales.length} obras y ${actualesImagenes.length} imágenes; el respaldo, ${obras.length} y ${imagenes.length}. Haz un respaldo nuevo antes de vaciar.`
-    );
+  const actualesEstado = comprobar(
+    await db.from('sincronizacion_estado').select('obra_id, fecha')
+  ) as { obra_id: number; fecha: string }[];
+  const actualesHoja = comprobar(
+    await db.from('sincronizacion_hoja').select('id, fecha_ultima, etag')
+  ) as { id: number; fecha_ultima: string | null; etag: string | null }[];
+
+  // Compara por conjunto de ids, no por recuento: si entre «respaldar» y «vaciar» se
+  // borra una fila y se crea otra, el recuento cuadra pero el respaldo ya no sirve.
+  const problemas = [
+    ...compararConjunto(
+      'obras', (o) => o.id, actuales, obras,
+      (a, p) => a.fecha_actualizacion !== p.fecha_actualizacion
+    ),
+    ...compararConjunto('imágenes', (i) => i.id, actualesImagenes, imagenes),
+    ...compararConjunto(
+      'sincronizacion_estado', (s) => s.obra_id, actualesEstado, sincronizacionEstado,
+      (a, p) => a.fecha !== p.fecha
+    ),
+    ...compararConjunto(
+      'sincronizacion_hoja', (h) => h.id, actualesHoja, sincronizacionHoja,
+      (a, p) => a.fecha_ultima !== p.fecha_ultima || a.etag !== p.etag
+    ),
+  ];
+  if (problemas.length) {
+    throw new Error(`La base cambió desde el respaldo; no se borra nada:\n${problemas.map((p) => `- ${p}`).join('\n')}\nHaz un respaldo nuevo antes de vaciar.`);
   }
   const rutas = imagenes.map((i) => rutaEnBucket(i.url)!);
   const sinCopia = rutas.filter((r) => !existsSync(join(directorio, 'imagenes', archivoDeRespaldo(r))));
@@ -193,14 +264,43 @@ async function comandoSimular(ruta: string, db: SupabaseClient) {
   console.log('Detalle en importacion/simulacion.json. Para conservar el valor de la base en un campo, añádelo a importacion/excepciones.json como { "obraId": 5, "campo": "ubicacion" }.');
 }
 
+/** Nombres de `registro-*.json` en importacion/ que no terminaron en un «revertir» exitoso. */
+function registrosSinRevertir(): string[] {
+  if (!existsSync(SALIDA)) return [];
+  return readdirSync(SALIDA).filter((nombre) => {
+    if (!/^registro-.*\.json$/.test(nombre)) return false;
+    try {
+      const registro = JSON.parse(readFileSync(join(SALIDA, nombre), 'utf8')) as Registro;
+      return registro.revertido !== true;
+    } catch {
+      return true; // Ilegible: se trata como pendiente, no se descarta en silencio.
+    }
+  });
+}
+
 async function comandoAplicar(ruta: string, db: SupabaseClient) {
+  const pendientes = registrosSinRevertir();
+  if (pendientes.length) {
+    throw new Error(
+      `Hay ${pendientes.length} registro(s) de un «aplicar» anterior sin revertir en importacion/; ejecuta «revertir» sobre cada uno antes de aplicar de nuevo (si no, se duplicarían obras).`
+    );
+  }
   const { archivos, resultado, emparejamientos, plan } = await prepararPlan(ruta, db, true);
+  if (plan.obrasSinFila.length) {
+    throw new Error(
+      `Hay ${plan.obrasSinFila.length} obra(s) de la base que no aparecen en el emparejamiento; vuelve a ejecutar «emparejar» (o revisa con «revertir» si vienen de un aplicar fallido) antes de aplicar.`
+    );
+  }
   if (plan.cargosEnConflicto.length) {
-    throw new Error(`Responsables con cargos distintos; corrígelos en la hoja y vuelve a copiarla:\n${JSON.stringify(plan.cargosEnConflicto, null, 2)}`);
+    const rutaDetalle = join(SALIDA, `cargos-en-conflicto-${Date.now()}.json`);
+    writeFileSync(rutaDetalle, JSON.stringify(plan.cargosEnConflicto, null, 2));
+    throw new Error(
+      `${plan.cargosEnConflicto.length} responsable(s) con cargos distintos; corrígelos en la hoja y vuelve a copiarla. Detalle en ${rutaDetalle}`
+    );
   }
   const registro: Registro = {
     inicio: new Date().toISOString(), copia: basename(ruta), responsablesCreados: [], cargosAnteriores: [],
-    actualizaciones: [], obrasCreadas: [], imagenes: [], fotos: [],
+    actualizaciones: [], obrasCreadas: [], imagenes: [], fotos: [], revertido: false,
   };
   const nombreRegistro = `registro-${registro.inicio.replace(/[:.]/g, '-')}.json`;
   const anotar = () => guardar(nombreRegistro, registro);
@@ -300,6 +400,7 @@ async function comandoRevertir(ruta: string, db: SupabaseClient) {
   for (const a of [...r.actualizaciones].reverse()) comprobar(await db.from('obras').update(a.antes).eq('id', a.obraId));
   for (const c of r.cargosAnteriores) comprobar(await db.from('responsables').update({ cargo: c.cargo }).eq('id', c.id));
   if (r.responsablesCreados.length) comprobar(await db.from('responsables').delete().in('id', r.responsablesCreados));
+  writeFileSync(ruta, JSON.stringify({ ...r, revertido: true }, null, 2));
   console.log(`Revertido: ${r.obrasCreadas.length} obras borradas, ${r.actualizaciones.length} restauradas, ${r.imagenes.length} imágenes retiradas.`);
 }
 
@@ -325,6 +426,23 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : JSON.stringify(error, null, 2));
+  if (error instanceof Error) {
+    console.error(error.message);
+  } else {
+    // Un error de PostgREST/Postgres no es un Error: puede traer en `details` el
+    // valor que violó una restricción (p. ej. el nombre en un unique_violation de
+    // responsables). Solo el código y el mensaje van a consola; el resto, a un
+    // archivo ignorado por git.
+    const e = error as { code?: string; message?: string };
+    let rutaDetalle = '(no se pudo escribir)';
+    try {
+      mkdirSync(SALIDA, { recursive: true });
+      rutaDetalle = join(SALIDA, `error-${Date.now()}.json`);
+      writeFileSync(rutaDetalle, JSON.stringify(error, null, 2));
+    } catch {
+      // Si ni siquiera esto se puede escribir, se sigue con el mensaje genérico.
+    }
+    console.error(`Error de la base (code ${e.code ?? 'desconocido'}): ${e.message ?? 'sin mensaje'}. Detalle completo en ${rutaDetalle}`);
+  }
   process.exit(1);
 });
