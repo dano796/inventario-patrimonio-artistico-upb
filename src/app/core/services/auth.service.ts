@@ -112,17 +112,17 @@ export class AuthService {
       }, AuthService.TIEMPO_MAXIMO_INICIALIZACION_MS);
     });
 
-    try {
-      await Promise.race([this.cargarSesionYPerfil(), tope]);
-    } catch (error) {
+    // Si pierde la carrera contra el tope y rechaza mas tarde, el .catch va
+    // enganchado aqui mismo: si no, quedaria como un rechazo sin capturar.
+    const cargaSesionYPerfil = this.cargarSesionYPerfil().catch((error) => {
       console.warn('Error initializing auth:', error);
-      // En caso de error de inicialización, establecer estado por defecto
       this.userProfile.set(null);
       this.loadingProfile.set(false);
-    } finally {
-      clearTimeout(temporizador);
-      this.initializationPromise = null;
-    }
+    });
+
+    await Promise.race([cargaSesionYPerfil, tope]);
+    clearTimeout(temporizador);
+    this.initializationPromise = null;
 
     // Escuchar cambios de autenticación
     this.onAuthStateChange(async (event, session) => {

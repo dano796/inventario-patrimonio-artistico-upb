@@ -114,4 +114,43 @@ describe('AuthService', () => {
     expect(listoResuelto).toBe(true);
     expect(authService.isAuthenticated()).toBe(false);
   }));
+
+  it('un getSession que tarda mas que el tope y luego rechaza no queda como rechazo sin capturar', fakeAsync(() => {
+    let rechazarSesion!: (error: unknown) => void;
+    const sesionPromesa = new Promise<never>((_, reject) => {
+      rechazarSesion = reject;
+    });
+
+    const cliente = {
+      auth: {
+        getSession: () => sesionPromesa,
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe() {} } },
+        }),
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({ single: () => new Promise<never>(() => {}) }),
+        }),
+      }),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: SupabaseService, useValue: { supabaseClient: cliente } },
+      ],
+    });
+
+    const authService = TestBed.inject(AuthService);
+    spyOn(console, 'warn');
+
+    tick(5000);
+
+    const error = new Error('getSession fallo tarde');
+    rechazarSesion(error);
+    tick();
+
+    expect(console.warn).toHaveBeenCalledWith('Error initializing auth:', error);
+    expect(authService.isAuthenticated()).toBe(false);
+  }));
 });
