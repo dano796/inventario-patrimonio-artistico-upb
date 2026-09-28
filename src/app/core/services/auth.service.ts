@@ -17,10 +17,18 @@ export class AuthService {
   private loadingProfile = signal<boolean>(false);
   private initializationPromise: Promise<void> | null = null;
   private reinitializePromise: Promise<void> | null = null;
+  /** Carga de perfil en curso, para que una segunda llamada espere la misma en vez de salir sin hacer nada. */
+  private profileLoadPromise: Promise<void> | null = null;
   private profileCache = new Map<
     string,
     { profile: UserProfile; timestamp: number }
   >();
+  /**
+   * Se resuelve cuando la inicializacion (sesion + perfil, si hay sesion) termino.
+   * Vive aparte de initializationPromise porque este se pone en null al terminar
+   * doInitializeAuth(): un guard que llegue justo despues no debe perder la senal.
+   */
+  private readyPromise: Promise<void>;
 
   /**
    * Se lee de forma sincrona al construir el servicio porque supabase-js
@@ -73,7 +81,12 @@ export class AuthService {
   });
 
   constructor() {
-    this.initializeAuth();
+    this.readyPromise = this.initializeAuth();
+  }
+
+  /** Promesa que resuelve cuando la sesion y el perfil (si hay sesion) ya se cargaron. */
+  listo(): Promise<void> {
+    return this.readyPromise;
   }
 
   private async initializeAuth() {
@@ -131,12 +144,25 @@ export class AuthService {
   private async loadUserProfile(
     userId: string,
     isInitialLoad: boolean = false
-  ) {
-    // Prevenir carga múltiple
-    if (this.loadingProfile() && !isInitialLoad) {
-      return;
+  ): Promise<void> {
+    // Si ya hay una carga en curso, esperar esa misma en vez de salir sin hacer nada:
+    // quien llama necesita el resultado (p. ej. el guard tras un refreshUserProfile()).
+    if (this.profileLoadPromise && !isInitialLoad) {
+      return this.profileLoadPromise;
     }
 
+    const promise = this.fetchAndSetUserProfile(userId);
+    this.profileLoadPromise = promise;
+    try {
+      await promise;
+    } finally {
+      if (this.profileLoadPromise === promise) {
+        this.profileLoadPromise = null;
+      }
+    }
+  }
+
+  private async fetchAndSetUserProfile(userId: string): Promise<void> {
     // Verificar cache primero
     const cached = this.getCachedProfile(userId);
     if (cached) {
@@ -242,8 +268,9 @@ export class AuthService {
     this.loadingProfile.set(false);
     this.clearCache();
 
-    // 3. Reinicializar
-    await this.initializeAuth();
+    // 3. Reinicializar (listo() debe reflejar esta nueva inicializacion, no la anterior)
+    this.readyPromise = this.initializeAuth();
+    await this.readyPromise;
   }
 
   session() {
