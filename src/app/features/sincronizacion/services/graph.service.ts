@@ -15,6 +15,8 @@ export interface ArchivoOneDrive {
 }
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
+/** Sin esto, un Graph que no responde deja la pantalla en «Comprobando conexión…» para siempre. */
+const TOPE_MS = 15000;
 
 @Injectable({ providedIn: 'root' })
 export class GraphService {
@@ -51,7 +53,7 @@ export class GraphService {
   async tieneAccesoArchivos(): Promise<boolean> {
     const token = await this.token();
     if (!token) return false;
-    const respuesta = await fetch(`${GRAPH}/me/drive?$select=id`, {
+    const respuesta = await this.fetchConTope(`${GRAPH}/me/drive?$select=id`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (respuesta.ok) return true;
@@ -90,11 +92,41 @@ export class GraphService {
   private async pedir<T>(ruta: string, init: RequestInit = {}): Promise<T> {
     const token = await this.token();
     if (!token) throw new ErrorGraph(401, 'No hay conexión con OneDrive.');
-    const respuesta = await fetch(`${GRAPH}${ruta}`, {
+    const respuesta = await this.fetchConTope(`${GRAPH}${ruta}`, {
       ...init,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
     if (!respuesta.ok) throw new ErrorGraph(respuesta.status, await respuesta.text());
     return (respuesta.status === 204 ? undefined : await respuesta.json()) as T;
+  }
+
+  /**
+   * Tope compartido por toda petición a Graph. Se implementa con setTimeout +
+   * Promise.race (no con AbortSignal.timeout) para que el spec pueda simular
+   * el vencimiento con un reloj falso. Si quien llama pasa su propio `signal`,
+   * se respeta: también puede abortar la petición real, y su rechazo llega
+   * tal cual, sin convertirse en el ErrorGraph 408 del tope.
+   */
+  private async fetchConTope(url: string, init: RequestInit = {}): Promise<Response> {
+    const controlador = new AbortController();
+    const señalExterna = init.signal;
+    if (señalExterna) {
+      if (señalExterna.aborted) controlador.abort(señalExterna.reason);
+      else señalExterna.addEventListener('abort', () => controlador.abort(señalExterna.reason), { once: true });
+    }
+
+    let id: ReturnType<typeof setTimeout>;
+    const tope = new Promise<never>((_, reject) => {
+      id = setTimeout(() => {
+        controlador.abort();
+        reject(new ErrorGraph(408, 'Microsoft no respondió a tiempo. Vuelve a intentarlo.'));
+      }, TOPE_MS);
+    });
+
+    try {
+      return await Promise.race([fetch(url, { ...init, signal: controlador.signal }), tope]);
+    } finally {
+      clearTimeout(id!);
+    }
   }
 }

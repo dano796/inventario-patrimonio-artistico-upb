@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { GraphService, ErrorGraph } from './graph.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 
@@ -64,4 +64,18 @@ describe('GraphService.tieneAccesoArchivos', () => {
       expect((e as ErrorGraph).estado).toBe(500);
     }
   });
+
+  it('fetch que nunca resuelve: tras el tope, lanza ErrorGraph 408', fakeAsync(() => {
+    spyOn(window, 'fetch').and.returnValue(new Promise<Response>(() => {}));
+    const graph = crearGraphService('token-cualquiera');
+
+    let error: unknown;
+    graph.tieneAccesoArchivos().catch((e) => (error = e));
+
+    tick(15000);
+
+    expect(error instanceof ErrorGraph).toBe(true);
+    expect((error as ErrorGraph).estado).toBe(408);
+    expect((error as ErrorGraph).message).toBe('Microsoft no respondió a tiempo. Vuelve a intentarlo.');
+  }));
 });
