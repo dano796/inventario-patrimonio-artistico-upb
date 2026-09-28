@@ -42,6 +42,23 @@ export class GraphService {
     return data.session?.provider_token ?? null;
   }
 
+  /**
+   * El token de la sesión normal (scopes `openid profile email`) también
+   * responde 2xx aquí si por casualidad alcanza, pero /me/drive exige el
+   * permiso de archivos: es la forma barata de distinguir un token sin ese
+   * permiso de uno que sí lo tiene.
+   */
+  async tieneAccesoArchivos(): Promise<boolean> {
+    const token = await this.token();
+    if (!token) return false;
+    const respuesta = await fetch(`${GRAPH}/me/drive?$select=id`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (respuesta.ok) return true;
+    if (respuesta.status === 401 || respuesta.status === 403) return false;
+    throw new ErrorGraph(respuesta.status, await respuesta.text());
+  }
+
   async buscarArchivos(texto: string): Promise<ArchivoOneDrive[]> {
     const q = encodeURIComponent(texto.replace(/'/g, "''"));
     const r = await this.pedir<{ value: ArchivoOneDrive[] }>(
