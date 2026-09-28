@@ -24,6 +24,8 @@ ng test --include='**/artwork-list.spec.ts'   # single spec file
 
 `src/environments/environment.ts` and `environment.development.ts` are **generated and gitignored**. `scripts/generate-env.js` reads `SUPABASE_URL` and `SUPABASE_KEY` from real env vars first, then `.env` (see `.env.example`). It **exits 1** if either is missing, and refuses a `service_role` key outright — that key must never reach a browser bundle.
 
+`scripts/importar-hoja.ts` (the one-off import of the official sheet, run with `npx tsx`) is the only code that uses a `service_role` key. It reads `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env.importacion`, which is gitignored, and **bypasses RLS by design** — it backs up, empties and reimports `obras`, `imagenes`, `responsables` and the `sincronizacion_*` tables. Never put that key in `.env`, never import that script from `src/`, and keep its output (`importacion/`, gitignored) off the repo: it holds restricted data.
+
 `angular.json` swaps `environment.ts` → `environment.development.ts` for the development configuration.
 
 ## Security model — read this before touching data access
