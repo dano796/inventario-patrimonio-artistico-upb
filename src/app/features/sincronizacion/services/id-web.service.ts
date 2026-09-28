@@ -2,7 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { GraphService } from './graph.service';
 import { HojaVinculada } from './sincronizacion-datos.service';
 import { ENCABEZADO_ID_WEB, ENCABEZADOS } from '../nucleo/hoja-obras';
-import { AsignacionIdWeb, Discrepancia, EstadoFila, verificarAsignaciones } from '../nucleo/id-web';
+import {
+  AsignacionIdWeb,
+  Discrepancia,
+  duplicados,
+  EstadoFila,
+  verificarAsignaciones,
+  verificarColumnaVacia,
+} from '../nucleo/id-web';
 import { claveEmparejamiento, limpiarTexto } from '../nucleo/normalizacion';
 import { agruparFilasContiguas, columnaALetra } from '../nucleo/rangos';
 
@@ -21,6 +28,11 @@ export class IdWebService {
     asignaciones: AsignacionIdWeb[],
     progreso: (escritas: number, total: number) => void
   ): Promise<ResultadoEscritura> {
+    // Una fila o una obra repetidas en el archivo escribirían dos veces la
+    // misma celda: se rechaza sin gastar ninguna petición a Graph.
+    const repetidas = duplicados(asignaciones);
+    if (repetidas.length) return { ok: false, discrepancias: repetidas };
+
     const { drive_id, item_id, nombre_hoja } = hoja;
     const [encabezados = []] = await this.graph.leerValores(drive_id, item_id, nombre_hoja, ANCHO_ENCABEZADO);
     const columnaDe = (nombre: string) => {
@@ -29,34 +41,65 @@ export class IdWebService {
     };
     const autor = columnaDe(ENCABEZADOS.autor);
     const titulo = columnaDe(ENCABEZADOS.titulo);
-    if (autor === null || titulo === null) {
-      return { ok: false, discrepancias: [{ fila: 1, motivo: 'la hoja no tiene las columnas AUTOR y TITULO' }] };
+    const tecnica = columnaDe(ENCABEZADOS.tecnica);
+    const dimension = columnaDe(ENCABEZADOS.dimension);
+    if (autor === null || titulo === null || tecnica === null || dimension === null) {
+      return {
+        ok: false,
+        discrepancias: [{ fila: 1, motivo: 'la hoja no tiene las columnas AUTOR, TITULO, TECNICA y DIMENSION (cm)' }],
+      };
     }
-    let idWeb = columnaDe(ENCABEZADO_ID_WEB);
+
+    // Si «ID WEB» no existe todavía se reclama la primera columna sin
+    // encabezado, pero antes hay que leerla: puede tener datos sueltos que no
+    // son ID WEB y que una escritura ciega borraría.
+    const idWebExistente = columnaDe(ENCABEZADO_ID_WEB);
+    const ultimaConTexto = encabezados.reduce<number>((ultima, e, i) => (limpiarTexto(e) === null ? ultima : i + 1), 0);
+    const columnaDestino = idWebExistente ?? ultimaConTexto + 1;
+    const letra = columnaALetra(columnaDestino);
+
     const ultimaFila = Math.max(...asignaciones.map((a) => a.fila));
     const leerColumna = async (columna: number) => {
-      const letra = columnaALetra(columna);
-      return (await this.graph.leerValores(drive_id, item_id, nombre_hoja, `${letra}1:${letra}${ultimaFila}`)).map((f) => f[0]);
+      const letraColumna = columnaALetra(columna);
+      return (await this.graph.leerValores(drive_id, item_id, nombre_hoja, `${letraColumna}1:${letraColumna}${ultimaFila}`)).map(
+        (f) => f[0]
+      );
     };
     const autores = await leerColumna(autor);
     const titulos = await leerColumna(titulo);
-    const ids = idWeb === null ? [] : await leerColumna(idWeb);
+    const tecnicas = await leerColumna(tecnica);
+    const dimensiones = await leerColumna(dimension);
+    const idsDestino = await leerColumna(columnaDestino);
+
     const actuales = new Map<number, EstadoFila>();
     for (let fila = 2; fila <= ultimaFila; fila++) {
-      actuales.set(fila, { autor: autores[fila - 1], titulo: titulos[fila - 1], idWeb: ids[fila - 1] ?? '' });
+      actuales.set(fila, {
+        autor: autores[fila - 1],
+        titulo: titulos[fila - 1],
+        tecnica: tecnicas[fila - 1],
+        dimension: dimensiones[fila - 1],
+        idWeb: idsDestino[fila - 1] ?? '',
+      });
     }
 
-    const verificacion = verificarAsignaciones(asignaciones, actuales);
+    if (idWebExistente === null) {
+      const ocupadas = verificarColumnaVacia(asignaciones, actuales, letra);
+      if (ocupadas.length) return { ok: false, discrepancias: ocupadas };
+    }
+    // Sin columna «ID WEB» todavía, la celda destino ya se comprobó arriba:
+    // para verificarAsignaciones se trata como en blanco, así todas quedan pendientes.
+    const paraVerificar =
+      idWebExistente === null
+        ? new Map([...actuales].map(([fila, e]) => [fila, { ...e, idWeb: '' }] as const))
+        : actuales;
+
+    const verificacion = verificarAsignaciones(asignaciones, paraVerificar);
     if (!verificacion.ok) return verificacion;
 
-    if (idWeb === null) {
-      const ultimaConTexto = encabezados.reduce<number>((ultima, e, i) => (limpiarTexto(e) === null ? ultima : i + 1), 0);
-      idWeb = ultimaConTexto + 1;
-      const celda = `${columnaALetra(idWeb)}1`;
-      await this.graph.escribirValores(drive_id, item_id, nombre_hoja, `${celda}:${celda}`, [[ENCABEZADO_ID_WEB]]);
+    if (idWebExistente === null) {
+      await this.graph.escribirValores(drive_id, item_id, nombre_hoja, `${letra}1:${letra}1`, [[ENCABEZADO_ID_WEB]]);
     }
 
-    const letra = columnaALetra(idWeb);
     const idDeFila = new Map(verificacion.pendientes.map((a) => [a.fila, a.obraId]));
     let escritas = 0;
     for (const { inicio, fin } of agruparFilasContiguas([...idDeFila.keys()])) {

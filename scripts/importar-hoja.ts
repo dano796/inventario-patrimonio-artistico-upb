@@ -386,7 +386,14 @@ async function comandoAplicar(ruta: string, db: SupabaseClient) {
     'id-web.json',
     resultado.filas
       .filter((f) => obraDeFila.has(f.fila))
-      .map((f) => ({ fila: f.fila, obraId: obraDeFila.get(f.fila)!, autor: f.campos.autor, titulo: f.campos.titulo }))
+      .map((f) => ({
+        fila: f.fila,
+        obraId: obraDeFila.get(f.fila)!,
+        autor: f.campos.autor,
+        titulo: f.campos.titulo,
+        tecnica: f.campos.tecnica,
+        dimension: f.campos.dimension,
+      }))
   );
   console.log(`Fotos: ${fotos.length}. Siguiente paso: escribir «ID WEB» desde /sincronizacion/vincular con importacion/id-web.json.`);
 }
