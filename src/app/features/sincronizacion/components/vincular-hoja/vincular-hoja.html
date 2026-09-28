@@ -1,0 +1,25 @@
+<main class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+  <h1 class="text-2xl font-bold text-gray-900">Vincular la hoja oficial</h1>
+
+  @if (error()) {
+    <p class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ error() }}</p>
+  }
+
+  <section class="rounded-lg border border-gray-200 bg-white p-5 space-y-3">
+    <h2 class="text-base font-semibold text-gray-900">1. Conectar con OneDrive</h2>
+    @if (conectado()) {
+      <p class="text-sm text-green-700">Conectado. La conexión dura alrededor de una hora.</p>
+    } @else {
+      <p class="text-sm text-gray-600">
+        Microsoft pedirá permiso para acceder a tus archivos. La aplicación solo usa la hoja que elijas.
+      </p>
+      <button
+        type="button"
+        (click)="conectar()"
+        class="bg-blue-600 text-white px-4 py-2.5 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+        Conectar con OneDrive
+      </button>
+    }
+  </section>
+</main>

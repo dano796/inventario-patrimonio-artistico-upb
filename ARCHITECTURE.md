@@ -29,9 +29,14 @@ src/app/
 │   │   │   ├── artworks.service.ts        # estado + CRUD + paginación
 │   │   │   └── artwork-export.service.ts  # generación del .xlsx
 │   │   └── artwork.routes.ts  # rutas con loadComponent (carga diferida)
-│   └── auth/
-│       ├── components/        # auth-log-in · forgot-password · update-password
-│       └── auth.routes.ts
+│   ├── auth/
+│   │   ├── components/        # auth-log-in · forgot-password · update-password
+│   │   └── auth.routes.ts
+│   └── sincronizacion/
+│       ├── nucleo/            # TS puro, compartido con scripts/importar-hoja.ts
+│       ├── services/          # graph.service (Microsoft Graph, token delegado)
+│       ├── components/        # vincular-hoja
+│       └── sincronizacion.routes.ts
 │
 └── shared/
     ├── components/            # confirm-modal · image-uploader
