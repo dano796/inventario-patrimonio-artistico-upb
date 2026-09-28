@@ -17,18 +17,17 @@ export class AuthService {
   private loadingProfile = signal<boolean>(false);
   private initializationPromise: Promise<void> | null = null;
   private reinitializePromise: Promise<void> | null = null;
-  /** Carga de perfil en curso, para que una segunda llamada espere la misma en vez de salir sin hacer nada. */
   private profileLoadPromise: Promise<void> | null = null;
   private profileCache = new Map<
     string,
     { profile: UserProfile; timestamp: number }
   >();
   /**
-   * Se resuelve cuando la inicializacion (sesion + perfil, si hay sesion) termino.
    * Vive aparte de initializationPromise porque este se pone en null al terminar
    * doInitializeAuth(): un guard que llegue justo despues no debe perder la senal.
    */
   private readyPromise: Promise<void>;
+  private static readonly TIEMPO_MAXIMO_INICIALIZACION_MS = 5000;
 
   /**
    * Se lee de forma sincrona al construir el servicio porque supabase-js
@@ -84,7 +83,6 @@ export class AuthService {
     this.readyPromise = this.initializeAuth();
   }
 
-  /** Promesa que resuelve cuando la sesion y el perfil (si hay sesion) ya se cargaron. */
   listo(): Promise<void> {
     return this.readyPromise;
   }
@@ -100,22 +98,29 @@ export class AuthService {
   }
 
   private async doInitializeAuth() {
-    try {
-      // Obtener sesión sin timeout artificial
-      const { data } = await this.session();
-
-      if (data.session?.user) {
-        await this.loadUserProfile(data.session.user.id, true);
-      } else {
+    // Si getSession() o la consulta a `usuarios` se cuelgan (lock de
+    // supabase-js, cliente viejo tras reinitializeClient), este tope resuelve
+    // -no rechaza- en vez de dejar listo() esperando para siempre: si no,
+    // los guards ni siquiera podrian llegar a la pantalla de iniciar sesion.
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    const tope = new Promise<void>((resolve) => {
+      temporizador = setTimeout(() => {
+        console.warn('Auth initialization timed out, asumiendo sin sesión');
         this.userProfile.set(null);
         this.loadingProfile.set(false);
-      }
+        resolve();
+      }, AuthService.TIEMPO_MAXIMO_INICIALIZACION_MS);
+    });
+
+    try {
+      await Promise.race([this.cargarSesionYPerfil(), tope]);
     } catch (error) {
       console.warn('Error initializing auth:', error);
       // En caso de error de inicialización, establecer estado por defecto
       this.userProfile.set(null);
       this.loadingProfile.set(false);
     } finally {
+      clearTimeout(temporizador);
       this.initializationPromise = null;
     }
 
@@ -141,12 +146,23 @@ export class AuthService {
     });
   }
 
+  private async cargarSesionYPerfil(): Promise<void> {
+    const { data } = await this.session();
+
+    if (data.session?.user) {
+      await this.loadUserProfile(data.session.user.id, true);
+    } else {
+      this.userProfile.set(null);
+      this.loadingProfile.set(false);
+    }
+  }
+
   private async loadUserProfile(
     userId: string,
     isInitialLoad: boolean = false
   ): Promise<void> {
-    // Si ya hay una carga en curso, esperar esa misma en vez de salir sin hacer nada:
-    // quien llama necesita el resultado (p. ej. el guard tras un refreshUserProfile()).
+    // Espera la carga ya en curso en vez de salir sin hacer nada: quien
+    // llama (p. ej. el guard via refreshUserProfile()) necesita el resultado.
     if (this.profileLoadPromise && !isInitialLoad) {
       return this.profileLoadPromise;
     }

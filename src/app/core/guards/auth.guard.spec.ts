@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import {
   ActivatedRouteSnapshot,
   Router,
@@ -6,8 +6,8 @@ import {
 } from '@angular/router';
 import { privateGuard, publicGuard } from './auth.guard';
 import { AuthService } from '../services/auth.service';
+import { SupabaseService } from '../services/supabase.service';
 
-/** Mismo doble que admin.guard.spec.ts: perfil que llega tras un await. */
 class AuthServiceDePrueba {
   private perfilCargado = false;
   private resolverListo!: () => void;
@@ -81,6 +81,57 @@ describe('privateGuard', () => {
     expect(await resultado$).toBe(true);
     expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
+});
+
+describe('privateGuard con AuthService real', () => {
+  it('redirige a iniciar sesion cuando getSession() nunca resuelve, tras agotarse el tope', fakeAsync(() => {
+    const router = jasmine.createSpyObj<Router>('Router', [
+      'navigate',
+      'navigateByUrl',
+    ]);
+    const clienteQueNuncaResponde = {
+      auth: {
+        getSession: () => new Promise<never>(() => {}),
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe() {} } },
+        }),
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({ single: () => new Promise<never>(() => {}) }),
+        }),
+      }),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: SupabaseService,
+          useValue: { supabaseClient: clienteQueNuncaResponde },
+        },
+        { provide: Router, useValue: router },
+      ],
+    });
+
+    const ruta = {} as ActivatedRouteSnapshot;
+    const estado = {} as RouterStateSnapshot;
+
+    let resultado: boolean | undefined;
+    (
+      TestBed.runInInjectionContext(() =>
+        privateGuard(ruta, estado)
+      ) as Promise<boolean>
+    ).then((r) => {
+      resultado = r;
+    });
+
+    tick(5000);
+
+    expect(resultado).toBe(false);
+    expect(router.navigateByUrl).toHaveBeenCalledWith(
+      '/autenticacion/iniciar-sesion'
+    );
+  }));
 });
 
 describe('publicGuard', () => {

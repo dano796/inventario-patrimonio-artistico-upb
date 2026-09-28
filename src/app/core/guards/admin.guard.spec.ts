@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import {
   ActivatedRouteSnapshot,
   Router,
@@ -6,14 +6,8 @@ import {
 } from '@angular/router';
 import { adminGuard } from './admin.guard';
 import { AuthService } from '../services/auth.service';
+import { SupabaseService } from '../services/supabase.service';
 
-/**
- * Doble de AuthService que reproduce la carrera del sintoma: el guard corre
- * en frio (isLoading() en false, perfil aun no cargado) y el perfil admin
- * llega despues, tras un await. Implementa ademas los metodos que usaba la
- * version anterior del guard (session, refreshUserProfile, reinitializeAuth)
- * para que la carrera se reproduzca igual contra ese codigo.
- */
 class AuthServiceDePrueba {
   private perfilCargado = false;
   private rolAdmin = false;
@@ -46,14 +40,12 @@ class AuthServiceDePrueba {
 
   async reinitializeAuth(): Promise<void> {}
 
-  /** Simula que el perfil admin termino de cargar, en otro tick. */
   llegaPerfilAdmin(): void {
     this.perfilCargado = true;
     this.rolAdmin = true;
     this.resolverListo();
   }
 
-  /** Simula que el perfil termino de cargar pero el usuario no es admin. */
   llegaPerfilNoAdmin(): void {
     this.perfilCargado = true;
     this.rolAdmin = false;
@@ -88,9 +80,6 @@ describe('adminGuard', () => {
       adminGuard(ruta, estado)
     );
 
-    // Deja que el guard corra hasta el final con la informacion "en frio"
-    // que tiene disponible de forma sincrona (como en el sintoma real),
-    // y solo despues llega el perfil admin.
     await esperarMacrotarea();
     authServiceDoble.llegaPerfilAdmin();
 
@@ -129,4 +118,52 @@ describe('adminGuard', () => {
     expect(resultado).toBe(false);
     expect(router.navigate).toHaveBeenCalledWith(['/autenticacion/iniciar-sesion']);
   });
+});
+
+describe('adminGuard con AuthService real', () => {
+  it('redirige a iniciar sesion cuando getSession() nunca resuelve, tras agotarse el tope', fakeAsync(() => {
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const clienteQueNuncaResponde = {
+      auth: {
+        getSession: () => new Promise<never>(() => {}),
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe() {} } },
+        }),
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({ single: () => new Promise<never>(() => {}) }),
+        }),
+      }),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: SupabaseService,
+          useValue: { supabaseClient: clienteQueNuncaResponde },
+        },
+        { provide: Router, useValue: router },
+      ],
+    });
+
+    const ruta = {} as ActivatedRouteSnapshot;
+    const estado = {} as RouterStateSnapshot;
+
+    let resultado: boolean | undefined;
+    (
+      TestBed.runInInjectionContext(() =>
+        adminGuard(ruta, estado)
+      ) as Promise<boolean>
+    ).then((r) => {
+      resultado = r;
+    });
+
+    tick(5000);
+
+    expect(resultado).toBe(false);
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/autenticacion/iniciar-sesion',
+    ]);
+  }));
 });
