@@ -281,15 +281,16 @@ function registrosSinRevertir(): string[] {
 async function comandoAplicar(ruta: string, db: SupabaseClient) {
   const pendientes = registrosSinRevertir();
   if (pendientes.length) {
+    const comandos = pendientes
+      .map((nombre) => `  npx tsx scripts/importar-hoja.ts revertir importacion/${nombre} --confirmar`)
+      .join('\n');
     throw new Error(
-      `Hay ${pendientes.length} registro(s) de un «aplicar» anterior sin revertir en importacion/; ejecuta «revertir» sobre cada uno antes de aplicar de nuevo (si no, se duplicarían obras).`
+      `Hay ${pendientes.length} registro(s) de un «aplicar» anterior sin revertir en importacion/ (si no se revierten, el siguiente aplicar duplicaría obras); ejecuta:\n${comandos}`
     );
   }
   const { archivos, resultado, emparejamientos, plan } = await prepararPlan(ruta, db, true);
   if (plan.obrasSinFila.length) {
-    throw new Error(
-      `Hay ${plan.obrasSinFila.length} obra(s) de la base que no aparecen en el emparejamiento; vuelve a ejecutar «emparejar» (o revisa con «revertir» si vienen de un aplicar fallido) antes de aplicar.`
-    );
+    console.log(`${plan.obrasSinFila.length} obras de la base no están en la hoja; no se tocan.`);
   }
   if (plan.cargosEnConflicto.length) {
     const rutaDetalle = join(SALIDA, `cargos-en-conflicto-${Date.now()}.json`);
