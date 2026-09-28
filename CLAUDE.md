@@ -36,7 +36,7 @@ Authorization is **100% Postgres RLS + column grants**. Angular guards and `@if 
 - **Public signup is closed** on purpose, and so is password sign-in. Both must also be off in Supabase → Authentication → Sign In / Providers — removing a route or hiding a form is not enough.
 - **`.or()` takes a raw PostgREST filter string** with no escaping. Any user value interpolated into it must go through `quoteFilterValue()`. `.ilike()` values are separate params and are safe from structural injection.
 - **Password change requires a genuine recovery link** (`AuthService.isRecoveryFlow()`), not merely an open session.
-- **What Postgres enforces.** RLS is enabled on `obras`, `imagenes`, `usuarios`, `responsables`, `sincronizacion_hoja` and `sincronizacion_estado`; every write policy requires `usuarios.rol = 'admin'`, so a plain signed-in user cannot write. `responsables` and both `sincronizacion_*` tables are admin-only for reads too, and `anon` has nothing on them. `obras.titulo` is nullable: the official sheet has untitled rows, and the UI shows «Sin título». Neither `anon` nor `authenticated` holds a table-level `SELECT` on `obras` — both get a column list that excludes the restricted three. `anon` has nothing at all on `usuarios`; `authenticated` has `SELECT` there and nothing else, and only for its own row. The `imagenes-obras` bucket is world-readable but admin-only for INSERT/UPDATE/DELETE, and is capped at 5 MB and `image/jpeg|png|webp` — the checks in `image.service.ts` are a nicety, the bucket config is the limit.
+- **What Postgres enforces.** RLS is enabled on `obras`, `imagenes`, `usuarios`, `responsables`, `sincronizacion_hoja` and `sincronizacion_estado`; every write policy requires `usuarios.rol = 'admin'`, so a plain signed-in user cannot write. `responsables` and both `sincronizacion_*` tables are admin-only for reads too, and `anon` has nothing on them. `obras.titulo` is nullable: the official sheet has untitled rows, and the UI shows «Sin título». Neither `anon` nor `authenticated` holds a table-level `SELECT` on `obras` — both get a column list that excludes the restricted ones. `anon` has nothing at all on `usuarios`; `authenticated` has `SELECT` there and nothing else, and only for its own row. The `imagenes-obras` bucket is world-readable but admin-only for INSERT/UPDATE/DELETE, and is capped at 5 MB and `image/jpeg|png|webp` — the checks in `image.service.ts` are a nicety, the bucket config is the limit.
 - **Schema changes are made in the Supabase dashboard**, not from a migrations folder — this repo holds no SQL. When you change a policy or a grant, update this section in the same commit.
 
 ## Architecture
@@ -60,7 +60,7 @@ await this.prepareClient();   // ensureActiveSession() + re-read the client
 - `@if` / `@for` with an explicit stable `track` (prefer `track x.id`, not object identity).
 - Tailwind utilities in templates only; no per-component stylesheets. `getGridClasses()` builds class names at runtime, so those variants live in `safelist` in `tailwind.config.js`.
 - Heavy dependencies go behind `await import()` (`exceljs` + `file-saver` are a ~1.5 MB lazy chunk). All routes use `loadComponent`.
-- Supabase tables: `obras`, `imagenes`, `usuarios`. Storage bucket: `imagenes-obras`. The FK column is `id_obra`.
+- Supabase tables: `obras`, `imagenes`, `usuarios`, `responsables`, `sincronizacion_hoja`, `sincronizacion_estado`. Storage bucket: `imagenes-obras`. The FK column is `id_obra`.
 
 ## Testing
 
