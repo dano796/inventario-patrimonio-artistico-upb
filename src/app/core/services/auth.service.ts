@@ -12,12 +12,16 @@ import { environment } from '../../../environments/environment';
 })
 export class AuthService {
   supabaseService = inject(SupabaseService);
-  private supabaseClient = this.supabaseService.supabaseClient;
+  private get supabaseClient() {
+    return this.supabaseService.supabaseClient;
+  }
   private userProfile = signal<UserProfile | null>(null);
   private loadingProfile = signal<boolean>(false);
   private initializationPromise: Promise<void> | null = null;
   private reinitializePromise: Promise<void> | null = null;
   private profileLoadPromise: Promise<void> | null = null;
+  private profileLoadUserId: string | null = null;
+  private generacionPerfil = 0;
   private profileCache = new Map<
     string,
     { profile: UserProfile; timestamp: number }
@@ -124,26 +128,30 @@ export class AuthService {
     clearTimeout(temporizador);
     this.initializationPromise = null;
 
-    // Escuchar cambios de autenticación
-    this.onAuthStateChange(async (event, session) => {
-      try {
-        if (event === 'PASSWORD_RECOVERY') {
-          this.passwordRecoveryEvent.set(true);
-        }
+    try {
+      this.onAuthStateChange(async (event, session) => {
+        try {
+          if (event === 'PASSWORD_RECOVERY') {
+            this.passwordRecoveryEvent.set(true);
+          }
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          await this.loadUserProfile(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
+          if (event === 'SIGNED_IN' && session?.user) {
+            await this.loadUserProfile(session.user.id);
+          } else if (event === 'SIGNED_OUT') {
+            this.generacionPerfil++;
+            this.userProfile.set(null);
+            this.loadingProfile.set(false);
+            this.clearCache();
+          }
+        } catch (error) {
+          console.error('Error in auth state change:', error);
           this.userProfile.set(null);
           this.loadingProfile.set(false);
-          this.clearCache();
         }
-      } catch (error) {
-        console.error('Error in auth state change:', error);
-        this.userProfile.set(null);
-        this.loadingProfile.set(false);
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error subscribing to auth state changes:', error);
+    }
   }
 
   private async cargarSesionYPerfil(): Promise<void> {
@@ -163,17 +171,19 @@ export class AuthService {
   ): Promise<void> {
     // Espera la carga ya en curso en vez de salir sin hacer nada: quien
     // llama (p. ej. el guard via refreshUserProfile()) necesita el resultado.
-    if (this.profileLoadPromise && !isInitialLoad) {
+    if (this.profileLoadPromise && !isInitialLoad && this.profileLoadUserId === userId) {
       return this.profileLoadPromise;
     }
 
     const promise = this.fetchAndSetUserProfile(userId);
     this.profileLoadPromise = promise;
+    this.profileLoadUserId = userId;
     try {
       await promise;
     } finally {
       if (this.profileLoadPromise === promise) {
         this.profileLoadPromise = null;
+        this.profileLoadUserId = null;
       }
     }
   }
@@ -188,6 +198,7 @@ export class AuthService {
     }
 
     this.loadingProfile.set(true);
+    const generacion = this.generacionPerfil;
 
     try {
       // Intentar cargar perfil de la base de datos
@@ -196,6 +207,8 @@ export class AuthService {
         .select('id, rol')
         .eq('id', userId)
         .single();
+
+      if (generacion !== this.generacionPerfil) return;
 
       if (error) {
         console.warn(
@@ -215,6 +228,7 @@ export class AuthService {
       this.userProfile.set(data);
       this.loadingProfile.set(false);
     } catch (error) {
+      if (generacion !== this.generacionPerfil) return;
       console.error('Error loading user profile:', error);
 
       // Usar perfil por defecto en caso de error
@@ -280,6 +294,7 @@ export class AuthService {
 
     // 2. Resetear estado local
     this.initializationPromise = null;
+    this.generacionPerfil++;
     this.userProfile.set(null);
     this.loadingProfile.set(false);
     this.clearCache();

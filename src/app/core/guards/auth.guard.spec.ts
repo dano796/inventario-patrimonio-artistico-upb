@@ -43,6 +43,10 @@ class AuthServiceDePrueba {
     this.perfilCargado = true;
     this.resolverListo();
   }
+
+  terminaSinSesion(): void {
+    this.resolverListo();
+  }
 }
 
 function esperarMacrotarea(): Promise<void> {
@@ -80,6 +84,27 @@ describe('privateGuard', () => {
 
     expect(await resultado$).toBe(true);
     expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe('privateGuard sin sesion', () => {
+  it('redirige a iniciar sesion', async () => {
+    const authServiceDoble = new AuthServiceDePrueba();
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate', 'navigateByUrl']);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: authServiceDoble },
+        { provide: Router, useValue: router },
+      ],
+    });
+    authServiceDoble.terminaSinSesion();
+
+    const resultado = await TestBed.runInInjectionContext(() =>
+      privateGuard({} as ActivatedRouteSnapshot, { url: '/nueva' } as RouterStateSnapshot)
+    );
+
+    expect(resultado).toBe(false);
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/autenticacion/iniciar-sesion');
   });
 });
 
@@ -165,6 +190,18 @@ describe('publicGuard', () => {
 
     expect(await resultado$).toBe(false);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('deja pasar a iniciar sesion a quien no tiene sesion', async () => {
+    authServiceDoble.terminaSinSesion();
+    const estado = { url: '/autenticacion/iniciar-sesion' } as RouterStateSnapshot;
+
+    const resultado = await TestBed.runInInjectionContext(() =>
+      publicGuard(ruta, estado)
+    );
+
+    expect(resultado).toBe(true);
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
 
   it('deja pasar sin esperar a listo() la ruta de actualizar contrasena', async () => {

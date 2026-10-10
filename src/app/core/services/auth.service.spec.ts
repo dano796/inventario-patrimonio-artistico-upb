@@ -48,6 +48,41 @@ function crearClienteQueNuncaResponde() {
   };
 }
 
+function crearClienteControlable() {
+  let sesion: { user: { id: string } } | null = null;
+  let oyente: (evento: string, sesion: unknown) => void = () => {};
+  const pendientes = new Map<string, () => void>();
+  const cliente = {
+    auth: {
+      getSession: async () => ({ data: { session: sesion } }),
+      onAuthStateChange: (callback: (evento: string, sesion: unknown) => void) => {
+        oyente = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      },
+    },
+    from: () => ({
+      select: () => ({
+        eq: (_columna: string, id: string) => ({
+          single: () =>
+            new Promise((resolve) => {
+              pendientes.set(id, () => resolve({ data: { id, rol: 'admin' }, error: null }));
+            }),
+        }),
+      }),
+    }),
+  };
+  return {
+    cliente,
+    iniciarSesion: (id: string) => {
+      sesion = { user: { id } };
+    },
+    emitir: (evento: string) => oyente(evento, sesion),
+    responderPerfil: (id: string) => pendientes.get(id)?.(),
+  };
+}
+
+const esperarMacrotarea = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 describe('AuthService', () => {
   it('listo() no resuelve hasta que el perfil termino de cargar, aunque la sesion ya estaba lista', async () => {
     const { cliente, resolverPerfil } = crearClienteDePrueba('admin');
@@ -90,6 +125,60 @@ describe('AuthService', () => {
     await refresco;
 
     expect(authService.isAdmin()).toBe(true);
+  });
+
+  it('un SIGNED_OUT durante la carga del perfil descarta el perfil que llega despues', async () => {
+    const c = crearClienteControlable();
+    TestBed.configureTestingModule({
+      providers: [{ provide: SupabaseService, useValue: { supabaseClient: c.cliente } }],
+    });
+    const authService = TestBed.inject(AuthService);
+    await authService.listo();
+
+    c.iniciarSesion('admin-1');
+    c.emitir('SIGNED_IN');
+    await esperarMacrotarea();
+    c.emitir('SIGNED_OUT');
+    c.responderPerfil('admin-1');
+    await esperarMacrotarea();
+
+    expect(authService.isAuthenticated()).toBe(false);
+  });
+
+  it('refreshUserProfile() no reutiliza la carga en curso de otro usuario', async () => {
+    const c = crearClienteControlable();
+    TestBed.configureTestingModule({
+      providers: [{ provide: SupabaseService, useValue: { supabaseClient: c.cliente } }],
+    });
+    const authService = TestBed.inject(AuthService);
+    await authService.listo();
+
+    c.iniciarSesion('usuario-a');
+    c.emitir('SIGNED_IN');
+    await esperarMacrotarea();
+    c.iniciarSesion('usuario-b');
+    const refresco = authService.refreshUserProfile();
+    await esperarMacrotarea();
+    c.responderPerfil('usuario-a');
+    c.responderPerfil('usuario-b');
+    await refresco;
+    await esperarMacrotarea();
+
+    expect(authService.isAuthenticated()).toBe(true);
+    expect((authService as unknown as { userProfile: () => { id: string } }).userProfile().id).toBe('usuario-b');
+  });
+
+  it('listo() resuelve aunque suscribirse a los cambios de sesion lance', async () => {
+    const c = crearClienteControlable();
+    c.cliente.auth.onAuthStateChange = () => {
+      throw new Error('fallo al suscribirse');
+    };
+    TestBed.configureTestingModule({
+      providers: [{ provide: SupabaseService, useValue: { supabaseClient: c.cliente } }],
+    });
+    const authService = TestBed.inject(AuthService);
+
+    await expectAsync(authService.listo()).toBeResolved();
   });
 
   it('listo() resuelve tras el tope si getSession() nunca resuelve', fakeAsync(() => {
