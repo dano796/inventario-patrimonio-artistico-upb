@@ -15,8 +15,9 @@ import {
 
 /**
  * Columnas visibles para cualquier visitante.
- * Se excluyen a proposito `ubicacion`, `valor` y `responsable`: juntas forman
- * un mapa de que obra vale cuanto, donde esta y quien la custodia.
+ * Se excluyen a proposito `ubicacion`, `valor`, `bloque_asignado` y
+ * `responsable_id`: juntas forman un mapa de que obra vale cuanto, donde esta
+ * y quien la custodia.
  */
 const COLUMNAS_PUBLICAS =
   'id, titulo, autor, tecnica, dimension, ano, observaciones, descripcion, fecha_creacion, fecha_actualizacion';
@@ -102,10 +103,10 @@ export class ArtworksService {
 
   /**
    * Relacion de la que leer. `authenticated` no tiene concedidas ubicacion,
-   * valor ni responsable sobre la tabla `obras`, porque los permisos por
-   * columna son por rol y un administrador tambien es `authenticated`. Esas
-   * columnas solo las sirve la vista `obras_admin`, que comprueba el rol
-   * dentro. Las escrituras siguen yendo contra `obras`.
+   * valor, bloque_asignado ni responsable_id sobre la tabla `obras`, porque
+   * los permisos por columna son por rol y un administrador tambien es
+   * `authenticated`. Esas columnas solo las sirve la vista `obras_admin`, que
+   * comprueba el rol dentro. Las escrituras siguen yendo contra `obras`.
    */
   private tablaLectura(): 'obras' | 'obras_admin' {
     return this.authService.isAdmin() ? 'obras_admin' : 'obras';

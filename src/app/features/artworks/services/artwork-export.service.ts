@@ -124,7 +124,6 @@ export class ArtworkExportService {
     // Ajustar el alto del header
     worksheet.getRow(1).height = 60;
 
-    // Las columnas nuevas desplazan la posicion de IMAGEN 1; calcularla en vez de asumirla fija.
     const primeraColumnaImagen = worksheet.getColumn('imagen1').number - 1;
 
     // Descargar e insertar hasta 3 imágenes por obra

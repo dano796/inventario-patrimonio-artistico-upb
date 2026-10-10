@@ -187,15 +187,16 @@ export class ArtworkFormComponent implements OnInit {
     }
   }
 
-  /** El responsable nuevo se crea aquí, al guardar: cancelar la edición no deja responsables huérfanos. */
-  private async resolverResponsable(): Promise<number | null> {
+  /**
+   * El responsable nuevo se crea aquí, al guardar: cancelar la edición no deja
+   * responsables huérfanos, y si el guardado falla, onSubmit lo descarta.
+   */
+  private async resolverResponsable(): Promise<{ id: number | null; creado: boolean }> {
     const seleccion = this.seleccionResponsable();
-    if (seleccion === null) return null;
-    if (seleccion.tipo === 'existente') return seleccion.responsable.id;
-    const creado = await this.responsablesService.crearOReusar(seleccion.nombre, seleccion.cargo);
-    this.responsables.update((lista) => (lista.some((r) => r.id === creado.id) ? lista : [...lista, creado]));
-    this.seleccionResponsable.set({ tipo: 'existente', responsable: creado });
-    return creado.id;
+    if (seleccion === null) return { id: null, creado: false };
+    if (seleccion.tipo === 'existente') return { id: seleccion.responsable.id, creado: false };
+    const { responsable, creado } = await this.responsablesService.crearOReusar(seleccion.nombre, seleccion.cargo);
+    return { id: responsable.id, creado };
   }
 
   async onSubmit(): Promise<void> {
@@ -209,10 +210,12 @@ export class ArtworkFormComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
+    let responsableCreado: number | null = null;
     try {
       // Obtener datos del formulario
       const formData = this.artworkForm.getRawValue();
-      const responsable_id = await this.resolverResponsable();
+      const { id: responsable_id, creado } = await this.resolverResponsable();
+      if (creado) responsableCreado = responsable_id;
 
       // Limpiar campos vacíos
       const artworkData = {
@@ -261,6 +264,9 @@ export class ArtworkFormComponent implements OnInit {
     } catch (error) {
       console.error('Error saving artwork:', error);
       this.errorMessage.set('Error al guardar la obra de arte');
+      if (responsableCreado !== null) {
+        await this.responsablesService.descartarSiSinObras(responsableCreado).catch(() => undefined);
+      }
     } finally {
       this.isLoading.set(false);
     }

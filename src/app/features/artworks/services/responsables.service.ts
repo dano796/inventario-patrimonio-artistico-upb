@@ -20,17 +20,29 @@ export class ResponsablesService {
   }
 
   /** Si ya existe con otras mayúsculas o espacios, el índice único lo rechaza y se devuelve el existente. */
-  async crearOReusar(nombre: string, cargo: string | null): Promise<Responsable> {
+  async crearOReusar(nombre: string, cargo: string | null): Promise<{ responsable: Responsable; creado: boolean }> {
     await this.supabaseService.ensureActiveSession();
     const { data, error } = await this.supabaseService.supabaseClient
       .from('responsables')
       .insert({ nombre: nombre.trim(), cargo: cargo?.trim() || null })
       .select('id, nombre, cargo')
       .single();
-    if (!error) return data;
+    if (!error) return { responsable: data, creado: true };
     if (error.code !== VIOLACION_UNICA) throw error;
     const existente = buscarPorNombre(nombre, await this.listar());
     if (!existente) throw error;
-    return existente;
+    return { responsable: existente, creado: false };
+  }
+
+  /** Borra un responsable recién creado cuyo guardado de obra falló, salvo que alguna obra ya lo use. */
+  async descartarSiSinObras(id: number): Promise<void> {
+    await this.supabaseService.ensureActiveSession();
+    const cliente = this.supabaseService.supabaseClient;
+    const { count, error } = await cliente
+      .from('obras_admin')
+      .select('id', { count: 'exact', head: true })
+      .eq('responsable_id', id);
+    if (error || count !== 0) return;
+    await cliente.from('responsables').delete().eq('id', id);
   }
 }
