@@ -29,6 +29,7 @@ export class VincularHojaComponent implements OnInit {
   ocupado = signal(false);
 
   async ngOnInit(): Promise<void> {
+    await this.ejecutar(async () => this.hoja.set(await this.datos.hojaVinculada()));
     // El token del inicio de sesion normal de Microsoft no trae el permiso de
     // archivos: «conectado» solo puede salir de comprobar /me/drive, no de
     // que exista un provider_token.
@@ -39,7 +40,6 @@ export class VincularHojaComponent implements OnInit {
     } finally {
       this.comprobando.set(false);
     }
-    await this.ejecutar(async () => this.hoja.set(await this.datos.hojaVinculada()));
   }
 
   async conectar(): Promise<void> {
@@ -92,6 +92,8 @@ export class VincularHojaComponent implements OnInit {
   private async ejecutar(accion: () => Promise<void>): Promise<void> {
     this.ocupado.set(true);
     this.error.set(null);
+    this.mensaje.set(null);
+    this.progreso.set(null);
     try {
       await accion();
     } catch (e) {

@@ -32,6 +32,7 @@ export class IdWebService {
     // misma celda: se rechaza sin gastar ninguna petición a Graph.
     const repetidas = duplicados(asignaciones);
     if (repetidas.length) return { ok: false, discrepancias: repetidas };
+    if (asignaciones.length === 0) return { ok: true, escritas: 0, yaEscritas: 0 };
 
     const { drive_id, item_id, nombre_hoja } = hoja;
     const [encabezados = []] = await this.graph.leerValores(drive_id, item_id, nombre_hoja, ANCHO_ENCABEZADO);

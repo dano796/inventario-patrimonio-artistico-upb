@@ -90,6 +90,7 @@ describe('leerFilasObras', () => {
     expect(r.filas.map((f) => f.campos.valor)).toEqual([800000, 800000, 800000]);
     expect(r.filas.every((f) => f.combinados.includes('valor'))).toBeTrue();
     expect(r.filas.every((f) => !f.combinados.includes('titulo'))).toBeTrue();
+    expect(r.filas.map((f) => f.heredados.includes('valor'))).toEqual([false, true, true]);
   });
 
   it('clasifica el contenido de las columnas de imagen', () => {
@@ -116,6 +117,21 @@ describe('leerFilasObras', () => {
     expect(r.columnaIdWeb).toBe(18);
     expect(r.filas.map((f) => f.idWeb)).toEqual([14, null]);
     expect(r.avisos).toContain({ fila: 3, campo: 'id_web', motivo: 'el ID WEB no es un número entero positivo', original: 'abc' });
+  });
+
+  it('avisa de un error de Excel en IMAGEN o en ID WEB en vez de tratarlo como vacío', () => {
+    const r = filas(
+      [
+        { ref: 'C2', texto: 'Uno' },
+        { ref: 'O2', error: '#REF!' },
+        { ref: 'R2', formula: 'A1/0', valorFormula: '#DIV/0!' },
+      ],
+      { encabezados: [...ENCABEZADOS_HOJA, ['R', 'ID WEB']] }
+    );
+    expect(r.filas[0].imagenes[1]).toEqual({ tipo: 'vacia' });
+    expect(r.filas[0].idWeb).toBeNull();
+    expect(r.avisos).toContain({ fila: 2, campo: 'imagen_2', motivo: 'la celda tiene un error de Excel', original: '#REF!' });
+    expect(r.avisos).toContain({ fila: 2, campo: 'id_web', motivo: 'la celda tiene un error de Excel', original: '#DIV/0!' });
   });
 
   it('ignora las filas que solo tienen el número de fila de Excel', () => {

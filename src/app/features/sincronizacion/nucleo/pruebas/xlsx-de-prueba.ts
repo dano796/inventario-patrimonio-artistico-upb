@@ -8,6 +8,8 @@ export interface CeldaDePrueba {
   valorFormula?: string | number;
   imagen?: string;
   error?: string;
+  booleano?: boolean;
+  formulaBooleana?: boolean;
 }
 
 export interface OpcionesXlsx {
@@ -39,8 +41,8 @@ export function crearXlsxDePrueba({
     const fila = Number(/\d+$/.exec(c.ref)![0]);
     let xml: string;
     if (c.formula !== undefined) {
-      const v = c.valorFormula;
-      const tipo = typeof v === 'string' ? ' t="str"' : '';
+      const v = c.formulaBooleana === undefined ? c.valorFormula : c.formulaBooleana ? 1 : 0;
+      const tipo = c.formulaBooleana !== undefined ? ' t="b"' : typeof v === 'string' ? ' t="str"' : '';
       xml = `<c r="${c.ref}"${tipo}><f>${esc(c.formula)}</f>${v === undefined ? '' : `<v>${esc(String(v))}</v>`}</c>`;
     } else if (c.imagen !== undefined) {
       imagenes.push(c.imagen);
@@ -48,6 +50,8 @@ export function crearXlsxDePrueba({
     } else if (c.texto !== undefined) {
       textos.push(c.texto);
       xml = `<c r="${c.ref}" t="s"><v>${textos.length - 1}</v></c>`;
+    } else if (c.booleano !== undefined) {
+      xml = `<c r="${c.ref}" t="b"><v>${c.booleano ? 1 : 0}</v></c>`;
     } else if (c.error !== undefined) {
       xml = `<c r="${c.ref}" t="e"><v>${esc(c.error)}</v></c>`;
     } else {

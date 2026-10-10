@@ -7,7 +7,7 @@ import { MOTIVO_OTRA_MONEDA } from './normalizacion';
 const vacios = () => Object.fromEntries(CAMPOS.map((c) => [c, null])) as unknown as CamposObra;
 const fila = (numero: number, campos: Partial<CamposObra>, extra: Partial<FilaHoja> = {}): FilaHoja => ({
   fila: numero, idWeb: null, campos: { ...vacios(), ...campos },
-  noConvertibles: [], combinados: [], imagenes: [{ tipo: 'vacia' }, { tipo: 'vacia' }, { tipo: 'vacia' }], ...extra,
+  noConvertibles: [], combinados: [], heredados: [], imagenes: [{ tipo: 'vacia' }, { tipo: 'vacia' }, { tipo: 'vacia' }], ...extra,
 });
 const obra = (id: number, campos: Partial<CamposObra>, imagenes: { id: number; url: string }[] = []): ObraBase => ({
   id, campos: { ...vacios(), ...campos }, imagenes,

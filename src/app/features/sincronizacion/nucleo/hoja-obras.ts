@@ -1,5 +1,5 @@
 import { Celda, Hoja } from './leer-xlsx';
-import { claveEmparejamiento, Conversion, convertirAno, convertirValor, limpiarTexto } from './normalizacion';
+import { claveEmparejamiento, Conversion, convertirAno, convertirValor, esErrorDeExcel, limpiarTexto } from './normalizacion';
 import { expandirRango, referencia, separarReferencia } from './rangos';
 
 export const CAMPOS_TEXTO = [
@@ -36,7 +36,7 @@ export type CasillaImagen =
 
 export interface AvisoFila {
   fila: number;
-  campo: Campo | 'id_web';
+  campo: Campo | 'id_web' | 'imagen_1' | 'imagen_2' | 'imagen_3';
   motivo: string;
   original: string;
 }
@@ -47,6 +47,8 @@ export interface FilaHoja {
   campos: CamposObra;
   noConvertibles: Campo[];
   combinados: Campo[];
+  /** Celdas combinadas que no son la de origen: Graph las devuelve vacías. */
+  heredados: Campo[];
   imagenes: CasillaImagen[];
 }
 
@@ -108,15 +110,19 @@ export function leerFilasObras(hoja: Hoja): ResultadoHoja {
   const filas: FilaHoja[] = [];
   const avisos: AvisoFila[] = [];
   for (let fila = 2; fila <= ultimaFila; fila++) {
-    const avisar = (campo: Campo | 'id_web', motivo: string, original: string) =>
+    const avisar = (campo: AvisoFila['campo'], motivo: string, original: string) =>
       avisos.push({ fila, campo, motivo, original });
     const campos = {} as CamposObra;
     const noConvertibles: Campo[] = [];
     const combinados: Campo[] = [];
+    const heredados: Campo[] = [];
 
     for (const campo of CAMPOS) {
       const c = celda(columnas[campo], fila);
-      if (origenCombinado.has(referencia(columnas[campo], fila))) combinados.push(campo);
+      const ref = referencia(columnas[campo], fila);
+      const origen = origenCombinado.get(ref);
+      if (origen !== undefined) combinados.push(campo);
+      if (origen !== undefined && origen !== ref) heredados.push(campo);
       if (c?.tipo === 'imagen' || c?.tipo === 'error') {
         (campos as Record<Campo, unknown>)[campo] = null;
         noConvertibles.push(campo);
@@ -143,7 +149,15 @@ export function leerFilasObras(hoja: Hoja): ResultadoHoja {
       }
     }
 
-    const imagenes = columnasImagen.map((columna) => casilla(celda(columna, fila)));
+    const imagenes = columnasImagen.map((columna, i) => {
+      const c = celda(columna, fila);
+      const resultado = casilla(c);
+      const error = errorDeExcel(c);
+      if (resultado.tipo === 'vacia' && error !== null) {
+        avisar(`imagen_${i + 1}` as AvisoFila['campo'], 'la celda tiene un error de Excel', error);
+      }
+      return resultado;
+    });
     const idWeb =
       columnaIdWeb === null
         ? null
@@ -153,7 +167,7 @@ export function leerFilasObras(hoja: Hoja): ResultadoHoja {
       noConvertibles.length === 0 &&
       imagenes.every((i) => i.tipo === 'vacia') &&
       idWeb === null;
-    if (!vacia) filas.push({ fila, idWeb, campos, noConvertibles, combinados, imagenes });
+    if (!vacia) filas.push({ fila, idWeb, campos, noConvertibles, combinados, heredados, imagenes });
   }
   return { columnas, columnasImagen, columnaIdWeb, filas, avisos };
 }
@@ -164,6 +178,12 @@ function valorPrimitivo(c: Celda | undefined): string | number | null {
   return null;
 }
 
+function errorDeExcel(c: Celda | undefined): string | null {
+  if (c?.tipo === 'error') return c.valor;
+  if (c?.tipo === 'formula' && esErrorDeExcel(c.valor)) return c.valor;
+  return null;
+}
+
 function casilla(c: Celda | undefined): CasillaImagen {
   if (!c) return { tipo: 'vacia' };
   if (c.tipo === 'imagen') return { tipo: 'pegada', archivo: c.archivo };
@@ -171,6 +191,7 @@ function casilla(c: Celda | undefined): CasillaImagen {
     const imagen = FORMULA_IMAGEN.exec(c.formula);
     if (imagen) return { tipo: 'formula', url: imagen[1] || null };
   }
+  if (errorDeExcel(c) !== null) return { tipo: 'vacia' };
   const texto = limpiarTexto(valorPrimitivo(c));
   return texto === null ? { tipo: 'vacia' } : { tipo: 'texto', valor: texto };
 }
@@ -179,6 +200,11 @@ function leerIdWeb(
   c: Celda | undefined,
   avisar: (motivo: string, original: string) => void
 ): number | null {
+  const error = errorDeExcel(c);
+  if (error !== null) {
+    avisar('la celda tiene un error de Excel', error);
+    return null;
+  }
   const crudo = valorPrimitivo(c);
   if (limpiarTexto(crudo) === null) return null;
   const numero = typeof crudo === 'number' ? crudo : Number(String(crudo).trim());

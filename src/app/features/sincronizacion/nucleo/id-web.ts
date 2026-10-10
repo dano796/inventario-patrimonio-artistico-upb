@@ -1,4 +1,4 @@
-import { normalizarTexto } from './normalizacion';
+import { esErrorDeExcel, normalizarTexto } from './normalizacion';
 
 export interface AsignacionIdWeb {
   fila: number;
@@ -34,14 +34,8 @@ export type Verificacion =
  * como NULL (ver `leerFilasObras`): sin este tratamiento, cada fila así queda
  * en discrepancia permanente y bloquea toda la escritura.
  */
-const VALORES_ERROR_EXCEL = new Set([
-  '#VALUE!', '#N/A', '#REF!', '#NAME?', '#DIV/0!', '#NUM!', '#NULL!',
-  '#SPILL!', '#CALC!', '#BLOCKED!', '#CONNECT!', '#FIELD!', '#UNKNOWN!', '#BUSY!',
-]);
-
 export function normalizarCeldaHoja(valor: unknown): string | null {
-  if (typeof valor === 'string' && VALORES_ERROR_EXCEL.has(valor.trim().toUpperCase())) return null;
-  return normalizarTexto(valor);
+  return esErrorDeExcel(valor) ? null : normalizarTexto(valor);
 }
 
 /** `undefined` en `esperado` significa «no se trajo este campo»: no se compara. */
@@ -106,7 +100,7 @@ export function verificarAsignaciones(
       });
       continue;
     }
-    const id = normalizarCeldaHoja(actual.idWeb);
+    const id = normalizarTexto(actual.idWeb);
     if (id === null) pendientes.push(a);
     else if (Number(id) !== a.obraId) {
       discrepancias.push({ fila: a.fila, motivo: `ya tiene el ID WEB ${id}, se esperaba ${a.obraId}` });
@@ -117,20 +111,21 @@ export function verificarAsignaciones(
 
 /**
  * Cuando no existe la columna «ID WEB» se reclama la primera columna sin
- * encabezado, pero antes hay que comprobar que de verdad está libre: puede
- * tener datos sueltos que no son ID WEB y que una escritura ciega borraría.
+ * encabezado, pero antes hay que comprobar que de verdad está libre en todas
+ * las filas leídas: puede tener datos sueltos que no son ID WEB y que una
+ * escritura ciega borraría o dejaría bajo el encabezado «ID WEB».
  */
 export function verificarColumnaVacia(
   asignaciones: AsignacionIdWeb[],
   actuales: Map<number, EstadoFila>,
   letra: string
 ): Discrepancia[] {
+  const obraDeFila = new Map(asignaciones.map((a) => [a.fila, a.obraId]));
   const discrepancias: Discrepancia[] = [];
-  for (const a of [...asignaciones].sort((x, y) => x.fila - y.fila)) {
-    const actual = actuales.get(a.fila);
-    const valor = actual ? normalizarCeldaHoja(actual.idWeb) : null;
-    if (valor === null || Number(valor) === a.obraId) continue;
-    discrepancias.push({ fila: a.fila, motivo: `la columna ${letra} ya tiene un valor en la fila ${a.fila}` });
+  for (const fila of [...actuales.keys()].sort((x, y) => x - y)) {
+    const valor = normalizarTexto(actuales.get(fila)!.idWeb);
+    if (valor === null || Number(valor) === obraDeFila.get(fila)) continue;
+    discrepancias.push({ fila, motivo: `la columna ${letra} ya tiene un valor en la fila ${fila}` });
   }
   return discrepancias;
 }

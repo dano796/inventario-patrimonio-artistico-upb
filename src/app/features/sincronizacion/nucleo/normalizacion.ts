@@ -8,6 +8,15 @@ export type Conversion<T> = { ok: true; valor: T } | { ok: false; motivo: string
 
 export const MOTIVO_OTRA_MONEDA = 'el valor está en otra moneda';
 
+const VALORES_ERROR_EXCEL = new Set([
+  '#VALUE!', '#N/A', '#REF!', '#NAME?', '#DIV/0!', '#NUM!', '#NULL!',
+  '#SPILL!', '#CALC!', '#BLOCKED!', '#CONNECT!', '#FIELD!', '#UNKNOWN!', '#BUSY!',
+]);
+
+export function esErrorDeExcel(valor: unknown): valor is string {
+  return typeof valor === 'string' && VALORES_ERROR_EXCEL.has(valor.trim().toUpperCase());
+}
+
 const VACIOS = new Set(['', 'no registra']);
 const OTRA_MONEDA = /(?:^|[^a-z])(?:usd|us\$|eur|euros?|d[oó]lar(?:es)?)(?![a-z])|€/i;
 const ANO = /(?<!\d)\d{4}(?!\d)/g;
@@ -76,7 +85,7 @@ export function convertirValor(valor: unknown): Conversion<number | null> {
   if (texto === null) return { ok: true, valor: null };
   if (OTRA_MONEDA.test(texto)) return { ok: false, motivo: MOTIVO_OTRA_MONEDA };
   const cifra = texto.replace(/^\$/, '').replace(/\s/g, '');
-  if (/^\d+$/.test(cifra) || /^\d{1,3}([.,]\d{3})+$/.test(cifra)) {
+  if (/^\d+$/.test(cifra) || /^\d{1,3}([.,])\d{3}(?:\1\d{3})*$/.test(cifra)) {
     return { ok: true, valor: Number(cifra.replace(/[.,]/g, '')) };
   }
   return { ok: false, motivo: 'formato de valor no reconocido' };

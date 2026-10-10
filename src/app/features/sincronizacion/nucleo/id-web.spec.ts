@@ -57,6 +57,11 @@ describe('verificarAsignaciones', () => {
     expect(r).toEqual({ ok: true, pendientes: [sinAutor(217, 900001, 'Cruz Típica de Lituania')] });
   });
 
+  it('se detiene si la celda destino tiene un error de Excel: hay una fórmula que no se sobrescribe', () => {
+    const r = verificarAsignaciones([asignacion(2, 10, 'Uno')], new Map([[2, estado('Uno', '#REF!')]]));
+    expect(r).toEqual({ ok: false, discrepancias: [{ fila: 2, motivo: 'ya tiene el ID WEB #REF!, se esperaba 10' }] });
+  });
+
   it('se detiene si dos asignaciones repiten fila u obra, sin llegar a comparar con la hoja', () => {
     const r = verificarAsignaciones(
       [asignacion(2, 10, 'Uno'), asignacion(2, 11, 'Otra'), asignacion(3, 10, 'Dos')],
@@ -117,6 +122,15 @@ describe('verificarColumnaVacia', () => {
   it('informa la fila si la celda destino tiene un valor que no es el ID esperado', () => {
     const r = verificarColumnaVacia([asignacion2(10)], new Map([[2, estado('Titulo', 'texto suelto')]]), 'R');
     expect(r).toEqual([{ fila: 2, motivo: 'la columna R ya tiene un valor en la fila 2' }]);
+  });
+
+  it('informa también las filas sin asignación y los errores de Excel', () => {
+    const r = verificarColumnaVacia(
+      [asignacion2(10)],
+      new Map([[2, estado('Titulo', '')], [3, estado('Otro', 'nota')], [4, estado('Otro', '#N/A')]]),
+      'R'
+    );
+    expect(r.map((d) => d.fila)).toEqual([3, 4]);
   });
 });
 

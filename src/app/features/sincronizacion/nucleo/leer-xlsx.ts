@@ -77,7 +77,10 @@ function elementos(raiz: Document | Element, nombre: string): Element[] {
 }
 
 function hijo(elemento: Element, nombre: string): Element | null {
-  return elementos(elemento, nombre)[0] ?? null;
+  for (let nodo = elemento.firstChild; nodo; nodo = nodo.nextSibling) {
+    if (nodo.nodeType === 1 && (nodo as Element).localName === nombre) return nodo as Element;
+  }
+  return null;
 }
 
 function idRelacion(elemento: Element): string {
@@ -137,7 +140,7 @@ function mapaDeImagenes(leer: Lector): (vm: number) => string | null {
     (f) => f.getAttribute('name') === 'XLRICHVALUE'
   );
   const indiceRv = futuro
-    ? elementos(futuro, 'bk').map((bk) => Number(hijo(bk, 'rvb')?.getAttribute('i')))
+    ? elementos(futuro, 'bk').map((bk) => Number(elementos(bk, 'rvb')[0]?.getAttribute('i')))
     : [];
   const metadatosValor = elementos(metadatos, 'valueMetadata')[0];
   const bloques = metadatosValor ? elementos(metadatosValor, 'bk') : [];
@@ -172,7 +175,15 @@ function leerCelda(
 
   if (formula) {
     const valor =
-      v === null ? null : tipo === 'str' || tipo === 'e' ? v : tipo === 's' ? textos[Number(v)] ?? '' : Number(v);
+      v === null
+        ? null
+        : tipo === 'str' || tipo === 'e'
+          ? v
+          : tipo === 's'
+            ? textos[Number(v)] ?? ''
+            : tipo === 'b'
+              ? booleano(v)
+              : Number(v);
     return { tipo: 'formula', formula: formula.textContent ?? '', valor };
   }
   if (vm) return { tipo: 'imagen', archivo: imagenDe(Number(vm)) };
@@ -182,6 +193,11 @@ function leerCelda(
   if (v === null) return null;
   if (tipo === 's') return { tipo: 'texto', valor: textos[Number(v)] ?? '' };
   if (tipo === 'e') return { tipo: 'error', valor: v };
-  if (tipo === 'str' || tipo === 'b') return { tipo: 'texto', valor: v };
+  if (tipo === 'b') return { tipo: 'texto', valor: booleano(v) };
+  if (tipo === 'str') return { tipo: 'texto', valor: v };
   return { tipo: 'numero', valor: Number(v) };
+}
+
+function booleano(v: string): string {
+  return v === '1' ? 'true' : 'false';
 }

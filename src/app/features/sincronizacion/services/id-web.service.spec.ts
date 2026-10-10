@@ -53,6 +53,16 @@ const asignacion = (
 ): AsignacionIdWeb => ({ fila, obraId, autor, titulo, tecnica, dimension });
 
 describe('IdWebService.escribir', () => {
+  it('con una lista vacía no lee ni escribe nada', async () => {
+    const { servicio, graph } = crearServicio([['AUTOR', 'TITULO', 'TECNICA', 'DIMENSION (cm)']]);
+
+    const resultado = await servicio.escribir(HOJA, [], () => {});
+
+    expect(resultado).toEqual({ ok: true, escritas: 0, yaEscritas: 0 });
+    expect(graph.lecturas).toEqual([]);
+    expect(graph.escrituras).toEqual([]);
+  });
+
   it('sin columna «ID WEB»: si la primera columna libre ya tiene un valor, avisa y no escribe nada', async () => {
     const filas = [
       ['AUTOR', 'TITULO', 'TECNICA', 'DIMENSION (cm)', 'ALGO'],

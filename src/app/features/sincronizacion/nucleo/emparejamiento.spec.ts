@@ -5,7 +5,7 @@ function fila(numero: number, autor: string | null, titulo: string | null, idWeb
   const campos = Object.fromEntries(CAMPOS.map((c) => [c, null])) as unknown as CamposObra;
   return {
     fila: numero, idWeb, campos: { ...campos, autor, titulo },
-    noConvertibles: [], combinados: [], imagenes: [],
+    noConvertibles: [], combinados: [], heredados: [], imagenes: [],
   };
 }
 const obra = (id: number, autor: string | null, titulo: string | null): ObraExistente => ({ id, autor, titulo });

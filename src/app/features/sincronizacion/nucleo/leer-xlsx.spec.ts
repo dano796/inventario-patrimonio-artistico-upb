@@ -40,6 +40,17 @@ describe('leerHoja', () => {
     expect(hoja.celdas.get('Q2')).toEqual({ tipo: 'error', valor: '#N/A' });
   });
 
+  it('lee los booleanos como texto, también como resultado de una fórmula', () => {
+    const hoja = leer({
+      celdas: [
+        { ref: 'A1', booleano: true },
+        { ref: 'B1', formula: 'A1=FALSE', formulaBooleana: false },
+      ],
+    });
+    expect(hoja.celdas.get('A1')).toEqual({ tipo: 'texto', valor: 'true' });
+    expect(hoja.celdas.get('B1')).toEqual({ tipo: 'formula', formula: 'A1=FALSE', valor: 'false' });
+  });
+
   it('resuelve cada imagen en celda a su archivo dentro del zip', () => {
     const hoja = leer({
       celdas: [

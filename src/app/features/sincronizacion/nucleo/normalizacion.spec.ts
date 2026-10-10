@@ -93,6 +93,12 @@ describe('normalizacion', () => {
       expect(convertirValor('No registra')).toEqual({ ok: true, valor: null });
     });
 
+    it('rechaza separadores de miles mezclados, que no se sabe si llevan decimales', () => {
+      expect(convertirValor('12.000.500')).toEqual({ ok: true, valor: 12000500 });
+      expect(convertirValor('12,000.500').ok).toBeFalse();
+      expect(convertirValor('1.200,000').ok).toBeFalse();
+    });
+
     it('rechaza otra moneda y los formatos que no reconoce', () => {
       expect(convertirValor('USD 5,000')).toEqual({ ok: false, motivo: MOTIVO_OTRA_MONEDA });
       expect(convertirValor('US$ 300')).toEqual({ ok: false, motivo: MOTIVO_OTRA_MONEDA });
