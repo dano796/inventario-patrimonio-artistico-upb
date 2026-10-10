@@ -35,6 +35,9 @@ interface Registro {
   obrasCreadas: number[];
   imagenes: { ruta: string; imagenId: number | null }[];
   fotos: number[];
+  fotosAnteriores?: { obra_id: number; valores: unknown; fecha: string }[];
+  // Mayor id de obras al empezar: revertir detecta obras creadas que no llegaron al registro.
+  ultimoIdAntes?: number;
   // Falso hasta que «revertir» termina con éxito: «aplicar» se niega a correr mientras exista un registro sin revertir.
   revertido: boolean;
 }
@@ -58,7 +61,7 @@ function rutaEnBucket(url: string): string | null {
   const ruta = new URL(url).pathname.split(prefijo)[1];
   return ruta ? decodeURIComponent(ruta) : null;
 }
-const archivoDeRespaldo = (ruta: string) => ruta.replace(/\//g, '__');
+const archivoDeRespaldo = (ruta: string) => encodeURIComponent(ruta);
 
 const guardar = (nombre: string, datos: unknown) =>
   writeFileSync(join(SALIDA, nombre), JSON.stringify(datos, null, 2));
@@ -67,6 +70,21 @@ const leerJson = <T>(nombre: string): T => JSON.parse(readFileSync(join(SALIDA, 
 function comprobar<T>(respuesta: { data: T; error: unknown }): T {
   if (respuesta.error) throw respuesta.error;
   return respuesta.data;
+}
+
+const PAGINA = 1000;
+
+/** PostgREST corta cada respuesta en max-rows: se pide por páginas hasta que una llega vacía. */
+async function todas<T>(
+  consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+): Promise<T[]> {
+  const filas: T[] = [];
+  for (let desde = 0; ; ) {
+    const pagina = comprobar(await consulta(desde, desde + PAGINA - 1)) ?? [];
+    if (pagina.length === 0) return filas;
+    filas.push(...pagina);
+    desde += pagina.length;
+  }
 }
 
 /**
@@ -109,12 +127,13 @@ function leerCopia(ruta: string, incluirMedios: boolean) {
 }
 
 async function obrasDeLaBase(db: SupabaseClient): Promise<ObraBase[]> {
-  const filas = comprobar(
-    await db
+  const filas = await todas<any>((desde, hasta) =>
+    db
       .from('obras')
       .select('id, autor, titulo, tecnica, dimension, ano, ubicacion, bloque_asignado, valor, descripcion, observaciones, responsables(nombre, cargo), imagenes(id, url)')
       .order('id')
-  ) as any[];
+      .range(desde, hasta)
+  );
   return filas.map((o) => ({
     id: o.id,
     campos: {
@@ -131,12 +150,12 @@ async function obrasDeLaBase(db: SupabaseClient): Promise<ObraBase[]> {
 async function comandoRespaldar(db: SupabaseClient) {
   const directorio = join(SALIDA, `respaldo-${new Date().toISOString().replace(/[:.]/g, '-')}`);
   mkdirSync(join(directorio, 'imagenes'), { recursive: true });
-  const obras = comprobar(await db.from('obras').select('*').order('id')) as { id: number }[];
-  const imagenes = comprobar(await db.from('imagenes').select('*').order('id')) as { id: number; url: string }[];
-  const responsables = comprobar(await db.from('responsables').select('*').order('id')) as unknown[];
-  const sincronizacionEstado = comprobar(
-    await db.from('sincronizacion_estado').select('*').order('obra_id')
-  ) as { obra_id: number }[];
+  const obras = await todas<{ id: number }>((d, h) => db.from('obras').select('*').order('id').range(d, h));
+  const imagenes = await todas<{ id: number; url: string }>((d, h) => db.from('imagenes').select('*').order('id').range(d, h));
+  const responsables = await todas<unknown>((d, h) => db.from('responsables').select('*').order('id').range(d, h));
+  const sincronizacionEstado = await todas<{ obra_id: number }>((d, h) =>
+    db.from('sincronizacion_estado').select('*').order('obra_id').range(d, h)
+  );
   const sincronizacionHoja = comprobar(await db.from('sincronizacion_hoja').select('*')) as { id: number }[];
   writeFileSync(
     join(directorio, 'datos.json'),
@@ -162,13 +181,13 @@ async function comandoVaciar(directorio: string, db: SupabaseClient) {
     sincronizacionEstado: { obra_id: number; fecha: string }[];
     sincronizacionHoja: { id: number; fecha_ultima: string | null; etag: string | null }[];
   };
-  const actuales = comprobar(
-    await db.from('obras').select('id, fecha_actualizacion')
-  ) as { id: number; fecha_actualizacion: string | null }[];
-  const actualesImagenes = comprobar(await db.from('imagenes').select('id')) as { id: number }[];
-  const actualesEstado = comprobar(
-    await db.from('sincronizacion_estado').select('obra_id, fecha')
-  ) as { obra_id: number; fecha: string }[];
+  const actuales = await todas<{ id: number; fecha_actualizacion: string | null }>((d, h) =>
+    db.from('obras').select('id, fecha_actualizacion').order('id').range(d, h)
+  );
+  const actualesImagenes = await todas<{ id: number }>((d, h) => db.from('imagenes').select('id').order('id').range(d, h));
+  const actualesEstado = await todas<{ obra_id: number; fecha: string }>((d, h) =>
+    db.from('sincronizacion_estado').select('obra_id, fecha').order('obra_id').range(d, h)
+  );
   const actualesHoja = comprobar(
     await db.from('sincronizacion_hoja').select('id, fecha_ultima, etag')
   ) as { id: number; fecha_ultima: string | null; etag: string | null }[];
@@ -305,10 +324,16 @@ async function comandoAplicar(ruta: string, db: SupabaseClient) {
   };
   const nombreRegistro = `registro-${registro.inicio.replace(/[:.]/g, '-')}.json`;
   const anotar = () => guardar(nombreRegistro, registro);
+  const ultima = comprobar(
+    await db.from('obras').select('id').order('id', { ascending: false }).limit(1).maybeSingle()
+  ) as { id: number } | null;
+  registro.ultimoIdAntes = ultima?.id ?? 0;
   anotar();
   console.log(`Registro en importacion/${nombreRegistro}`);
 
-  const existentes = comprobar(await db.from('responsables').select('id, nombre, cargo')) as { id: number; nombre: string; cargo: string | null }[];
+  const existentes = await todas<{ id: number; nombre: string; cargo: string | null }>((d, h) =>
+    db.from('responsables').select('id, nombre, cargo').order('id').range(d, h)
+  );
   const responsables = new Map(existentes.map((r) => [claveNombre(r.nombre)!, r]));
   for (const r of plan.responsables) {
     const actual = responsables.get(r.clave);
@@ -336,7 +361,9 @@ async function comandoAplicar(ruta: string, db: SupabaseClient) {
   for (const a of plan.actualizaciones) {
     const columnas = aColumnas(a.valores);
     if (Object.keys(columnas).length === 0) continue;
-    const antes = comprobar(await db.from('obras').select(Object.keys(columnas).join(', ')).eq('id', a.obraId).single()) as unknown as Record<string, unknown>;
+    const antes = comprobar(
+      await db.from('obras').select([...Object.keys(columnas), 'fecha_actualizacion'].join(', ')).eq('id', a.obraId).single()
+    ) as unknown as Record<string, unknown>;
     registro.actualizaciones.push({ obraId: a.obraId, antes });
     anotar();
     comprobar(await db.from('obras').update({ ...columnas, fecha_actualizacion: new Date().toISOString() }).eq('id', a.obraId));
@@ -360,9 +387,9 @@ async function comandoAplicar(ruta: string, db: SupabaseClient) {
     const extension = img.archivo.split('.').pop()!.toLowerCase();
     const destino = `importacion/${obraId}-${img.casilla}.${extension}`;
     const datos = archivos[img.archivo];
-    comprobar(await db.storage.from(BUCKET).upload(destino, datos, { contentType: TIPOS[extension], upsert: false }));
     registro.imagenes.push({ ruta: destino, imagenId: null });
     anotar();
+    comprobar(await db.storage.from(BUCKET).upload(destino, datos, { contentType: TIPOS[extension], upsert: false }));
     const url = db.storage.from(BUCKET).getPublicUrl(destino).data.publicUrl;
     const fila = comprobar(await db.from('imagenes').insert({ id_obra: obraId, url, nombre: basename(img.archivo), tamano: datos.length }).select('id').single()) as { id: number };
     registro.imagenes[registro.imagenes.length - 1].imagenId = fila.id;
@@ -370,40 +397,75 @@ async function comandoAplicar(ruta: string, db: SupabaseClient) {
     if ((i + 1) % 25 === 0) console.log(`Imágenes: ${i + 1}/${imagenes.length}`);
   }
 
-  const todas = comprobar(await db.from('imagenes').select('id, id_obra').order('id')) as { id: number; id_obra: number }[];
+  const imagenesBase = await todas<{ id: number; id_obra: number }>((d, h) =>
+    db.from('imagenes').select('id, id_obra').order('id').range(d, h)
+  );
   const fotos = resultado.filas
     .filter((f) => obraDeFila.has(f.fila))
     .map((f) => {
       const obraId = obraDeFila.get(f.fila)!;
-      const ids = todas.filter((i) => i.id_obra === obraId).map((i) => i.id);
+      const ids = imagenesBase.filter((i) => i.id_obra === obraId).map((i) => i.id);
       return { obra_id: obraId, valores: valoresFoto(f.campos, ids), fecha: new Date().toISOString() };
     });
-  comprobar(await db.from('sincronizacion_estado').upsert(fotos));
-  registro.fotos = fotos.map((f) => f.obra_id);
+  const idsFoto = fotos.map((f) => f.obra_id);
+  registro.fotosAnteriores = [];
+  for (let i = 0; i < idsFoto.length; i += 200) {
+    registro.fotosAnteriores.push(
+      ...(comprobar(
+        await db.from('sincronizacion_estado').select('obra_id, valores, fecha').in('obra_id', idsFoto.slice(i, i + 200))
+      ) as { obra_id: number; valores: unknown; fecha: string }[])
+    );
+  }
+  registro.fotos = idsFoto;
   anotar();
+  comprobar(await db.from('sincronizacion_estado').upsert(fotos));
 
   guardar(
     'id-web.json',
     resultado.filas
       .filter((f) => obraDeFila.has(f.fila))
-      .map((f) => ({
-        fila: f.fila,
-        obraId: obraDeFila.get(f.fila)!,
-        autor: f.campos.autor,
-        titulo: f.campos.titulo,
-        tecnica: f.campos.tecnica,
-        dimension: f.campos.dimension,
-      }))
+      .map((f) => {
+        const comoEnGraph = (campo: 'autor' | 'titulo' | 'tecnica' | 'dimension') =>
+          f.heredados.includes(campo) ? null : f.campos[campo];
+        return {
+          fila: f.fila,
+          obraId: obraDeFila.get(f.fila)!,
+          autor: comoEnGraph('autor'),
+          titulo: comoEnGraph('titulo'),
+          tecnica: comoEnGraph('tecnica'),
+          dimension: comoEnGraph('dimension'),
+        };
+      })
   );
   console.log(`Fotos: ${fotos.length}. Siguiente paso: escribir «ID WEB» desde /sincronizacion/vincular con importacion/id-web.json.`);
 }
 
 async function comandoRevertir(ruta: string, db: SupabaseClient) {
   const r = JSON.parse(readFileSync(ruta, 'utf8')) as Registro;
+  if (r.revertido) throw new Error('Este registro ya está revertido: no se toca nada.');
+  if (r.ultimoIdAntes !== undefined) {
+    const registradas = new Set(r.obrasCreadas);
+    const sinRegistrar = (
+      await todas<{ id: number }>((d, h) => db.from('obras').select('id').gt('id', r.ultimoIdAntes!).order('id').range(d, h))
+    )
+      .map((o) => o.id)
+      .filter((id) => !registradas.has(id));
+    if (sinRegistrar.length) {
+      throw new Error(
+        `Hay ${sinRegistrar.length} obra(s) creadas después de empezar «aplicar» que no están en el registro (ids ${sinRegistrar.join(', ')}): ` +
+          'pueden venir de un «aplicar» interrumpido o de alguien que creó obras en la web. Revísalas, añade a "obrasCreadas" las de la importación y repite.'
+      );
+    }
+  }
   if (r.fotos.length) comprobar(await db.from('sincronizacion_estado').delete().in('obra_id', r.fotos));
-  const idsImagen = r.imagenes.map((i) => i.imagenId).filter((id): id is number => id !== null);
-  if (idsImagen.length) comprobar(await db.from('imagenes').delete().in('id', idsImagen));
-  if (r.imagenes.length) comprobar(await db.storage.from(BUCKET).remove(r.imagenes.map((i) => i.ruta)));
+  if (r.fotosAnteriores?.length) comprobar(await db.from('sincronizacion_estado').upsert(r.fotosAnteriores));
+  const urls = r.imagenes.map((i) => db.storage.from(BUCKET).getPublicUrl(i.ruta).data.publicUrl);
+  for (let i = 0; i < urls.length; i += 100) {
+    comprobar(await db.from('imagenes').delete().in('url', urls.slice(i, i + 100)));
+  }
+  for (let i = 0; i < r.imagenes.length; i += 100) {
+    comprobar(await db.storage.from(BUCKET).remove(r.imagenes.slice(i, i + 100).map((img) => img.ruta)));
+  }
   if (r.obrasCreadas.length) comprobar(await db.from('obras').delete().in('id', r.obrasCreadas));
   for (const a of [...r.actualizaciones].reverse()) comprobar(await db.from('obras').update(a.antes).eq('id', a.obraId));
   for (const c of r.cargosAnteriores) comprobar(await db.from('responsables').update({ cargo: c.cargo }).eq('id', c.id));
