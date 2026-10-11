@@ -1,60 +1,41 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { TestBed } from '@angular/core/testing';
 import { ConfirmModalComponent } from './confirm-modal.component';
 
+function montar(entradas: Record<string, unknown>) {
+  TestBed.configureTestingModule({ imports: [ConfirmModalComponent] });
+  const fixture = TestBed.createComponent(ConfirmModalComponent);
+  for (const [clave, valor] of Object.entries(entradas)) fixture.componentRef.setInput(clave, valor);
+  const respuestas: boolean[] = [];
+  fixture.componentInstance.confirmar.subscribe((r) => respuestas.push(r));
+  fixture.detectChanges();
+  return { fixture, respuestas, html: fixture.nativeElement as HTMLElement };
+}
+
 describe('ConfirmModalComponent', () => {
-  let component: ConfirmModalComponent;
-  let fixture: ComponentFixture<ConfirmModalComponent>;
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [ConfirmModalComponent],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(ConfirmModalComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  it('cerrado no pinta nada', () => {
+    expect(montar({ abierto: false }).html.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('abierto muestra título, mensaje y el texto del botón', () => {
+    const { html } = montar({ abierto: true, titulo: 'Eliminar obra del inventario', mensaje: '«X» se eliminará.', textoConfirmar: 'Sí, eliminar' });
+    expect(html.querySelector('[role="dialog"]')?.textContent).toContain('Eliminar obra del inventario');
+    expect(html.textContent).toContain('«X» se eliminará.');
+    expect(html.textContent).toContain('Sí, eliminar');
   });
 
-  it('should emit false when closing modal without confirmation', () => {
-    spyOn(component.confirm, 'emit');
-    component.closeModal(false);
-    expect(component.confirm.emit).toHaveBeenCalledWith(false);
+  it('responde true al confirmar y false al cancelar o con Escape', () => {
+    const { html, respuestas } = montar({ abierto: true, textoConfirmar: 'Sí, eliminar' });
+    const boton = (texto: string) => [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto)!;
+    boton('Sí, eliminar').click();
+    boton('Cancelar').click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(respuestas).toEqual([true, false, false]);
   });
 
-  it('should emit true when confirming action', () => {
-    spyOn(component.confirm, 'emit');
-    component.closeModal(true);
-    expect(component.confirm.emit).toHaveBeenCalledWith(true);
-  });
-
-  it('should display custom title when provided', () => {
-    const customTitle = 'Custom confirmation message';
-    component.title = customTitle;
-    component.isOpen = true;
-    fixture.detectChanges();
-
-    const titleElement = fixture.nativeElement.querySelector('h3');
-    expect(titleElement.textContent.trim()).toBe(customTitle);
-  });
-
-  it('should not display modal when isOpen is false', () => {
-    component.isOpen = false;
-    fixture.detectChanges();
-
-    const modalElement = fixture.nativeElement.querySelector('.fixed');
-    expect(modalElement).toBeNull();
-  });
-
-  it('should display modal when isOpen is true', () => {
-    component.isOpen = true;
-    fixture.detectChanges();
-
-    const modalElement = fixture.nativeElement.querySelector('.fixed');
-    expect(modalElement).toBeTruthy();
+  it('mientras carga no se puede cerrar y muestra el error si lo hay', () => {
+    const { html, respuestas } = montar({ abierto: true, cargando: true, error: 'No se pudo eliminar.' });
+    [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Cancelar')!.click();
+    expect(respuestas).toEqual([]);
+    expect(html.textContent).toContain('No se pudo eliminar.');
   });
 });

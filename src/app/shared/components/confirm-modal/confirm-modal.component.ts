@@ -1,31 +1,22 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  EventEmitter,
-  Input,
-  Output,
-} from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroExclamationCircle } from '@ng-icons/heroicons/outline';
-import { heroInformationCircleSolid } from '@ng-icons/heroicons/solid';
-
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-confirm-modal',
-  imports: [NgIcon],
   templateUrl: './confirm-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  viewProviders: [provideIcons({ heroExclamationCircle, heroInformationCircleSolid })],
+  host: { '(document:keydown.escape)': 'abierto() && cerrar(false)' },
 })
 export class ConfirmModalComponent {
-  @Input() isOpen = false;
-  @Input() title = '¿Está seguro de que desea realizar esta acción?';
-  @Input() isLoading = false;
-  @Input() errorMessage: string | null = null;
-  @Output() confirm = new EventEmitter<boolean>();
+  abierto = input(false);
+  titulo = input('¿Confirmas esta acción?');
+  mensaje = input<string | null>(null);
+  textoConfirmar = input('Confirmar');
+  cargando = input(false);
+  error = input<string | null>(null);
+  confirmar = output<boolean>();
 
-  closeModal(confirmed: boolean): void {
-    if (this.isLoading) return; // Prevenir cierre durante carga
-    this.confirm.emit(confirmed);
+  cerrar(confirmado: boolean): void {
+    if (this.cargando()) return;
+    this.confirmar.emit(confirmado);
   }
 }
