@@ -2,8 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: "Manrope", Arial, Helvetica, sans-serif;
+@layer base {
+  :root {
+    --text: #0f172a; --t-2: #334155; --t-3: #475569; --t-4: #64748b; --t-5: #94a3b8;
+    --line-3: #cbd5e1; --line-2: #e2e8f0; --line: #eef1f6; --line-soft: #f1f5f9; --line-0: #f4f7fb;
+    --line-00: #f6f8fb; --line-tl: #e6ebf3; --track: #e4e9f2; --seg: #eaeef5; --track-2: #eef2f7;
+    --bg: #f4f6fa; --sub: #f8fafc; --sub-2: #fafbfd; --sub-3: #fbfcfe; --surface: #fff;
+    --acc: #2563eb; --acc-ink: #1d4ed8; --acc-hover: #1d4ed8; --acc-ink-2: #1e40af; --acc-line: #bfd0f5;
+    --acc-soft: #dbeafe; --acc-tint: #eff6ff; --acc-tint-2: #eff4ff; --acc-tint-3: #f5f8ff;
+    --red: #dc2626; --red-2: #b91c1c; --red-3: #7f1d1d; --red-line: #fecaca; --red-soft: #fee2e2; --red-tint: #fef2f2;
+    --amb: #92400e; --amb-2: #b45309; --amb-3: #d97706; --amb-line: #fde68a; --amb-soft: #fef3c7; --amb-tint: #fffbeb;
+    --grn: #16a34a; --grn-soft: #dcfce7; --bar: #0f172a; --header: rgba(255, 255, 255, 0.92);
+    --ph-1: #e6ebf3; --ph-2: #dde4ee; --ph-3: #e9edf4;
+  }
+
+  :root[data-theme='oscuro'] {
+    color-scheme: dark;
+    --text: #e6ebf2; --t-2: #cfd8e3; --t-3: #b3bfcd; --t-4: #95a2b3; --t-5: #7d8a9c;
+    --line-3: #465366; --line-2: #2e3848; --line: #252e3c; --line-soft: #222a37; --line-0: #1e2632;
+    --line-00: #1e2632; --line-tl: #2b3545; --track: #232c3a; --seg: #0f141b; --track-2: #232c3a;
+    --bg: #0d1117; --sub: #1b222d; --sub-2: #19202a; --sub-3: #19202a; --surface: #151b24;
+    --acc: #4d8af7; --acc-ink: #93b8ff; --acc-hover: #6a9dfb; --acc-ink-2: #b5cdff; --acc-line: #36507c;
+    --acc-soft: #1b2b48; --acc-tint: #152238; --acc-tint-2: #152238; --acc-tint-3: #131d2f;
+    --red: #ef5350; --red-2: #f87171; --red-3: #fecaca; --red-line: #5a2424; --red-soft: #3a1b1d; --red-tint: #271618;
+    --amb: #f6c35a; --amb-2: #f2a93b; --amb-3: #f2a93b; --amb-line: #5b4614; --amb-soft: #3a2e11; --amb-tint: #211c10;
+    --grn: #3ccf7e; --grn-soft: #123020; --bar: #222b3a; --header: rgba(17, 22, 30, 0.88);
+    --ph-1: #1b232e; --ph-2: #212a36; --ph-3: #19212b;
+  }
+
+  body {
+    @apply bg-fondo text-tinta font-sans antialiased;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn-primario {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-acento px-[18px] py-2.5 text-sm font-semibold text-white shadow-boton hover:bg-acento-hover disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secundario {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-linea-2 bg-superficie px-[18px] py-2.5 text-sm font-semibold text-tinta-2 hover:border-linea-3 hover:bg-sub disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-peligro {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-rojo-linea bg-superficie px-[18px] py-2.5 text-sm font-semibold text-rojo hover:bg-rojo-tenue disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .campo {
+    @apply w-full rounded-xl border border-linea-2 bg-superficie px-3.5 py-[11px] text-sm font-medium text-tinta placeholder:text-tinta-5 focus:border-acento focus:shadow-anillo focus:outline-none aria-[invalid=true]:border-rojo;
+  }
+  .tarjeta {
+    @apply rounded-[20px] border border-linea bg-superficie shadow-tarjeta;
+  }
+  .etiqueta {
+    @apply mb-1.5 block text-xs font-semibold text-tinta-4;
+  }
+  .antetitulo {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-acento;
+  }
+  .titulo-pantalla {
+    @apply mt-1 text-[28px] font-extrabold leading-tight tracking-[-0.02em] sm:text-[34px];
+  }
+  .marcador {
+    background: linear-gradient(135deg, var(--ph-1), var(--ph-2) 60%, var(--ph-3));
+  }
 }
 
 /* Sin esto el icono se recorta cuando el texto de al lado ocupa varias lineas. */

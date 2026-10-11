@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <title>Inventario Patrimonio Artístico UPB</title>
@@ -12,6 +12,17 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Antes de arrancar Angular, para que la página no parpadee en claro con el tema oscuro elegido.
+      (function () {
+        var tema = null;
+        try { tema = localStorage.getItem('tema'); } catch (e) {}
+        if (tema !== 'claro' && tema !== 'oscuro') {
+          tema = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro';
+        }
+        document.documentElement.setAttribute('data-theme', tema);
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>
