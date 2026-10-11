@@ -178,8 +178,8 @@ export class ArtworksService {
       this.abortController.abort();
     }
 
-    // Crear nuevo AbortController para este request
-    this.abortController = new AbortController();
+    const controlador = new AbortController();
+    this.abortController = controlador;
 
     // Pausar heartbeat durante el request para evitar interferencias
     this.supabaseService.pauseHeartbeat();
@@ -276,7 +276,7 @@ export class ArtworksService {
       const queryPromise = query
         .order('fecha_creacion', { ascending: false })
         .range(startIndex, endIndex)
-        .abortSignal(this.abortController.signal) // Agregar signal para cancelación
+        .abortSignal(controlador.signal)
         .returns<Artwork[]>();
 
       // Ejecutar la consulta con reintentos automáticos
@@ -394,8 +394,7 @@ export class ArtworksService {
         artworks: [], // Limpiar datos en caso de error
       }));
     } finally {
-      // Limpiar abort controller
-      this.abortController = null;
+      if (this.abortController === controlador) this.abortController = null;
 
       // Reanudar heartbeat
       this.supabaseService.resumeHeartbeat();
