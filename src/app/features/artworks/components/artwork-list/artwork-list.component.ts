@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
+import { debounceTime, filter, Subject, takeUntil } from 'rxjs';
 import { ArtworksService } from '../../services/artworks.service';
 import { ArtworkExportService } from '../../services/artwork-export.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -189,16 +189,19 @@ export class ArtworkListComponent implements OnDestroy {
   }
 
   private setupFilters() {
-    const conEspera = (fuente: Subject<string>, aplicar: (valor: string) => void) =>
-      fuente.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(async (valor) => {
-        aplicar(valor);
-        await this.performFilters();
-      });
-    conEspera(this.searchSubject, (v) => this.searchTerm.set(v));
-    conEspera(this.ubicacionSubject, (v) => this.ubicacionFilter.set(v));
-    conEspera(this.responsableSubject, (v) => this.responsableFilter.set(v));
-    conEspera(this.autorSubject, (v) => this.autorFilter.set(v));
-    conEspera(this.tecnicaSubject, (v) => this.tecnicaFilter.set(v));
+    // Se compara con el filtro vigente y no con el último valor emitido: los chips y «Limpiar» cambian la señal sin pasar por aquí.
+    const conEspera = (fuente: Subject<string>, filtro: WritableSignal<string>) =>
+      fuente
+        .pipe(debounceTime(300), filter((valor) => valor !== filtro()), takeUntil(this.destroy$))
+        .subscribe(async (valor) => {
+          filtro.set(valor);
+          await this.performFilters();
+        });
+    conEspera(this.searchSubject, this.searchTerm);
+    conEspera(this.ubicacionSubject, this.ubicacionFilter);
+    conEspera(this.responsableSubject, this.responsableFilter);
+    conEspera(this.autorSubject, this.autorFilter);
+    conEspera(this.tecnicaSubject, this.tecnicaFilter);
   }
 
   private listenToQueryParams() {

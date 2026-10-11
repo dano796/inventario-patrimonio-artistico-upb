@@ -167,4 +167,37 @@ describe('ArtworkListComponent', () => {
     expect(fixture.componentInstance.selectedUbicaciones()).toEqual(['Bloque 3']);
     expect(campo.value).toBe('');
   });
+
+  it('Enter en Ubicación antes de la espera no lanza una segunda carga', async () => {
+    const { fixture, servicio, html } = montar(true);
+    await fixture.whenStable();
+    fixture.componentInstance.showAdvancedFilters.set(true);
+    fixture.detectChanges();
+    servicio.filterArtworks.calls.reset();
+    const campo = html.querySelector<HTMLInputElement>('#filtro-ubicacion')!;
+    escribir(campo, 'Bloque 3');
+    campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await esperarEspera();
+    await fixture.whenStable();
+    expect(servicio.filterArtworks).toHaveBeenCalledTimes(1);
+  });
+
+  it('tras quitar un filtro con su chip, volver a escribir el mismo valor lo aplica', async () => {
+    const { fixture, servicio, html } = montar(false);
+    await fixture.whenStable();
+    fixture.componentInstance.showAdvancedFilters.set(true);
+    fixture.detectChanges();
+    escribir(html.querySelector<HTMLInputElement>('#filtro-autor')!, 'Ana');
+    await esperarEspera();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    html.querySelector<HTMLButtonElement>('[aria-label="Quitar filtro Autor: Ana"]')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: '' }));
+    escribir(html.querySelector<HTMLInputElement>('#filtro-autor')!, 'Ana');
+    await esperarEspera();
+    await fixture.whenStable();
+    expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: 'Ana' }));
+  });
 });
