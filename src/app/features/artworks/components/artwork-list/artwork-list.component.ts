@@ -1,162 +1,142 @@
+import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { ArtworksService } from '../../services/artworks.service';
 import { ArtworkExportService } from '../../services/artwork-export.service';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
-import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
 import {
-  Component,
-  computed,
-  inject,
-  signal,
-  OnDestroy,
-  ChangeDetectionStrategy,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroAdjustmentsVertical, heroArrowLeftOnRectangle, heroArrowRightOnRectangle, heroChevronLeft, heroChevronRight, heroMagnifyingGlass, heroPencilSquare, heroPlus, heroTrash, heroXMark } from '@ng-icons/heroicons/outline';
-import { heroCheckCircleSolid, heroCog6ToothSolid, heroInformationCircleSolid, heroMagnifyingGlassSolid, heroMapPinSolid, heroUserCircleSolid, heroUserSolid } from '@ng-icons/heroicons/solid';
+  ChipFiltro, ClaveFiltro, chipsFiltros, guardarVista, leerVista, lineaResultado, ValoresFiltros, Vista,
+} from '../../utils/galeria';
+import { BarraFiltrosComponent } from '../galeria/barra-filtros/barra-filtros.component';
+import { TarjetaObraComponent } from '../galeria/tarjeta-obra/tarjeta-obra.component';
+import { TablaObrasComponent } from '../galeria/tabla-obras/tabla-obras.component';
+import { PaginacionComponent } from '../galeria/paginacion/paginacion.component';
 
 @Component({
   selector: 'app-artwork-list',
-  imports: [CommonModule, RouterLink, ConfirmModalComponent, FormsModule, NgIcon],
+  imports: [RouterLink, BarraFiltrosComponent, TarjetaObraComponent, TablaObrasComponent, PaginacionComponent],
   templateUrl: './artwork-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  viewProviders: [provideIcons({ heroAdjustmentsVertical, heroArrowLeftOnRectangle, heroArrowRightOnRectangle, heroCheckCircleSolid, heroChevronLeft, heroChevronRight, heroCog6ToothSolid, heroInformationCircleSolid, heroMagnifyingGlass, heroMagnifyingGlassSolid, heroMapPinSolid, heroPencilSquare, heroPlus, heroTrash, heroUserCircleSolid, heroUserSolid, heroXMark })],
 })
 export class ArtworkListComponent implements OnDestroy {
-  // Signal para mostrar loader durante la exportación
-  isExporting = signal<boolean>(false);
-  exportError = signal<string | null>(null);
-
-  /** Delega en ArtworkExportService; ver ese archivo para el detalle del xlsx. */
-  async exportArtworksToExcel() {
-    this.isExporting.set(true);
-    this.exportError.set(null);
-    try {
-      const total = await this.exportService.exportToExcel();
-      if (total === 0) {
-        this.exportError.set('No hay obras para exportar.');
-      }
-    } catch (error: any) {
-      console.error('Error exportando a Excel:', error);
-      this.exportError.set(
-        'No se pudo generar el archivo de Excel. Intenta de nuevo.'
-      );
-    } finally {
-      this.isExporting.set(false);
-    }
-  }
-
   private exportService = inject(ArtworkExportService);
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private artworksService = inject(ArtworksService);
 
-  // Subject para manejar la destrucción del componente
   private destroy$ = new Subject<void>();
-
-  // Subjects para filtros con debounce
   private searchSubject = new Subject<string>();
   private ubicacionSubject = new Subject<string>();
   private responsableSubject = new Subject<string>();
   private autorSubject = new Subject<string>();
   private tecnicaSubject = new Subject<string>();
 
-  // Usar directamente el AuthService optimizado
-  isAuthenticated = this.authService.isAuthenticated;
   isAdmin = this.authService.isAdmin;
-  isAuthLoading = this.authService.isLoading;
 
-  // Signals para el modal de confirmación
-  isModalOpen = signal(false);
-  private artworkToDelete = signal<number | null>(null);
-  isDeleting = signal(false);
-  deleteError = signal<string | null>(null);
-  successMessage = signal<string | null>(null);
+  isExporting = signal(false);
+  exportError = signal<string | null>(null);
 
-  // Signal para manejar índices de imágenes de cada obra
-  private imageIndices = signal<Record<number, number>>({});
+  searchTerm = signal('');
+  ubicacionFilter = signal('');
+  selectedUbicaciones = signal<string[]>([]);
+  responsableFilter = signal('');
+  autorFilter = signal('');
+  tecnicaFilter = signal('');
+  showAdvancedFilters = signal(false);
 
-  // Signals para filtros
-  searchTerm = signal<string>('');
-  ubicacionFilter = signal<string>('');
-  selectedUbicaciones = signal<string[]>([]); // Nueva signal para múltiples ubicaciones
-  responsableFilter = signal<string>('');
-  autorFilter = signal<string>('');
-  tecnicaFilter = signal<string>('');
+  readonly vistas: readonly { valor: Vista; etiqueta: string }[] = [
+    { valor: 'galeria', etiqueta: 'Galería' },
+    { valor: 'mosaico', etiqueta: 'Mosaico' },
+    { valor: 'tabla', etiqueta: 'Tabla' },
+  ];
+  vista = signal<Vista>(leerVista());
 
-  // Signal para controlar la visibilidad de filtros avanzados
-  showAdvancedFilters = signal<boolean>(false);
-
-  // Signal para el número de columnas en la grid
-  selectedColumns = signal<number>(3);
-
-  // Clave para localStorage
   private readonly FILTERS_STORAGE_KEY = 'artwork-filters';
+  private savedPage = signal(1);
+  private isInitialized = signal(false);
+  private filteringInProgress = signal(false);
 
-  // Página guardada en localStorage
-  private savedPage = signal<number>(1);
-
-  // Computed para saber si hay filtros activos
-  hasActiveFilters = computed(() => {
-    return (
-      this.searchTerm() !== '' ||
-      this.ubicacionFilter() !== '' ||
-      this.selectedUbicaciones().length > 0 ||
-      this.responsableFilter() !== '' ||
-      this.autorFilter() !== '' ||
-      this.tecnicaFilter() !== ''
-    );
-  });
-
-  // Computed para contar filtros activos
-  activeFiltersCount = computed(() => {
-    let count = 0;
-    if (this.searchTerm()) count++;
-    if (this.ubicacionFilter()) count++;
-    if (this.selectedUbicaciones().length > 0) count++;
-    if (this.responsableFilter()) count++;
-    if (this.autorFilter()) count++;
-    if (this.tecnicaFilter()) count++;
-    return count;
-  });
-
-  // Computed properties del servicio
   artworks = this.artworksService.artworks;
   isLoading = this.artworksService.loading;
   error = this.artworksService.error;
-
-  // Computed properties de paginación
   currentPage = this.artworksService.currentPage;
   totalItems = this.artworksService.totalItems;
   totalPages = this.artworksService.totalPages;
-  startItem = this.artworksService.startItem;
-  endItem = this.artworksService.endItem;
-  hasPreviousPage = this.artworksService.hasPreviousPage;
-  hasNextPage = this.artworksService.hasNextPage;
+
+  valoresFiltros = computed<ValoresFiltros>(() => ({
+    busqueda: this.searchTerm(),
+    ubicacion: this.ubicacionFilter(),
+    ubicaciones: this.selectedUbicaciones(),
+    responsable: this.responsableFilter(),
+    autor: this.autorFilter(),
+    tecnica: this.tecnicaFilter(),
+  }));
+  chips = computed(() => chipsFiltros(this.valoresFiltros(), this.isAdmin()));
+  linea = computed(() => lineaResultado(this.totalItems(), this.chips()));
 
   constructor() {
-    // AuthService maneja automáticamente la autenticación
     this.setupFilters();
     this.listenToQueryParams();
   }
 
-  // Antes habia aqui tres sistemas de recuperacion compitiendo entre si:
-  // setupErrorRecovery() (effect con timeouts de 30s/120s),
-  // setupPageVisibilityHandler() (listener de visibilitychange que ademas
-  // nunca se desuscribia, filtrando el componente en cada navegacion),
-  // recoverFromLoadingError() y retryLoadArtworks().
-  //
-  // Todo eso se solapaba con InactivityService, que ya reinicializa cliente y
-  // sesion al volver la pestana, y con los reintentos de ArtworksService; al
-  // coincidir llegaban a cancelarse peticiones entre si. Ahora cada cosa tiene
-  // un unico responsable: InactivityService la sesion, ArtworksService los
-  // reintentos, y este componente solo presenta.
+  // Cada cosa tiene un unico responsable: InactivityService la sesion,
+  // ArtworksService los reintentos, y este componente solo presenta.
 
-  // Métodos para persistencia de filtros
+  async exportArtworksToExcel() {
+    this.isExporting.set(true);
+    this.exportError.set(null);
+    try {
+      const total = await this.exportService.exportToExcel();
+      if (total === 0) this.exportError.set('No hay obras para exportar.');
+    } catch (error) {
+      console.error('Error exportando a Excel:', error);
+      this.exportError.set('No se pudo generar el archivo de Excel. Intenta de nuevo.');
+    } finally {
+      this.isExporting.set(false);
+    }
+  }
+
+  cambiarVista(vista: Vista): void {
+    this.vista.set(vista);
+    guardarVista(vista);
+  }
+
+  onCambioFiltro({ clave, valor }: { clave: ClaveFiltro; valor: string }): void {
+    const destino: Record<ClaveFiltro, Subject<string>> = {
+      busqueda: this.searchSubject,
+      ubicacion: this.ubicacionSubject,
+      responsable: this.responsableSubject,
+      autor: this.autorSubject,
+      tecnica: this.tecnicaSubject,
+    };
+    destino[clave].next(valor);
+  }
+
+  async onQuitarChip(chip: ChipFiltro): Promise<void> {
+    if (chip.clave === 'busqueda') {
+      this.searchTerm.set('');
+      await this.performFilters();
+    } else if (chip.clave === 'ubicacion' && this.selectedUbicaciones().includes(chip.valor)) {
+      this.removeUbicacion(chip.valor);
+    } else {
+      await this.clearFilter(chip.clave);
+    }
+  }
+
+  async recargar(): Promise<void> {
+    this.savedPage.set(this.currentPage() || 1);
+    await this.performFiltersWithoutUrlUpdate();
+  }
+
+  async goToSpecificPage(page: number) {
+    if (this.artworksService.isValidPageNumber(page)) {
+      await this.artworksService.goToPage(page);
+      this.savedPage.set(this.currentPage());
+      this.saveFiltersToStorage();
+    }
+  }
+
   private saveFiltersToStorage() {
     const filters = {
       searchTerm: this.searchTerm(),
@@ -165,19 +145,14 @@ export class ArtworkListComponent implements OnDestroy {
       responsableFilter: this.responsableFilter(),
       autorFilter: this.autorFilter(),
       tecnicaFilter: this.tecnicaFilter(),
-      selectedColumns: this.selectedColumns(),
       currentPage: this.currentPage(),
       showAdvancedFilters: this.showAdvancedFilters(),
       timestamp: Date.now(),
     };
-
     try {
       localStorage.setItem(this.FILTERS_STORAGE_KEY, JSON.stringify(filters));
     } catch (error) {
-      console.warn(
-        'No se pudieron guardar los filtros en localStorage:',
-        error
-      );
+      console.warn('No se pudieron guardar los filtros en localStorage:', error);
     }
   }
 
@@ -185,38 +160,25 @@ export class ArtworkListComponent implements OnDestroy {
     try {
       const saved = localStorage.getItem(this.FILTERS_STORAGE_KEY);
       if (!saved) return false;
-
       const filters = JSON.parse(saved);
-
-      // Verificar que no sea muy antiguo (24 horas)
       const isExpired = Date.now() - filters.timestamp > 24 * 60 * 60 * 1000;
       if (isExpired) {
         localStorage.removeItem(this.FILTERS_STORAGE_KEY);
         return false;
       }
-
-      // Restaurar filtros sin triggear búsquedas
-      this.searchTerm.set(filters.searchTerm || '');
       const puedeFiltrarRestringido = this.isAdmin();
-      this.ubicacionFilter.set(
-        puedeFiltrarRestringido ? filters.ubicacionFilter || '' : ''
-      );
-      this.selectedUbicaciones.set(
-        puedeFiltrarRestringido ? filters.selectedUbicaciones || [] : []
-      );
-      this.responsableFilter.set(
-        puedeFiltrarRestringido ? filters.responsableFilter || '' : ''
-      );
+      this.searchTerm.set(filters.searchTerm || '');
+      this.ubicacionFilter.set(puedeFiltrarRestringido ? filters.ubicacionFilter || '' : '');
+      this.selectedUbicaciones.set(puedeFiltrarRestringido ? filters.selectedUbicaciones || [] : []);
+      this.responsableFilter.set(puedeFiltrarRestringido ? filters.responsableFilter || '' : '');
       this.autorFilter.set(filters.autorFilter || '');
       this.tecnicaFilter.set(filters.tecnicaFilter || '');
-      this.selectedColumns.set(filters.selectedColumns || 3);
       this.showAdvancedFilters.set(filters.showAdvancedFilters || false);
       this.savedPage.set(filters.currentPage || 1);
-
       return true;
     } catch (error) {
       console.warn('Error al cargar filtros desde localStorage:', error);
-      localStorage.removeItem(this.FILTERS_STORAGE_KEY);
+      this.clearFiltersFromStorage();
       return false;
     }
   }
@@ -230,544 +192,167 @@ export class ArtworkListComponent implements OnDestroy {
   }
 
   private setupFilters() {
-    // Configurar búsqueda con debounce para cada filtro
-    this.searchSubject
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(async (searchTerm) => {
-        this.searchTerm.set(searchTerm);
+    const conEspera = (fuente: Subject<string>, aplicar: (valor: string) => void) =>
+      fuente.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(async (valor) => {
+        aplicar(valor);
         await this.performFilters();
       });
-
-    this.ubicacionSubject
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(async (ubicacion) => {
-        this.ubicacionFilter.set(ubicacion);
-        await this.performFilters();
-      });
-
-    this.responsableSubject
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(async (responsable) => {
-        this.responsableFilter.set(responsable);
-        await this.performFilters();
-      });
-
-    this.autorSubject
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(async (autor) => {
-        this.autorFilter.set(autor);
-        await this.performFilters();
-      });
-
-    this.tecnicaSubject
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(async (tecnica) => {
-        this.tecnicaFilter.set(tecnica);
-        await this.performFilters();
-      });
+    conEspera(this.searchSubject, (v) => this.searchTerm.set(v));
+    conEspera(this.ubicacionSubject, (v) => this.ubicacionFilter.set(v));
+    conEspera(this.responsableSubject, (v) => this.responsableFilter.set(v));
+    conEspera(this.autorSubject, (v) => this.autorFilter.set(v));
+    conEspera(this.tecnicaSubject, (v) => this.tecnicaFilter.set(v));
   }
-
-  private isInitialized = signal(false);
 
   private listenToQueryParams() {
-    // Escuchar cambios en query parameters
-    this.route.queryParams
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(async (params) => {
-        const hasQueryParams = Object.keys(params).some((key) => params[key]);
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(async (params) => {
+      const hasQueryParams = Object.keys(params).some((key) => params[key]);
 
-        // Si no hay query params, intentar cargar desde localStorage
-        if (!hasQueryParams && !this.isInitialized()) {
-          const loadedFromStorage = this.loadFiltersFromStorage();
-          if (loadedFromStorage) {
-            // Aplicar filtros cargados desde localStorage
-            await this.performFiltersWithoutUrlUpdate();
-            this.isInitialized.set(true);
-            return;
-          }
-        }
-
-        const search = params['search'] || '';
-        // ubicacion y responsable son columnas restringidas: si no se ignoran
-        // aqui, un visitante podria usar la URL para deducir su contenido
-        // aunque la interfaz no muestre esos filtros.
-        const puedeFiltrarRestringido = this.isAdmin();
-        const ubicacion = puedeFiltrarRestringido
-          ? params['ubicacion'] || ''
-          : '';
-        const ubicaciones =
-          puedeFiltrarRestringido && params['ubicaciones']
-            ? params['ubicaciones'].split(',')
-            : [];
-        const responsable = puedeFiltrarRestringido
-          ? params['responsable'] || ''
-          : '';
-        const autor = params['autor'] || '';
-        const tecnica = params['tecnica'] || '';
-
-        // Establecer valores sin triggear búsqueda
-        this.searchTerm.set(search);
-        this.ubicacionFilter.set(ubicacion);
-        this.selectedUbicaciones.set(ubicaciones);
-        this.responsableFilter.set(responsable);
-        this.autorFilter.set(autor);
-        this.tecnicaFilter.set(tecnica);
-
-        // Solo cargar datos una vez al inicializar o si hay cambios reales
-        if (!this.isInitialized()) {
+      if (!hasQueryParams && !this.isInitialized()) {
+        if (this.loadFiltersFromStorage()) {
+          await this.performFiltersWithoutUrlUpdate();
           this.isInitialized.set(true);
-
-          // Preparar filtros con ubicaciones múltiples
-          const filterUbicacion =
-            ubicaciones.length > 0 ? ubicaciones : ubicacion;
-
-          // Cargar datos con filtros iniciales
-          if (search || filterUbicacion || responsable || autor || tecnica) {
-            await this.artworksService.filterArtworks(
-              {
-                search,
-                ubicacion: filterUbicacion,
-                responsable,
-                autor,
-                tecnica,
-              },
-              1
-            );
-          } else {
-            await this.artworksService.getAllArtworks();
-          }
+          return;
         }
-      });
-  }
-
-  async onLogout() {
-    await this.authService.signOut();
-    this.router.navigateByUrl('/autenticacion/iniciar-sesion');
-  }
-
-  viewArtworkDetails(id: number) {
-    this.router.navigateByUrl(`/obra/${id}`);
-  }
-
-  onDeleteArtwork(id: number) {
-    this.artworkToDelete.set(id);
-    this.deleteError.set(null);
-    this.isModalOpen.set(true);
-  }
-
-  async handleConfirmation(confirmed: boolean) {
-    if (confirmed && this.artworkToDelete()) {
-      this.isDeleting.set(true);
-      this.deleteError.set(null);
-
-      try {
-        await this.artworksService.deleteArtwork(this.artworkToDelete()!);
-
-        // Mostrar mensaje de éxito
-        this.successMessage.set('Obra eliminada exitosamente');
-
-        // Ocultar mensaje después de 3 segundos
-        setTimeout(() => {
-          this.successMessage.set(null);
-        }, 3000);
-      } catch (error) {
-        console.error('Error al eliminar obra:', error);
-        this.deleteError.set(
-          'Error al eliminar la obra. Por favor, intente nuevamente.'
-        );
-        // No cerrar el modal si hay error, mostrar el mensaje
-        this.isDeleting.set(false);
-        return;
       }
-    }
 
-    // Cerrar modal y limpiar estado
-    this.isModalOpen.set(false);
-    this.artworkToDelete.set(null);
-    this.isDeleting.set(false);
-    this.deleteError.set(null);
+      const search = params['search'] || '';
+      // ubicacion y responsable son columnas restringidas: si no se ignoran
+      // aqui, un visitante podria usar la URL para deducir su contenido
+      // aunque la interfaz no muestre esos filtros.
+      const puedeFiltrarRestringido = this.isAdmin();
+      const ubicacion = puedeFiltrarRestringido ? params['ubicacion'] || '' : '';
+      const ubicaciones = puedeFiltrarRestringido && params['ubicaciones'] ? params['ubicaciones'].split(',') : [];
+      const responsable = puedeFiltrarRestringido ? params['responsable'] || '' : '';
+      const autor = params['autor'] || '';
+      const tecnica = params['tecnica'] || '';
+
+      this.searchTerm.set(search);
+      this.ubicacionFilter.set(ubicacion);
+      this.selectedUbicaciones.set(ubicaciones);
+      this.responsableFilter.set(responsable);
+      this.autorFilter.set(autor);
+      this.tecnicaFilter.set(tecnica);
+
+      if (!this.isInitialized()) {
+        this.isInitialized.set(true);
+        const filterUbicacion = ubicaciones.length > 0 ? ubicaciones : ubicacion;
+        if (search || filterUbicacion || responsable || autor || tecnica) {
+          await this.artworksService.filterArtworks({ search, ubicacion: filterUbicacion, responsable, autor, tecnica }, 1);
+        } else {
+          await this.artworksService.getAllArtworks();
+        }
+      }
+    });
   }
 
-  // Métodos para manejar el carrusel de imágenes
-  getCurrentImage(artwork: any) {
-    if (!artwork.imagenes || artwork.imagenes.length === 0) {
-      return null;
-    }
-    const currentIndex = this.getCurrentImageIndex(artwork.id);
-    return artwork.imagenes[currentIndex];
+  private filtrosActuales() {
+    const ubicacion = this.selectedUbicaciones().length > 0 ? this.selectedUbicaciones() : this.ubicacionFilter();
+    return {
+      search: this.searchTerm(),
+      ubicacion,
+      responsable: this.responsableFilter(),
+      autor: this.autorFilter(),
+      tecnica: this.tecnicaFilter(),
+    };
   }
 
-  getCurrentImageIndex(artworkId: number): number {
-    return this.imageIndices()[artworkId] || 0;
-  }
-
-  nextImage(artworkId: number): void {
-    const artwork = this.artworks().find((a) => a.id === artworkId);
-    if (!artwork?.imagenes || artwork.imagenes.length <= 1) return;
-
-    const currentIndex = this.getCurrentImageIndex(artworkId);
-    const nextIndex = (currentIndex + 1) % artwork.imagenes.length;
-
-    this.imageIndices.update((indices) => ({
-      ...indices,
-      [artworkId]: nextIndex,
-    }));
-  }
-
-  prevImage(artworkId: number): void {
-    const artwork = this.artworks().find((a) => a.id === artworkId);
-    if (!artwork?.imagenes || artwork.imagenes.length <= 1) return;
-
-    const currentIndex = this.getCurrentImageIndex(artworkId);
-    const prevIndex =
-      currentIndex === 0 ? artwork.imagenes.length - 1 : currentIndex - 1;
-
-    this.imageIndices.update((indices) => ({
-      ...indices,
-      [artworkId]: prevIndex,
-    }));
-  }
-
-  // Métodos de navegación de páginas
-  async goToPage(page: number) {
-    await this.artworksService.goToPage(page);
-    this.savedPage.set(this.currentPage());
-    this.saveFiltersToStorage();
-  }
-
-  async nextPage() {
-    await this.artworksService.nextPage();
-    this.savedPage.set(this.currentPage());
-    this.saveFiltersToStorage();
-  }
-
-  async previousPage() {
-    await this.artworksService.previousPage();
-    this.savedPage.set(this.currentPage());
-    this.saveFiltersToStorage();
-  }
-
-  async firstPage() {
-    await this.artworksService.firstPage();
-    this.savedPage.set(this.currentPage());
-    this.saveFiltersToStorage();
-  }
-
-  async lastPage() {
-    await this.artworksService.lastPage();
-    this.savedPage.set(this.currentPage());
-    this.saveFiltersToStorage();
-  }
-
-  // Generar array de números de página para mostrar
-  getPageNumbers(): number[] {
-    const totalPages = this.totalPages();
-    const currentPage = this.currentPage();
-    const pageNumbers: number[] = [];
-
-    // Mostrar máximo 5 páginas
-    const maxPages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
-    let endPage = Math.min(totalPages, startPage + maxPages - 1);
-
-    // Ajustar si estamos cerca del final
-    if (endPage - startPage + 1 < maxPages) {
-      startPage = Math.max(1, endPage - maxPages + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
-    }
-
-    return pageNumbers;
-  }
-
-  // Navegación avanzada
-  async goToSpecificPage(page: number) {
-    if (this.artworksService.isValidPageNumber(page)) {
-      await this.artworksService.goToPage(page);
-      this.savedPage.set(this.currentPage());
-      this.saveFiltersToStorage();
-    }
-  }
-
-  async goToFirstPage() {
-    await this.artworksService.goToFirstPage();
-  }
-
-  async goToLastPage() {
-    await this.artworksService.goToLastPage();
-  }
-
-  // Manejar input de página específica
-  async onPageInputChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const page = parseInt(input.value);
-
-    if (this.artworksService.isValidPageNumber(page)) {
-      await this.goToSpecificPage(page);
-    } else if (input.value !== '') {
-      // Resetear a página actual si el número no es válido
-      input.value = this.currentPage().toString();
-    }
-  }
-
-  // Obtener rango de páginas para mostrar
-  get pageRange() {
-    return this.artworksService.getPageRange();
-  }
-
-  // Variable para evitar múltiples llamadas simultáneas
-  private filteringInProgress = signal(false);
-
-  // Métodos de búsqueda y filtrado
   async performFilters() {
-    // Evitar múltiples llamadas simultáneas
-    if (this.filteringInProgress()) {
-      return;
-    }
-
+    if (this.filteringInProgress()) return;
     this.filteringInProgress.set(true);
-
     try {
-      // Usar ubicaciones múltiples si están disponibles, sino usar filtro individual
-      const ubicacionFilter =
-        this.selectedUbicaciones().length > 0
-          ? this.selectedUbicaciones()
-          : this.ubicacionFilter();
-
-      const filters = {
-        search: this.searchTerm(),
-        ubicacion: ubicacionFilter,
-        responsable: this.responsableFilter(),
-        autor: this.autorFilter(),
-        tecnica: this.tecnicaFilter(),
-      };
-
-      // Actualizar URL con query parameters
-      const queryParams: any = {};
-      queryParams.search = filters.search || null;
-      queryParams.responsable = filters.responsable || null;
-      queryParams.autor = filters.autor || null;
-      queryParams.tecnica = filters.tecnica || null;
-
-      // Manejar ubicaciones múltiples en URL
-      if (Array.isArray(ubicacionFilter) && ubicacionFilter.length > 0) {
-        queryParams.ubicaciones = ubicacionFilter.join(',');
-        queryParams.ubicacion = null;
-      } else if (typeof ubicacionFilter === 'string' && ubicacionFilter) {
-        queryParams.ubicacion = ubicacionFilter;
-        queryParams.ubicaciones = null;
-      } else {
-        queryParams.ubicacion = null;
-        queryParams.ubicaciones = null;
-      }
-      queryParams.page = null; // Reset página
-
+      const filters = this.filtrosActuales();
+      const ubicacion = filters.ubicacion;
       this.router.navigate([], {
         relativeTo: this.route,
-        queryParams,
+        queryParams: {
+          search: filters.search || null,
+          responsable: filters.responsable || null,
+          autor: filters.autor || null,
+          tecnica: filters.tecnica || null,
+          ubicaciones: Array.isArray(ubicacion) && ubicacion.length ? ubicacion.join(',') : null,
+          ubicacion: typeof ubicacion === 'string' && ubicacion ? ubicacion : null,
+          page: null,
+        },
         queryParamsHandling: 'merge',
       });
-
-      // Realizar filtrado
       await this.artworksService.filterArtworks(filters, 1);
-
-      // Guardar filtros en localStorage después de una búsqueda exitosa
       this.saveFiltersToStorage();
     } finally {
       this.filteringInProgress.set(false);
     }
   }
 
-  // Método para realizar filtros sin actualizar URL (usado al cargar desde localStorage)
   async performFiltersWithoutUrlUpdate() {
-    if (this.filteringInProgress()) {
-      return;
-    }
-
+    if (this.filteringInProgress()) return;
     this.filteringInProgress.set(true);
-
     try {
-      const ubicacionFilter =
-        this.selectedUbicaciones().length > 0
-          ? this.selectedUbicaciones()
-          : this.ubicacionFilter();
-
-      const filters = {
-        search: this.searchTerm(),
-        ubicacion: ubicacionFilter,
-        responsable: this.responsableFilter(),
-        autor: this.autorFilter(),
-        tecnica: this.tecnicaFilter(),
-      };
-
-      // Solo realizar filtrado, sin actualizar URL
-      await this.artworksService.filterArtworks(filters, this.savedPage());
-
-      // Actualizar savedPage con la página actual (puede haber sido ajustada)
+      await this.artworksService.filterArtworks(this.filtrosActuales(), this.savedPage());
       this.savedPage.set(this.currentPage());
       this.saveFiltersToStorage();
     } finally {
       this.filteringInProgress.set(false);
     }
-  }
-
-  async performSearch(searchTerm: string) {
-    // Actualizar URL con query parameters
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { search: searchTerm || null, page: null },
-      queryParamsHandling: 'merge',
-    });
-
-    // Realizar búsqueda
-    await this.artworksService.searchArtworks(searchTerm, 1);
-  }
-
-  onSearchInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.searchSubject.next(input.value);
-  }
-
-  onUbicacionInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.ubicacionSubject.next(input.value);
-  }
-
-  onResponsableInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.responsableSubject.next(input.value);
-  }
-
-  onAutorInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.autorSubject.next(input.value);
-  }
-
-  onTecnicaInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.tecnicaSubject.next(input.value);
   }
 
   async clearAllFilters() {
-    // Limpiar todos los signals
     this.searchTerm.set('');
     this.ubicacionFilter.set('');
     this.selectedUbicaciones.set([]);
     this.responsableFilter.set('');
     this.autorFilter.set('');
     this.tecnicaFilter.set('');
-    this.selectedColumns.set(3);
-
-    // Limpiar localStorage
     this.clearFiltersFromStorage();
-
-    // Limpiar URL
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: {
-        search: null,
-        ubicacion: null,
-        ubicaciones: null,
-        responsable: null,
-        autor: null,
-        tecnica: null,
-        page: null,
-      },
+      queryParams: { search: null, ubicacion: null, ubicaciones: null, responsable: null, autor: null, tecnica: null, page: null },
       queryParamsHandling: 'merge',
     });
-
-    // Cargar sin filtros
     await this.artworksService.clearAllFilters();
   }
 
-  async clearSearch() {
-    this.searchTerm.set('');
-    await this.performFilters();
-  }
-
-  async clearFilter(filterType: string) {
-    switch (filterType) {
-      case 'ubicacion':
-        this.ubicacionFilter.set('');
-        this.selectedUbicaciones.set([]);
-        break;
-      case 'responsable':
-        this.responsableFilter.set('');
-        break;
-      case 'autor':
-        this.autorFilter.set('');
-        break;
-      case 'tecnica':
-        this.tecnicaFilter.set('');
-        break;
+  async clearFilter(filterType: Exclude<ClaveFiltro, 'busqueda'>) {
+    if (filterType === 'ubicacion') {
+      this.ubicacionFilter.set('');
+      this.selectedUbicaciones.set([]);
+    } else if (filterType === 'responsable') {
+      this.responsableFilter.set('');
+    } else if (filterType === 'autor') {
+      this.autorFilter.set('');
+    } else {
+      this.tecnicaFilter.set('');
     }
     await this.performFilters();
   }
 
-  // Métodos para manejar múltiples ubicaciones
   toggleAdvancedFilters() {
-    this.showAdvancedFilters.update((show) => !show);
+    this.showAdvancedFilters.update((abierto) => !abierto);
+    this.saveFiltersToStorage();
   }
 
   addUbicacion() {
     const ubicacion = this.ubicacionFilter().trim();
     if (ubicacion && !this.selectedUbicaciones().includes(ubicacion)) {
-      this.selectedUbicaciones.update((ubicaciones) => [
-        ...ubicaciones,
-        ubicacion,
-      ]);
+      this.selectedUbicaciones.update((ubicaciones) => [...ubicaciones, ubicacion]);
       this.ubicacionFilter.set('');
       this.performFilters();
     }
   }
 
-  removeUbicacion(ubicacion: string) {
-    this.selectedUbicaciones.update((ubicaciones) =>
-      ubicaciones.filter((u) => u !== ubicacion)
-    );
-    this.performFilters();
+  /** Enter puede llegar antes de que pasen los 300 ms de espera: se toma el texto del campo y se descarta el pendiente. */
+  alAgregarUbicacion(valor: string): void {
+    this.ubicacionSubject.next('');
+    this.ubicacionFilter.set(valor);
+    this.addUbicacion();
   }
 
-  onUbicacionKeyPress(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.addUbicacion();
-    }
+  removeUbicacion(ubicacion: string) {
+    this.selectedUbicaciones.update((ubicaciones) => ubicaciones.filter((u) => u !== ubicacion));
+    this.performFilters();
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  getDeleteConfirmMessage(): string {
-    const artworkId = this.artworkToDelete();
-    if (artworkId) {
-      const artwork = this.artworks().find((a) => a.id === artworkId);
-      if (artwork?.titulo) {
-        return `¿Está seguro de que desea eliminar la obra "${artwork.titulo}"?`;
-      }
-    }
-    return '¿Está seguro de que desea eliminar esta obra de arte?';
-  }
-
-  // Método para obtener las clases de la grid basadas en el número de columnas seleccionado
-  getGridClasses(): string {
-    const cols = this.selectedColumns();
-    return `grid grid-cols-1 md:grid-cols-${cols} gap-6`;
-  }
-
-  // Método para cambiar el número de columnas
-  changeColumns(columns: number) {
-    this.selectedColumns.set(columns);
-    this.saveFiltersToStorage();
-  }
-
-  // Método para manejar el cambio en el selector de columnas
-  onColumnsChange(event: Event) {
-    const select = event.target as HTMLSelectElement;
-    this.changeColumns(parseInt(select.value));
   }
 }

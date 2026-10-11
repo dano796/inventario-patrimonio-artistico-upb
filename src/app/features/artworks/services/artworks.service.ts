@@ -61,7 +61,7 @@ export class ArtworksService {
     error: false,
     currentPage: 1,
     totalItems: 0,
-    itemsPerPage: 12,
+    itemsPerPage: 24,
     totalPages: 0,
   });
 
