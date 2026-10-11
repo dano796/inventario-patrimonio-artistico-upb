@@ -30,14 +30,14 @@ describe('planificarEjecucion', () => {
   it('un cambio hacia la hoja guarda lo leído para comprobarlo antes de escribir', () => {
     const plan = planDe({ cambios: [cambio({ destino: 'hoja', hoja: 'Bloque 6', base: 'Bloque 3' })] });
     expect(plan.escrituras).toEqual([
-      { obraId: 14, fila: 2, destino: { tipo: 'campo', campo: 'ubicacion' }, valor: 'Bloque 3', leido: 'Bloque 6', foto: { ubicacion: 'Bloque 3' } },
+      { obraId: 14, fila: 2, destino: { tipo: 'campo', campo: 'ubicacion' }, valor: "'Bloque 3", leido: 'Bloque 6', foto: { ubicacion: 'Bloque 3' } },
     ]);
     expect(plan.peticion.campos).toEqual([]);
   });
 
   it('un NULL de la base se escribe en la hoja como «No registra»', () => {
     const plan = planDe({ cambios: [cambio({ destino: 'hoja', hoja: 'Bloque 6', base: null })] });
-    expect(plan.escrituras.map((e) => [e.valor, e.foto])).toEqual([['No registra', { ubicacion: null }]]);
+    expect(plan.escrituras.map((e) => [e.valor, e.foto])).toEqual([["'No registra", { ubicacion: null }]]);
   });
 
   it('un cambio desmarcado no se aplica', () => {
@@ -66,8 +66,8 @@ describe('planificarEjecucion', () => {
       cambios: [cambio({ campo: 'responsable', destino: 'hoja', hoja: 'LUIS GÓMEZ', base: 'ANA PÉREZ', foto: 'LUIS GÓMEZ' })],
     });
     expect(plan.escrituras.map((e) => [e.destino, e.valor, e.leido])).toEqual([
-      [{ tipo: 'campo', campo: 'responsable' }, 'ANA PÉREZ', 'LUIS GÓMEZ'],
-      [{ tipo: 'campo', campo: 'cargo' }, 'DECANA', 'RECTOR'],
+      [{ tipo: 'campo', campo: 'responsable' }, "'ANA PÉREZ", 'LUIS GÓMEZ'],
+      [{ tipo: 'campo', campo: 'cargo' }, "'DECANA", 'RECTOR'],
     ]);
   });
 
@@ -121,7 +121,7 @@ describe('planificarEjecucion', () => {
       { clave: 'ANA PÉREZ', esperado: 'DECANA', nuevo: 'DIRECTORA', obras: [14], foto: { cargo: 'DIRECTORA' } },
     ]);
     expect(plan.escrituras).toEqual([
-      { obraId: 15, fila: 3, destino: { tipo: 'campo', campo: 'cargo' }, valor: 'DIRECTORA', leido: 'DECANA', foto: { cargo: 'DIRECTORA' } },
+      { obraId: 15, fila: 3, destino: { tipo: 'campo', campo: 'cargo' }, valor: "'DIRECTORA", leido: 'DECANA', foto: { cargo: 'DIRECTORA' } },
     ]);
   });
 
@@ -152,7 +152,7 @@ describe('planificarEjecucion', () => {
     const porDefecto = planDe(diff);
     expect(porDefecto.peticion.altas).toEqual([]);
     expect(porDefecto.altasHoja.length).toBe(1);
-    expect(porDefecto.altasHoja[0].celdas).toContain({ destino: { tipo: 'campo', campo: 'titulo' }, valor: 'Paisaje' });
+    expect(porDefecto.altasHoja[0].celdas).toContain({ destino: { tipo: 'campo', campo: 'titulo' }, valor: "'Paisaje" });
     expect(porDefecto.altasHoja[0].foto['titulo']).toBe('Paisaje');
 
     const elegidas = planDe(diff, { altasBase: new Set([9]), altasHoja: new Set() });

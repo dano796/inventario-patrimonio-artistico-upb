@@ -2,11 +2,14 @@ import { ValorCampo } from './foto';
 
 export const NO_REGISTRA = 'No registra';
 
-/** Excel toma como fórmula un texto que empieza por = + - @; el apóstrofo lo deja como texto. */
+/**
+ * Graph interpreta cada texto como si se tecleara: «=…» sería una fórmula y
+ * «30/40», «0123» o «50%» se convertirían en fecha o número. El apóstrofo
+ * inicial lo deja como texto y Excel no lo guarda en el valor de la celda.
+ */
 export function valorParaHoja(valor: ValorCampo): string | number {
-  if (valor === null) return NO_REGISTRA;
   if (typeof valor === 'number') return valor;
-  return /^[=+\-@]/.test(valor) ? `'${valor}` : valor;
+  return `'${valor ?? NO_REGISTRA}`;
 }
 
 export function formulaImagen(url: string, prefijo: string): string {

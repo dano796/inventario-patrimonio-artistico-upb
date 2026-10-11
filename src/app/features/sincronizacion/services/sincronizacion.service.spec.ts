@@ -80,7 +80,7 @@ describe('SincronizacionService', () => {
 
     const resultado = await servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff));
 
-    expect(graph.escribirValores).toHaveBeenCalledOnceWith('d', 'i', 'Inventario Obras', 'M3:M3', [['Nota corregida']]);
+    expect(graph.escribirValores).toHaveBeenCalledOnceWith('d', 'i', 'Inventario Obras', 'M3:M3', [["'Nota corregida"]]);
     expect(datos.aplicar.calls.mostRecent().args[0]).toEqual({
       campos: [], cargos: [], altas: [],
       fotos: [{ obra_id: 14, valores: { observaciones: 'Nota corregida' } }],

@@ -4,7 +4,7 @@ const PREFIJO = 'https://x.supabase.co/storage/v1/object/public/imagenes-obras/'
 
 describe('valorParaHoja', () => {
   it('escribe NULL como «No registra»', () => {
-    expect(valorParaHoja(null)).toBe('No registra');
+    expect(valorParaHoja(null)).toBe("'No registra");
   });
 
   it('deja los números como números', () => {
@@ -16,7 +16,19 @@ describe('valorParaHoja', () => {
     expect(valorParaHoja('+57 300')).toBe("'+57 300");
     expect(valorParaHoja('-')).toBe("'-");
     expect(valorParaHoja('@usuario')).toBe("'@usuario");
-    expect(valorParaHoja('Óleo sobre tela')).toBe('Óleo sobre tela');
+    expect(valorParaHoja('Óleo sobre tela')).toBe("'Óleo sobre tela");
+  });
+});
+
+describe('valorParaHoja, coerciones de Excel', () => {
+  it('fuerza como texto lo que Excel convertiría en número, fecha, porcentaje o booleano', () => {
+    for (const texto of ['0123', '30/40', '12-10', '50%', '1,200', 'TRUE', 'Oct-12']) {
+      expect(valorParaHoja(texto)).toBe(`'${texto}`);
+    }
+  });
+
+  it('conserva un apóstrofo inicial que sea parte del texto', () => {
+    expect(valorParaHoja("'Ca. 1998")).toBe("''Ca. 1998");
   });
 });
 
