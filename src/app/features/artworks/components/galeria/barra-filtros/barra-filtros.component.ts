@@ -19,6 +19,7 @@ const CAMPOS: readonly CampoFiltro[] = [
   selector: 'app-barra-filtros',
   templateUrl: './barra-filtros.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'flex flex-col gap-3' },
 })
 export class BarraFiltrosComponent {
   valores = input.required<ValoresFiltros>();

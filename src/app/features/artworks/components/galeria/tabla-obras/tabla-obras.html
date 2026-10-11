@@ -8,7 +8,7 @@
         @if (esAdmin()) {
           <th scope="col" class="w-44 py-3 pr-4 font-semibold">Ubicación</th>
         }
-        <th scope="col" class="w-16 py-3 font-semibold">Año</th>
+        <th scope="col" class="w-24 py-3 font-semibold">Año</th>
       </tr>
     </thead>
     <tbody>
@@ -22,7 +22,7 @@
           @if (esAdmin()) {
             <td class="py-[11px] pr-4 text-tinta-4">{{ texto(obra.ubicacion) }}</td>
           }
-          <td class="py-[11px] text-tinta-4">{{ texto(obra.ano) }}</td>
+          <td class="whitespace-nowrap py-[11px] text-tinta-4">{{ texto(obra.ano) }}</td>
         </tr>
       }
     </tbody>

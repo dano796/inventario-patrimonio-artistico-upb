@@ -6,7 +6,7 @@
     </a>
 
     <nav class="hidden gap-8 justify-self-center md:flex" aria-label="Principal">
-      <a routerLink="/" routerLinkActive="!text-acento-tinta !border-acento" [routerLinkActiveOptions]="{ exact: true }"
+      <a routerLink="/" routerLinkActive="!text-acento-tinta !border-acento" [routerLinkActiveOptions]="{ paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' }"
         class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Galería</a>
       @if (esAdmin()) {
         <a routerLink="/tablero" routerLinkActive="!text-acento-tinta !border-acento"

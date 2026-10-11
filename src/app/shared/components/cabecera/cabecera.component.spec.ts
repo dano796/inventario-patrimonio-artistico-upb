@@ -1,14 +1,17 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { CabeceraComponent } from './cabecera.component';
 import { AuthService } from '../../../core/services/auth.service';
+
+@Component({ template: '' })
+class Vacia {}
 
 function montar(opciones: { admin: boolean; sesion: boolean; nombre?: string | null }) {
   TestBed.configureTestingModule({
     imports: [CabeceraComponent],
     providers: [
-      provideRouter([]),
+      provideRouter([{ path: '', component: Vacia }]),
       {
         provide: AuthService,
         useValue: {
@@ -44,6 +47,14 @@ describe('CabeceraComponent', () => {
     const html = montar({ admin: false, sesion: true, nombre: 'Ana Pérez' });
     expect(html.textContent).not.toContain('Tablero');
     expect(html.textContent).toContain('Consulta');
+  });
+
+  it('marca la galería como activa aunque la URL lleve filtros', async () => {
+    const html = montar({ admin: false, sesion: false });
+    await TestBed.inject(Router).navigateByUrl('/?autor=Ana');
+    TestBed.tick();
+    const galeria = [...html.querySelectorAll('nav[aria-label="Principal"] a')].find((a) => a.textContent?.trim() === 'Galería')!;
+    expect(galeria.classList).toContain('!text-acento-tinta');
   });
 
   it('el botón de tema tiene nombre accesible', () => {
