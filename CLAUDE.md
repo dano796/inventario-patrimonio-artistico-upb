@@ -66,4 +66,4 @@ await this.prepareClient();   // ensureActiveSession() + re-read the client
 
 ## Testing
 
-Specs run with Karma + Jasmine. There is no Chrome on the dev machine; point `CHROME_BIN` at Playwright's Chromium (path in the latest plan under `docs/superpowers/plans/`). Component specs mock services at the `AuthService` / `ArtworksService` level, not `SupabaseService`. `npm test` is expected to be green.
+Specs run with Karma + Jasmine. Karma needs a Chrome binary: if there is no Chrome installed, set `CHROME_BIN` to any Chromium (Playwright's works) and run with `--browsers=ChromeHeadless`. Component specs mock services at the `AuthService` / `ArtworksService` level, not `SupabaseService`. `npm test` is expected to be green.
