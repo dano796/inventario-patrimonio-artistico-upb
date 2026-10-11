@@ -184,6 +184,7 @@ export class ArtworksService {
     // Pausar heartbeat durante el request para evitar interferencias
     this.supabaseService.pauseHeartbeat();
 
+    let paginaFueraDeRango = false;
     try {
       // CRÍTICO: Verificar y garantizar que la sesión está activa antes de hacer el request
       const sessionActive = await this.supabaseService.ensureActiveSession();
@@ -296,6 +297,13 @@ export class ArtworksService {
               return;
             }
 
+            // PostgREST responde 416 a un offset mayor que el total (una pagina guardada
+            // cuando habia mas obras o paginas mas cortas). No es un fallo de red: no se reintenta.
+            if (error.code === 'PGRST103' && page > 1) {
+              paginaFueraDeRango = true;
+              break;
+            }
+
             // Si es un error de autenticación/sesión, intentar refrescar
             if (this.isAuthError(error)) {
               console.warn(
@@ -398,6 +406,10 @@ export class ArtworksService {
       }));
 
       this.loadingPromise = null;
+    }
+
+    if (paginaFueraDeRango) {
+      await this.doGetAllArtworks({ ...params, page: 1 });
     }
   }
 
