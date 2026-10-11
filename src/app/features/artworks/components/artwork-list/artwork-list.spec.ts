@@ -95,4 +95,22 @@ describe('ArtworkListComponent', () => {
     await fixture.whenStable();
     expect(servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count()).toBe(1);
   });
+
+  it('un filtro que llega mientras otro se aplica no se pierde: se aplica al terminar', async () => {
+    const { fixture, servicio } = montar(false);
+    await fixture.whenStable();
+    let terminarPrimero!: () => void;
+    servicio.filterArtworks.and.returnValues(new Promise<void>((r) => (terminarPrimero = r)), Promise.resolve());
+    servicio.filterArtworks.calls.reset();
+    const componente = fixture.componentInstance;
+    componente.autorFilter.set('Ana');
+    const primero = componente.performFilters();
+    componente.tecnicaFilter.set('Óleo');
+    const segundo = componente.performFilters();
+    terminarPrimero();
+    await Promise.all([primero, segundo]);
+    await fixture.whenStable();
+    expect(servicio.filterArtworks).toHaveBeenCalledTimes(2);
+    expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: 'Ana', tecnica: 'Óleo' }));
+  });
 });

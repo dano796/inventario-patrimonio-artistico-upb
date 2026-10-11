@@ -56,6 +56,7 @@ export class ArtworkListComponent implements OnDestroy {
   private savedPage = signal(1);
   private isInitialized = signal(false);
   private filteringInProgress = signal(false);
+  private filtroPendiente = false;
 
   artworks = this.artworksService.artworks;
   isLoading = this.artworksService.loading;
@@ -227,6 +228,9 @@ export class ArtworkListComponent implements OnDestroy {
         }
       }
 
+      // La URL que emite una navegacion propia aun no lleva el filtro pendiente: no debe pisarlo.
+      if (this.isInitialized() && (this.filteringInProgress() || this.filtroPendiente)) return;
+
       const search = params['search'] || '';
       // ubicacion y responsable son columnas restringidas: si no se ignoran
       // aqui, un visitante podria usar la URL para deducir su contenido
@@ -268,8 +272,12 @@ export class ArtworkListComponent implements OnDestroy {
     };
   }
 
+  /** Un filtro que llega durante otra carga se aplica al terminarla, con los valores de ese momento. */
   async performFilters() {
-    if (this.filteringInProgress()) return;
+    if (this.filteringInProgress()) {
+      this.filtroPendiente = true;
+      return;
+    }
     this.filteringInProgress.set(true);
     try {
       const filters = this.filtrosActuales();
@@ -292,10 +300,14 @@ export class ArtworkListComponent implements OnDestroy {
     } finally {
       this.filteringInProgress.set(false);
     }
+    await this.aplicarPendiente();
   }
 
   async performFiltersWithoutUrlUpdate() {
-    if (this.filteringInProgress()) return;
+    if (this.filteringInProgress()) {
+      this.filtroPendiente = true;
+      return;
+    }
     this.filteringInProgress.set(true);
     try {
       await this.artworksService.filterArtworks(this.filtrosActuales(), this.savedPage());
@@ -304,6 +316,13 @@ export class ArtworkListComponent implements OnDestroy {
     } finally {
       this.filteringInProgress.set(false);
     }
+    await this.aplicarPendiente();
+  }
+
+  private async aplicarPendiente() {
+    if (!this.filtroPendiente) return;
+    this.filtroPendiente = false;
+    await this.performFilters();
   }
 
   async clearAllFilters() {
