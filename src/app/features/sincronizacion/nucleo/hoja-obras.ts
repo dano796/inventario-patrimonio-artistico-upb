@@ -66,7 +66,7 @@ export class ErrorEncabezados extends Error {
   }
 }
 
-const FORMULA_IMAGEN = /^(?:_xlfn\.)?IMAGE\(\s*"([^"]*)"/i;
+export const FORMULA_IMAGEN = /^(?:_xlfn\.)?IMAGE\(\s*"([^"]*)"/i;
 
 export function leerFilasObras(hoja: Hoja): ResultadoHoja {
   const encabezados = new Map<string, number>();
