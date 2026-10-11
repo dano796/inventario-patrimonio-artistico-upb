@@ -93,6 +93,16 @@ describe('diffCamposObra', () => {
     expect(r.cambios.map((c) => c.destino)).toEqual(['base']);
   });
 
+  it('avisa si el responsable va a la hoja y su CARGO está en una celda combinada', () => {
+    const r = diffCamposObra(
+      filaHoja(130, { responsable: 'LUIS GÓMEZ' }, { combinados: ['cargo'] }),
+      obraBase(40, { responsable: 'ANA PÉREZ' }),
+      foto({ responsable: 'LUIS GÓMEZ' })
+    );
+    expect(r.cambios.map((c) => c.campo)).toEqual(['responsable']);
+    expect(r.avisos).toEqual([{ tipo: 'celda_combinada', obraId: 40, fila: 130, campo: 'cargo' }]);
+  });
+
   it('el cargo no se compara por obra: es de la persona', () => {
     const r = diffCamposObra(filaHoja(2, { cargo: 'RECTOR' }), obraBase(1, { cargo: 'DECANO' }), foto({ cargo: 'DECANO' }));
     expect(r.cambios).toEqual([]);

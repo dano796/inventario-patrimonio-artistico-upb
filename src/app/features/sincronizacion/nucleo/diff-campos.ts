@@ -52,10 +52,14 @@ export function diffCamposObra(fila: FilaHoja, obra: ObraBase, foto: ValoresFoto
       r.convergencias.push({ obraId: obra.id, clave: campo, valor: comparacion.valor });
     } else if (comparacion.tipo === 'cambio') {
       if (comparacion.destino === 'hoja' && combinada) avisarCombinada();
-      else
+      else {
         r.cambios.push({
           obraId: obra.id, fila: fila.fila, campo, destino: comparacion.destino, hoja, base, foto: fotoCampo ?? null,
         });
+        if (campo === 'responsable' && comparacion.destino === 'hoja' && fila.combinados.includes('cargo')) {
+          r.avisos.push({ tipo: 'celda_combinada', obraId: obra.id, fila: fila.fila, campo: 'cargo' });
+        }
+      }
     } else if (comparacion.tipo === 'conflicto') {
       if (combinada) avisarCombinada();
       else r.conflictos.push({ obraId: obra.id, fila: fila.fila, campo, hoja, base, foto: fotoCampo });
