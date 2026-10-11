@@ -12,18 +12,14 @@ import {
   OnInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ImageService } from '../../services/image.service';
 import { ArtworkImage } from '../../models/image.model';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroPhoto, heroTrash, heroXMark } from '@ng-icons/heroicons/outline';
 
 @Component({
   selector: 'app-image-uploader',
-  imports: [CommonModule, NgIcon],
+  imports: [],
   templateUrl: './image-uploader.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  viewProviders: [provideIcons({ heroPhoto, heroTrash, heroXMark })],
 })
 export class ImageUploaderComponent implements OnInit, OnChanges {
   private imageService = inject(ImageService);
