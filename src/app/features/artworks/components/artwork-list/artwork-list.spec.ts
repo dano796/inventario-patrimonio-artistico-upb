@@ -8,7 +8,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { obraDePrueba } from '../galeria/obra-de-prueba';
 import { CLAVE_VISTA } from '../../utils/galeria';
 
-function montar(esAdmin: boolean) {
+function montar(esAdmin: boolean, admin = signal(esAdmin)) {
   const artworks = signal([obraDePrueba(), obraDePrueba({ id: 15, titulo: null })]);
   const servicio = {
     artworks, loading: signal(false), error: signal(false), currentPage: signal(1), totalItems: signal(2),
@@ -25,7 +25,7 @@ function montar(esAdmin: boolean) {
       provideRouter([]),
       { provide: ArtworksService, useValue: servicio },
       { provide: ArtworkExportService, useValue: { exportToExcel: jasmine.createSpy('exportToExcel').and.resolveTo(2) } },
-      { provide: AuthService, useValue: { isAdmin: signal(esAdmin), isAuthenticated: signal(esAdmin), isLoading: signal(false) } },
+      { provide: AuthService, useValue: { isAdmin: admin, isAuthenticated: signal(esAdmin), isLoading: signal(false) } },
     ],
   });
   const fixture = TestBed.createComponent(ArtworkListComponent);
@@ -75,5 +75,24 @@ describe('ArtworkListComponent', () => {
     const reintentar = [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Reintentar')!;
     reintentar.click();
     expect(servicio.filterArtworks).toHaveBeenCalled();
+  });
+
+  it('recarga con las columnas de administración si el rol llega después de la primera carga', async () => {
+    const admin = signal(false);
+    const { fixture, servicio } = montar(false, admin);
+    await fixture.whenStable();
+    const cargasIniciales = servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count();
+    admin.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count()).toBe(cargasIniciales + 1);
+  });
+
+  it('un administrador ya resuelto no provoca una segunda carga', async () => {
+    const { fixture, servicio } = montar(true);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count()).toBe(1);
   });
 });

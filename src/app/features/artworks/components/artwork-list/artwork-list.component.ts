@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { ArtworksService } from '../../services/artworks.service';
@@ -78,6 +78,17 @@ export class ArtworkListComponent implements OnDestroy {
   constructor() {
     this.setupFilters();
     this.listenToQueryParams();
+    this.recargarAlResolverAdmin();
+  }
+
+  /** Si el perfil llega después de la primera carga, esas filas salieron de `obras`, sin las columnas restringidas. */
+  private recargarAlResolverAdmin() {
+    let eraAdmin = this.isAdmin();
+    effect(() => {
+      const esAdmin = this.isAdmin();
+      if (esAdmin && !eraAdmin && untracked(this.isInitialized)) untracked(() => this.recargar());
+      eraAdmin = esAdmin;
+    });
   }
 
   // Cada cosa tiene un unico responsable: InactivityService la sesion,

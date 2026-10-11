@@ -31,4 +31,15 @@ describe('TablaObrasComponent', () => {
     expect(fila.textContent).toContain('No registra');
     expect(fila.querySelector('a')?.getAttribute('href')).toBe('/obra/15');
   });
+
+  it('una ubicación que no llegó en la lectura se muestra como «No registra», nunca «undefined»', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ imports: [TablaObrasComponent], providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(TablaObrasComponent);
+    const { ubicacion, ...sinUbicacion } = obraDePrueba();
+    fixture.componentRef.setInput('obras', [sinUbicacion]);
+    fixture.componentRef.setInput('esAdmin', true);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('undefined');
+  });
 });

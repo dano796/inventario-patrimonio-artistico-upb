@@ -16,7 +16,7 @@ export class TablaObrasComponent {
     return obra.titulo?.trim() || 'Sin título';
   }
 
-  texto(valor: string | number | null): string {
-    return valor === null || String(valor).trim() === '' ? 'No registra' : String(valor);
+  texto(valor: string | number | null | undefined): string {
+    return valor == null || String(valor).trim() === '' ? 'No registra' : String(valor);
   }
 }
