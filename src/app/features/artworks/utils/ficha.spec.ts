@@ -20,6 +20,14 @@ describe('camposFicha', () => {
   });
 });
 
+describe('camposFicha con una lectura sin columnas restringidas', () => {
+  it('lo que no llegó se muestra como «No registra», nunca «undefined» ni «NaN»', () => {
+    const { ubicacion, bloque_asignado, valor, responsable, cargo, ...publica } = obraDePrueba();
+    const textos = camposFicha(publica as never, true).map((c) => c.valor);
+    expect(textos.join(' ')).not.toMatch(/undefined|NaN/);
+  });
+});
+
 describe('subtituloFicha', () => {
   it('une autor y año, y nombra lo que falta', () => {
     expect(subtituloFicha(obraDePrueba())).toBe('Ana Pérez · 1998');

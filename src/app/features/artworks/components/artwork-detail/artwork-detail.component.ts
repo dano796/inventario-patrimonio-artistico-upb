@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ArtworksService } from '../../services/artworks.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -42,6 +42,16 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   observaciones = computed(() => this.artwork()?.observaciones?.trim() || NO_REGISTRA);
   captura = computed(() => ultimaCaptura(this.imagenes()));
   mensajeBorrado = computed(() => mensajeBorrado(this.titulo(), this.imagenes().length));
+
+  /** Si el perfil llega después de la primera lectura, la obra salió de `obras`, sin las columnas restringidas. */
+  constructor() {
+    let eraAdmin = this.isAdmin();
+    effect(() => {
+      const esAdmin = this.isAdmin();
+      if (esAdmin && !eraAdmin) untracked(() => this.recargar());
+      eraAdmin = esAdmin;
+    });
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {

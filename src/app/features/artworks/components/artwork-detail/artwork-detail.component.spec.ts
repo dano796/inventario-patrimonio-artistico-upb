@@ -8,7 +8,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { obraDePrueba } from '../galeria/obra-de-prueba';
 import { Artwork } from '../../../../shared/models/artwork.model';
 
-async function montar(obra: Artwork, esAdmin: boolean) {
+async function montar(obra: Artwork, esAdmin: boolean, admin = signal(esAdmin)) {
   const servicio = {
     selectedArtwork: signal<Artwork | null>(obra), loading: signal(false), error: signal(false),
     getArtworkById: jasmine.createSpy('getArtworkById').and.resolveTo(undefined),
@@ -19,7 +19,7 @@ async function montar(obra: Artwork, esAdmin: boolean) {
     providers: [
       provideRouter([{ path: 'obra/:id', component: ArtworkDetailComponent }]),
       { provide: ArtworksService, useValue: servicio },
-      { provide: AuthService, useValue: { isAdmin: signal(esAdmin), isAuthenticated: signal(esAdmin), isLoading: signal(false) } },
+      { provide: AuthService, useValue: { isAdmin: admin, isAuthenticated: signal(esAdmin), isLoading: signal(false) } },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -54,5 +54,21 @@ describe('ArtworkDetailComponent', () => {
   it('una obra sin título muestra «Sin título»', async () => {
     const { html } = await montar(obraDePrueba({ titulo: null }), false);
     expect(html.querySelector('h1')?.textContent?.trim()).toBe('Sin título');
+  });
+
+  it('vuelve a leer la obra si el rol de administrador llega después', async () => {
+    const admin = signal(false);
+    const { harness, servicio } = await montar(obraDePrueba(), false, admin);
+    admin.set(true);
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    expect(servicio.getArtworkById).toHaveBeenCalledTimes(2);
+  });
+
+  it('un administrador ya resuelto lee la obra una sola vez', async () => {
+    const { harness, servicio } = await montar(obraDePrueba(), true);
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    expect(servicio.getArtworkById).toHaveBeenCalledTimes(1);
   });
 });
