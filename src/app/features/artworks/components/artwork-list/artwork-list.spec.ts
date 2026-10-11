@@ -1,6 +1,6 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { ArtworkListComponent } from './artwork-list.component';
 import { ArtworksService } from '../../services/artworks.service';
 import { ArtworkExportService } from '../../services/artwork-export.service';
@@ -8,7 +8,10 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { obraDePrueba } from '../galeria/obra-de-prueba';
 import { CLAVE_VISTA } from '../../utils/galeria';
 
-function montar(esAdmin: boolean, admin = signal(esAdmin)) {
+@Component({ template: '' })
+class Vacia {}
+
+function montar(esAdmin: boolean, admin = signal(esAdmin), listo: () => Promise<void> = () => Promise.resolve()) {
   const artworks = signal([obraDePrueba(), obraDePrueba({ id: 15, titulo: null })]);
   const servicio = {
     artworks, loading: signal(false), error: signal(false), currentPage: signal(1), totalItems: signal(2),
@@ -22,10 +25,10 @@ function montar(esAdmin: boolean, admin = signal(esAdmin)) {
   TestBed.configureTestingModule({
     imports: [ArtworkListComponent],
     providers: [
-      provideRouter([]),
+      provideRouter([{ path: '', component: Vacia }]),
       { provide: ArtworksService, useValue: servicio },
       { provide: ArtworkExportService, useValue: { exportToExcel: jasmine.createSpy('exportToExcel').and.resolveTo(2) } },
-      { provide: AuthService, useValue: { isAdmin: admin, isAuthenticated: signal(esAdmin), isLoading: signal(false) } },
+      { provide: AuthService, useValue: { isAdmin: admin, isAuthenticated: signal(esAdmin), isLoading: signal(false), listo } },
     ],
   });
   const fixture = TestBed.createComponent(ArtworkListComponent);
@@ -77,23 +80,54 @@ describe('ArtworkListComponent', () => {
     expect(servicio.filterArtworks).toHaveBeenCalled();
   });
 
-  it('recarga con las columnas de administración si el rol llega después de la primera carga', async () => {
+  it('espera al perfil antes de la primera carga y conserva los filtros restringidos guardados', async () => {
+    localStorage.setItem('artwork-filters', JSON.stringify({ ubicacionFilter: 'Bloque 6', timestamp: Date.now() }));
     const admin = signal(false);
-    const { fixture, servicio } = montar(false, admin);
+    let perfilListo!: () => void;
+    const { fixture, servicio } = montar(false, admin, () => new Promise<void>((r) => (perfilListo = r)));
+    await Promise.resolve();
+    expect(servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count()).toBe(0);
+    admin.set(true);
+    perfilListo();
     await fixture.whenStable();
-    const cargasIniciales = servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count();
+    expect(servicio.filterArtworks).toHaveBeenCalledTimes(1);
+    expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ ubicacion: 'Bloque 6' }));
+  });
+
+  it('un parpadeo del rol al volver a la pestaña no recarga la galería', async () => {
+    const admin = signal(true);
+    const { fixture, servicio } = montar(true, admin);
+    await fixture.whenStable();
+    const cargas = servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count();
+    admin.set(false);
+    fixture.detectChanges();
     admin.set(true);
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count()).toBe(cargasIniciales + 1);
+    expect(servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count()).toBe(cargas);
   });
 
-  it('un administrador ya resuelto no provoca una segunda carga', async () => {
-    const { fixture, servicio } = montar(true);
+  it('si la URL cambia por una navegación ajena, aplica sus filtros', async () => {
+    const { fixture, servicio } = montar(false);
     await fixture.whenStable();
-    fixture.detectChanges();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/?autor=Ana');
     await fixture.whenStable();
-    expect(servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count()).toBe(1);
+    expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: 'Ana' }));
+    expect(fixture.componentInstance.chips().map((c) => c.texto)).toEqual(['Autor: Ana']);
+    await router.navigateByUrl('/');
+    await fixture.whenStable();
+    expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: '' }));
+  });
+
+  it('el eco de la URL de un filtro propio no provoca otra carga', async () => {
+    const { fixture, servicio } = montar(false);
+    await fixture.whenStable();
+    servicio.filterArtworks.calls.reset();
+    fixture.componentInstance.autorFilter.set('Ana');
+    await fixture.componentInstance.performFilters();
+    await fixture.whenStable();
+    expect(servicio.filterArtworks).toHaveBeenCalledTimes(1);
   });
 
   it('un filtro que llega mientras otro se aplica no se pierde: se aplica al terminar', async () => {

@@ -8,7 +8,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { obraDePrueba } from '../galeria/obra-de-prueba';
 import { Artwork } from '../../../../shared/models/artwork.model';
 
-async function montar(obra: Artwork, esAdmin: boolean, admin = signal(esAdmin)) {
+async function montar(obra: Artwork, esAdmin: boolean, admin = signal(esAdmin), listo: () => Promise<void> = () => Promise.resolve()) {
   const servicio = {
     selectedArtwork: signal<Artwork | null>(obra), loading: signal(false), error: signal(false),
     getArtworkById: jasmine.createSpy('getArtworkById').and.resolveTo(undefined),
@@ -19,11 +19,12 @@ async function montar(obra: Artwork, esAdmin: boolean, admin = signal(esAdmin)) 
     providers: [
       provideRouter([{ path: 'obra/:id', component: ArtworkDetailComponent }]),
       { provide: ArtworksService, useValue: servicio },
-      { provide: AuthService, useValue: { isAdmin: admin, isAuthenticated: signal(esAdmin), isLoading: signal(false) } },
+      { provide: AuthService, useValue: { isAdmin: admin, isAuthenticated: signal(esAdmin), isLoading: signal(false), listo } },
     ],
   });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/obra/14', ArtworkDetailComponent);
+  await harness.fixture.whenStable();
   harness.detectChanges();
   return { harness, servicio, html: harness.routeNativeElement as HTMLElement };
 }
@@ -56,17 +57,24 @@ describe('ArtworkDetailComponent', () => {
     expect(html.querySelector('h1')?.textContent?.trim()).toBe('Sin título');
   });
 
-  it('vuelve a leer la obra si el rol de administrador llega después', async () => {
-    const admin = signal(false);
-    const { harness, servicio } = await montar(obraDePrueba(), false, admin);
-    admin.set(true);
-    harness.detectChanges();
-    await harness.fixture.whenStable();
-    expect(servicio.getArtworkById).toHaveBeenCalledTimes(2);
+  it('espera al perfil antes de leer la obra', async () => {
+    let perfilListo!: () => void;
+    const pendiente = new Promise<void>((r) => (perfilListo = r));
+    const promesa = montar(obraDePrueba(), false, signal(false), () => pendiente);
+    const servicio = TestBed.inject(ArtworksService) as unknown as { getArtworkById: jasmine.Spy };
+    await new Promise((r) => setTimeout(r));
+    expect(servicio.getArtworkById).not.toHaveBeenCalled();
+    perfilListo();
+    await promesa;
+    expect(servicio.getArtworkById).toHaveBeenCalledOnceWith(14);
   });
 
-  it('un administrador ya resuelto lee la obra una sola vez', async () => {
-    const { harness, servicio } = await montar(obraDePrueba(), true);
+  it('un parpadeo del rol al volver a la pestaña no vuelve a leer la obra', async () => {
+    const admin = signal(true);
+    const { harness, servicio } = await montar(obraDePrueba(), true, admin);
+    admin.set(false);
+    harness.detectChanges();
+    admin.set(true);
     harness.detectChanges();
     await harness.fixture.whenStable();
     expect(servicio.getArtworkById).toHaveBeenCalledTimes(1);

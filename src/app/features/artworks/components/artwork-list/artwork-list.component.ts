@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { ArtworksService } from '../../services/artworks.service';
@@ -78,19 +78,11 @@ export class ArtworkListComponent implements OnDestroy {
 
   constructor() {
     this.setupFilters();
-    this.listenToQueryParams();
-    this.recargarAlResolverAdmin();
+    // Hasta que el perfil carga, isAdmin() es false: la primera lectura saldria de `obras`, sin las
+    // columnas restringidas, y los filtros de ubicacion y responsable guardados se descartarian.
+    this.authService.listo().then(() => this.listenToQueryParams());
   }
 
-  /** Si el perfil llega después de la primera carga, esas filas salieron de `obras`, sin las columnas restringidas. */
-  private recargarAlResolverAdmin() {
-    let eraAdmin = this.isAdmin();
-    effect(() => {
-      const esAdmin = this.isAdmin();
-      if (esAdmin && !eraAdmin && untracked(this.isInitialized)) untracked(() => this.recargar());
-      eraAdmin = esAdmin;
-    });
-  }
 
   // Cada cosa tiene un unico responsable: InactivityService la sesion,
   // ArtworksService los reintentos, y este componente solo presenta.
@@ -242,6 +234,10 @@ export class ArtworkListComponent implements OnDestroy {
       const autor = params['autor'] || '';
       const tecnica = params['tecnica'] || '';
 
+      const filterUbicacion = ubicaciones.length > 0 ? ubicaciones : ubicacion;
+      const desdeUrl = { search, ubicacion: filterUbicacion, responsable, autor, tecnica };
+      if (this.isInitialized() && JSON.stringify(desdeUrl) === JSON.stringify(this.filtrosActuales())) return;
+
       this.searchTerm.set(search);
       this.ubicacionFilter.set(ubicacion);
       this.selectedUbicaciones.set(ubicaciones);
@@ -249,9 +245,11 @@ export class ArtworkListComponent implements OnDestroy {
       this.autorFilter.set(autor);
       this.tecnicaFilter.set(tecnica);
 
-      if (!this.isInitialized()) {
+      if (this.isInitialized()) {
+        this.savedPage.set(1);
+        await this.performFiltersWithoutUrlUpdate();
+      } else {
         this.isInitialized.set(true);
-        const filterUbicacion = ubicaciones.length > 0 ? ubicaciones : ubicacion;
         if (search || filterUbicacion || responsable || autor || tecnica) {
           await this.artworksService.filterArtworks({ search, ubicacion: filterUbicacion, responsable, autor, tecnica }, 1);
         } else {
