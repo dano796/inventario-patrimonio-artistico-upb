@@ -40,4 +40,12 @@ describe('App', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-cabecera')).toBeNull();
   });
+
+  it('aplica el tema también en las pantallas sin cabecera', async () => {
+    document.documentElement.removeAttribute('data-theme');
+    const fixture = TestBed.createComponent(App);
+    await TestBed.inject(Router).navigateByUrl('/autenticacion/iniciar-sesion');
+    fixture.detectChanges();
+    expect(document.documentElement.getAttribute('data-theme')).toMatch(/^(claro|oscuro)$/);
+  });
 });
