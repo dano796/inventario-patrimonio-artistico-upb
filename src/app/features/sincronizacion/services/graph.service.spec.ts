@@ -79,3 +79,40 @@ describe('GraphService.tieneAccesoArchivos', () => {
     expect((error as ErrorGraph).message).toBe('Microsoft no respondió a tiempo. Vuelve a intentarlo.');
   }));
 });
+
+describe('GraphService.descargar', () => {
+  it('pide la URL de descarga del archivo y la descarga sin enviar el token', async () => {
+    const fetchEspia = spyOn(window, 'fetch').and.returnValues(
+      Promise.resolve(new Response(JSON.stringify({ '@microsoft.graph.downloadUrl': 'https://descarga.test/x' }), { status: 200 })),
+      Promise.resolve(new Response(new Uint8Array([1, 2, 3]), { status: 200 }))
+    );
+    const graph = crearGraphService('token');
+
+    const datos = await graph.descargar('drive-1', 'item-1');
+
+    expect(Array.from(datos)).toEqual([1, 2, 3]);
+    expect(fetchEspia.calls.argsFor(0)[0]).toBe('https://graph.microsoft.com/v1.0/drives/drive-1/items/item-1');
+    expect(fetchEspia.calls.argsFor(1)[0]).toBe('https://descarga.test/x');
+    expect((fetchEspia.calls.argsFor(1)[1] as RequestInit).headers).toBeUndefined();
+  });
+
+  it('falla con un error claro si OneDrive no da URL de descarga', async () => {
+    spyOn(window, 'fetch').and.resolveTo(new Response(JSON.stringify({}), { status: 200 }));
+    const graph = crearGraphService('token');
+
+    await expectAsync(graph.descargar('drive-1', 'item-1')).toBeRejectedWithError(ErrorGraph, /URL de descarga/);
+  });
+});
+
+describe('GraphService.leerRangoUsado', () => {
+  it('pide la dirección, los valores y las fórmulas del rango usado de la pestaña', async () => {
+    const respuesta = { address: "'Inventario Obras'!A1:R3", values: [['a']], formulas: [['a']] };
+    const fetchEspia = spyOn(window, 'fetch').and.resolveTo(new Response(JSON.stringify(respuesta), { status: 200 }));
+    const graph = crearGraphService('token');
+
+    expect(await graph.leerRangoUsado('drive-1', 'item-1', 'Inventario Obras')).toEqual(respuesta);
+    expect(fetchEspia.calls.argsFor(0)[0]).toBe(
+      'https://graph.microsoft.com/v1.0/drives/drive-1/items/item-1/workbook/worksheets/Inventario%20Obras/usedRange?$select=address,values,formulas'
+    );
+  });
+});

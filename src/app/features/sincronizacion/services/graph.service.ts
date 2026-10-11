@@ -18,6 +18,15 @@ const GRAPH = 'https://graph.microsoft.com/v1.0';
 /** Sin esto, un Graph que no responde deja la pantalla en «Comprobando conexión…» para siempre. */
 const TOPE_MS = 15000;
 
+/** La hoja pesa unos 112 MB por las imágenes: 15 s no alcanzan para descargarla. */
+const TOPE_DESCARGA_MS = 5 * 60 * 1000;
+
+export interface RangoLeido {
+  address: string;
+  values: unknown[][];
+  formulas: unknown[][];
+}
+
 @Injectable({ providedIn: 'root' })
 export class GraphService {
   private supabaseService = inject(SupabaseService);
@@ -85,6 +94,22 @@ export class GraphService {
     });
   }
 
+  /** La URL de descarga viene firmada y es de otro dominio: el token no debe viajar a ella. */
+  async descargar(driveId: string, itemId: string): Promise<Uint8Array> {
+    const item = await this.pedir<{ '@microsoft.graph.downloadUrl'?: string }>(`/drives/${driveId}/items/${itemId}`);
+    const url = item['@microsoft.graph.downloadUrl'];
+    if (!url) throw new ErrorGraph(404, 'OneDrive no dio una URL de descarga para la hoja.');
+    const respuesta = await this.fetchConTope(url, {}, TOPE_DESCARGA_MS);
+    if (!respuesta.ok) throw new ErrorGraph(respuesta.status, await respuesta.text());
+    return new Uint8Array(await respuesta.arrayBuffer());
+  }
+
+  leerRangoUsado(driveId: string, itemId: string, hoja: string): Promise<RangoLeido> {
+    return this.pedir<RangoLeido>(
+      `/drives/${driveId}/items/${itemId}/workbook/worksheets/${encodeURIComponent(hoja)}/usedRange?$select=address,values,formulas`
+    );
+  }
+
   private rango(driveId: string, itemId: string, hoja: string, direccion: string): string {
     return `/drives/${driveId}/items/${itemId}/workbook/worksheets/${encodeURIComponent(hoja)}/range(address='${direccion}')`;
   }
@@ -107,7 +132,7 @@ export class GraphService {
    * se respeta: también puede abortar la petición real, y su rechazo llega
    * tal cual, sin convertirse en el ErrorGraph 408 del tope.
    */
-  private async fetchConTope(url: string, init: RequestInit = {}): Promise<Response> {
+  private async fetchConTope(url: string, init: RequestInit = {}, topeMs = TOPE_MS): Promise<Response> {
     const controlador = new AbortController();
     const señalExterna = init.signal;
     if (señalExterna) {
@@ -120,7 +145,7 @@ export class GraphService {
       id = setTimeout(() => {
         controlador.abort();
         reject(new ErrorGraph(408, 'Microsoft no respondió a tiempo. Vuelve a intentarlo.'));
-      }, TOPE_MS);
+      }, topeMs);
     });
 
     try {
