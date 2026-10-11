@@ -20,11 +20,14 @@ src/app/
 │   └── services/
 │       ├── auth.service.ts        # sesión, perfil, rol, flujo de recuperación
 │       ├── supabase.service.ts    # dueño del cliente Supabase
+│       ├── tema.service.ts        # tema claro/oscuro en <html data-theme>
 │       └── inactivity.service.ts  # único responsable del despertar de pestaña
 │
 ├── features/
 │   ├── artworks/
-│   │   ├── components/        # artwork-list · artwork-detail · artwork-form
+│   │   ├── components/        # artwork-list · artwork-detail · artwork-form · selector-responsable
+│   │   │   └── galeria/       # barra-filtros · tarjeta-obra · tabla-obras · paginacion (solo presentan)
+│   │   ├── utils/             # galeria (chips, vista) · ficha (campos por rol) · buscar-responsables
 │   │   ├── services/
 │   │   │   ├── artworks.service.ts        # estado + CRUD + paginación
 │   │   │   └── artwork-export.service.ts  # generación del .xlsx
@@ -32,18 +35,22 @@ src/app/
 │   ├── auth/
 │   │   ├── components/        # auth-log-in · forgot-password · update-password
 │   │   └── auth.routes.ts
-│   └── sincronizacion/
-│       ├── nucleo/            # TS puro, compartido con scripts/importar-hoja.ts
-│       ├── services/          # graph.service (Microsoft Graph, token delegado)
-│       ├── components/        # vincular-hoja
-│       └── sincronizacion.routes.ts
+│   ├── sincronizacion/
+│   │   ├── nucleo/            # TS puro, compartido con scripts/importar-hoja.ts
+│   │   ├── services/          # graph.service (Microsoft Graph, token delegado)
+│   │   ├── components/        # vincular-hoja
+│   │   └── sincronizacion.routes.ts
+│   └── tablero/               # estado del inventario (solo administradores, lee obras_admin)
+│       ├── tablero.ts         # calcularTablero: función pura
+│       ├── tablero.service.ts
+│       └── components/        # tablero
 │
 └── shared/
-    ├── components/            # confirm-modal · image-uploader
+    ├── components/            # cabecera · confirm-modal · image-uploader
     ├── models/                # artwork.model · image.model · user.model
     ├── constants/
     ├── services/              # image.service (Storage)
-    └── utils/                 # validation.service
+    └── utils/                 # validation.service · almacen (localStorage seguro) · leer-por-paginas
 ```
 
 Los imports son rutas relativas directas. No hay barrels ni path aliases.

@@ -60,10 +60,10 @@ await this.prepareClient();   // ensureActiveSession() + re-read the client
 - Component is `name.component.ts`, its template is `name.html` (no `.component` in the template filename).
 - Standalone components, `inject()`, signals, and `ChangeDetectionStrategy.OnPush` **everywhere**. Because of OnPush, mutable state must live in signals — a plain field mutated after an `await` will not re-render.
 - `@if` / `@for` with an explicit stable `track` (prefer `track x.id`, not object identity).
-- Tailwind utilities in templates only; no per-component stylesheets. `getGridClasses()` builds class names at runtime, so those variants live in `safelist` in `tailwind.config.js`.
+- Tailwind utilities in templates only; no per-component stylesheets. Colors are CSS variables in `src/styles.css` (light in `:root`, dark in `[data-theme="oscuro"]`) exposed as named Tailwind colors (`bg-superficie`, `text-tinta-4`, `bg-acento`…); never hard-code a hex value or a stock Tailwind color in a template, or the dark theme breaks (the one exception is the dark scrim over images, `slate-900/…`, which is the same in both themes). Repeated building blocks (`btn-primario`, `btn-secundario`, `btn-peligro`, `campo`, `tarjeta`, `etiqueta`, `antetitulo`, `titulo-pantalla`, `marcador`) live in `@layer components` with `@apply`. `localStorage` always goes through `shared/utils/almacen.ts`.
 - Heavy dependencies go behind `await import()` (`exceljs` + `file-saver` are a ~1.5 MB lazy chunk). All routes use `loadComponent`.
 - Supabase tables: `obras`, `imagenes`, `usuarios`, `responsables`, `sincronizacion_hoja`, `sincronizacion_estado`. Storage bucket: `imagenes-obras`. The FK column is `id_obra`.
 
 ## Testing
 
-The 6 remaining spec files are unmodified CLI scaffolds that instantiate real components with no Supabase mock — effectively zero coverage. Treat `npm test` as unverified.
+Specs run with Karma + Jasmine. There is no Chrome on the dev machine; point `CHROME_BIN` at Playwright's Chromium (path in the latest plan under `docs/superpowers/plans/`). Component specs mock services at the `AuthService` / `ArtworksService` level, not `SupabaseService`. `npm test` is expected to be green.
