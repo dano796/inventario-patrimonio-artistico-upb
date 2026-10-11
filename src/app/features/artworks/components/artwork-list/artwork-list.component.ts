@@ -4,6 +4,7 @@ import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { ArtworksService } from '../../services/artworks.service';
 import { ArtworkExportService } from '../../services/artwork-export.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { borrarAlmacen, guardarAlmacen, leerAlmacen } from '../../../../shared/utils/almacen';
 import {
   ChipFiltro, ClaveFiltro, chipsFiltros, guardarVista, leerVista, lineaResultado, ValoresFiltros, Vista,
 } from '../../utils/galeria';
@@ -153,21 +154,17 @@ export class ArtworkListComponent implements OnDestroy {
       showAdvancedFilters: this.showAdvancedFilters(),
       timestamp: Date.now(),
     };
-    try {
-      localStorage.setItem(this.FILTERS_STORAGE_KEY, JSON.stringify(filters));
-    } catch (error) {
-      console.warn('No se pudieron guardar los filtros en localStorage:', error);
-    }
+    guardarAlmacen(this.FILTERS_STORAGE_KEY, JSON.stringify(filters));
   }
 
   private loadFiltersFromStorage(): boolean {
     try {
-      const saved = localStorage.getItem(this.FILTERS_STORAGE_KEY);
+      const saved = leerAlmacen(this.FILTERS_STORAGE_KEY);
       if (!saved) return false;
       const filters = JSON.parse(saved);
       const isExpired = Date.now() - filters.timestamp > 24 * 60 * 60 * 1000;
       if (isExpired) {
-        localStorage.removeItem(this.FILTERS_STORAGE_KEY);
+        borrarAlmacen(this.FILTERS_STORAGE_KEY);
         return false;
       }
       const puedeFiltrarRestringido = this.isAdmin();
@@ -181,18 +178,14 @@ export class ArtworkListComponent implements OnDestroy {
       this.savedPage.set(filters.currentPage || 1);
       return true;
     } catch (error) {
-      console.warn('Error al cargar filtros desde localStorage:', error);
+      console.warn('Error al cargar filtros guardados:', error);
       this.clearFiltersFromStorage();
       return false;
     }
   }
 
   private clearFiltersFromStorage() {
-    try {
-      localStorage.removeItem(this.FILTERS_STORAGE_KEY);
-    } catch (error) {
-      console.warn('Error al limpiar filtros de localStorage:', error);
-    }
+    borrarAlmacen(this.FILTERS_STORAGE_KEY);
   }
 
   private setupFilters() {

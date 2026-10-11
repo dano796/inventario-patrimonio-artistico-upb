@@ -14,3 +14,11 @@ export function guardarAlmacen(clave: string, valor: string): void {
     return;
   }
 }
+
+export function borrarAlmacen(clave: string): void {
+  try {
+    localStorage.removeItem(clave);
+  } catch {
+    return;
+  }
+}

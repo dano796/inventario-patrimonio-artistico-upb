@@ -1,7 +1,7 @@
-import { guardarAlmacen, leerAlmacen } from './almacen';
+import { borrarAlmacen, guardarAlmacen, leerAlmacen } from './almacen';
 
 describe('almacen', () => {
-  afterEach(() => localStorage.removeItem('prueba-almacen'));
+  afterEach(() => borrarAlmacen('prueba-almacen'));
 
   it('guarda y lee un valor', () => {
     guardarAlmacen('prueba-almacen', 'tabla');
@@ -16,5 +16,16 @@ describe('almacen', () => {
   it('no lanza si el almacenamiento lanza al guardar', () => {
     spyOn(Storage.prototype, 'setItem').and.throwError('lleno');
     expect(() => guardarAlmacen('prueba-almacen', 'tabla')).not.toThrow();
+  });
+
+  it('borra un valor guardado', () => {
+    guardarAlmacen('prueba-almacen', 'tabla');
+    borrarAlmacen('prueba-almacen');
+    expect(leerAlmacen('prueba-almacen')).toBeNull();
+  });
+
+  it('no lanza si el almacenamiento lanza al borrar', () => {
+    spyOn(Storage.prototype, 'removeItem').and.throwError('bloqueado');
+    expect(() => borrarAlmacen('prueba-almacen')).not.toThrow();
   });
 });
