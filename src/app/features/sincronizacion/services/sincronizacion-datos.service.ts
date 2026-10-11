@@ -4,6 +4,7 @@ import { ObraBase } from '../nucleo/importacion';
 import { ResponsableBase } from '../nucleo/diff-tipos';
 import { ValoresFoto } from '../nucleo/foto';
 import { PeticionSincronizacion } from '../nucleo/plan-ejecucion';
+import { leerPorPaginas } from '../../../shared/utils/leer-por-paginas';
 
 export interface HojaVinculada {
   drive_id: string;
@@ -21,22 +22,6 @@ export interface ResultadoRpc {
 
 const COLUMNAS_OBRA =
   'id, autor, titulo, tecnica, dimension, ano, ubicacion, bloque_asignado, valor, descripcion, responsable, cargo, observaciones, imagenes(id, url)';
-const PAGINA = 1000;
-
-/** PostgREST corta cada respuesta en max-rows: se pide por páginas hasta que una llega vacía. */
-export async function leerPorPaginas<T>(
-  consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: unknown }>
-): Promise<T[]> {
-  const filas: T[] = [];
-  for (let desde = 0; ; ) {
-    const { data, error } = await consulta(desde, desde + PAGINA - 1);
-    if (error) throw error;
-    if (!data?.length) return filas;
-    filas.push(...data);
-    desde += data.length;
-  }
-}
-
 export function obraDesdeFila(fila: Record<string, unknown>): ObraBase {
   const texto = (columna: string) => (fila[columna] ?? null) as string | null;
   const numero = (columna: string) => (fila[columna] === null || fila[columna] === undefined ? null : Number(fila[columna]));
