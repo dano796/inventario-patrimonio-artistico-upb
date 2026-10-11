@@ -83,6 +83,8 @@ export class AuthService {
     return this.loadingProfile();
   });
 
+  nombre = computed(() => this.userProfile()?.nombre ?? null);
+
   constructor() {
     this.readyPromise = this.initializeAuth();
   }
@@ -204,7 +206,7 @@ export class AuthService {
       // Intentar cargar perfil de la base de datos
       const { data, error } = await this.supabaseClient
         .from('usuarios')
-        .select('id, rol')
+        .select('id, rol, nombre')
         .eq('id', userId)
         .single();
 

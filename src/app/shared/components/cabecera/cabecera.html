@@ -1,0 +1,64 @@
+<header class="sticky top-0 z-40 border-b border-linea bg-cabecera backdrop-blur-md">
+  <div class="mx-auto grid max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-5 px-4 py-2.5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:px-8">
+    <a routerLink="/" class="min-w-0 text-tinta hover:text-tinta">
+      <span class="block text-[15px] font-extrabold leading-tight">Patrimonio Artístico</span>
+      <span class="block truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-tinta-5">Universidad Pontificia Bolivariana</span>
+    </a>
+
+    <nav class="hidden gap-8 justify-self-center md:flex" aria-label="Principal">
+      <a routerLink="/" routerLinkActive="!text-acento-tinta !border-acento" [routerLinkActiveOptions]="{ exact: true }"
+        class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Galería</a>
+      @if (esAdmin()) {
+        <a routerLink="/tablero" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Tablero</a>
+      }
+    </nav>
+
+    <div class="flex items-center gap-3 justify-self-end">
+      <button type="button" (click)="alternarTema()"
+        [attr.aria-label]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+        [attr.title]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+        class="grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 hover:border-linea-3 hover:text-tinta">
+        @if (esOscuro()) {
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+        } @else {
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
+        }
+      </button>
+
+      @if (conSesion()) {
+        <div class="hidden items-center gap-2.5 sm:flex">
+          <span class="grid h-[34px] w-[34px] place-items-center rounded-[11px] bg-acento-suave text-[13px] font-bold text-acento-tinta" aria-hidden="true">{{ iniciales() }}</span>
+          <span class="text-left">
+            <span class="block text-[13px] font-semibold">{{ nombre() }}</span>
+            <span class="block text-[11px] font-semibold text-tinta-5">{{ rol() }}</span>
+          </span>
+          <button type="button" (click)="cerrarSesion()" class="ml-2 text-[13px] font-semibold text-tinta-4 hover:text-rojo">Cerrar sesión</button>
+        </div>
+      } @else {
+        <a routerLink="/autenticacion/iniciar-sesion" class="btn-secundario hidden !px-3.5 !py-2 sm:inline-flex">Iniciar sesión</a>
+      }
+
+      <button type="button" (click)="menuAbierto.set(!menuAbierto())" [attr.aria-expanded]="menuAbierto()"
+        aria-controls="menu-movil" aria-label="Menú"
+        class="grid h-[34px] w-[34px] place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 md:hidden">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  @if (menuAbierto()) {
+    <nav id="menu-movil" class="border-t border-linea px-4 py-3 md:hidden" aria-label="Menú móvil">
+      <a routerLink="/" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Galería</a>
+      @if (esAdmin()) {
+        <a routerLink="/tablero" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Tablero</a>
+      }
+      @if (conSesion()) {
+        <p class="mt-2 border-t border-linea-suave pt-3 text-[13px] font-semibold">{{ nombre() }} · <span class="text-tinta-5">{{ rol() }}</span></p>
+        <button type="button" (click)="cerrarSesion()" class="py-2 text-sm font-semibold text-rojo">Cerrar sesión</button>
+      } @else {
+        <a routerLink="/autenticacion/iniciar-sesion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-acento">Iniciar sesión</a>
+      }
+    </nav>
+  }
+</header>

@@ -2,4 +2,5 @@
 export interface UserProfile {
   id: string;
   rol: string;
+  nombre?: string | null;
 }
