@@ -140,3 +140,55 @@ describe('SincronizacionService', () => {
     expect(graph.escribirValores).toHaveBeenCalledOnceWith('d', 'i', 'Inventario Obras', 'R2:R2', [[700]]);
   });
 });
+
+describe('SincronizacionService, protecciones al aplicar', () => {
+  it('no toca la base si antes no puede leer la hoja', async () => {
+    const { servicio, graph, datos } = montar({ hoja: [{ AUTOR: 'Ana', TITULO: 'Nueva' }], obras: [], fotos: [] });
+    graph.leerRangoUsado.and.rejectWith(new ErrorGraph(401, 'caducado'));
+    const calculo = await servicio.calcular();
+
+    await expectAsync(servicio.aplicar(calculo, { ...decisionesPorDefecto(calculo.diff), altasBase: new Set([2]) })).toBeRejected();
+
+    expect(datos.aplicar).not.toHaveBeenCalled();
+  });
+
+  it('escribe el ID WEB de las obras nuevas antes que cualquier otro campo', async () => {
+    const { servicio, graph, datos } = montar({
+      hoja: [{ AUTOR: 'Ana', TITULO: 'Nueva' }, { TITULO: 'Paisaje', OBSERVACIONES: 'Nota', 'ID WEB': 14 }],
+      obras: [obraBase(14, { titulo: 'Paisaje', observaciones: 'Nota corregida' })],
+      fotos: [[14, foto({ titulo: 'Paisaje', observaciones: 'Nota' })]],
+    });
+    datos.aplicar.and.returnValues(
+      Promise.resolve({ aplicados: 0, descartados: [], creadas: [{ fila: 2, obra_id: 700 }] }),
+      Promise.resolve(SIN_RESULTADO)
+    );
+    const calculo = await servicio.calcular();
+
+    await servicio.aplicar(calculo, { ...decisionesPorDefecto(calculo.diff), altasBase: new Set([2]) });
+
+    expect(graph.escribirValores.calls.allArgs().map((a) => a[3])).toEqual(['R2:R2', 'M3:M3']);
+  });
+
+  it('no deja aplicar dos veces el mismo cálculo, aunque el primer intento fallara', async () => {
+    const { servicio, graph, datos } = montar({ hoja: [{ AUTOR: 'Ana', TITULO: 'Nueva' }], obras: [], fotos: [] });
+    graph.leerRangoUsado.and.rejectWith(new ErrorGraph(401, 'caducado'));
+    const calculo = await servicio.calcular();
+    const decisiones = { ...decisionesPorDefecto(calculo.diff), altasBase: new Set([2]) };
+    await expectAsync(servicio.aplicar(calculo, decisiones)).toBeRejected();
+    graph.leerRangoUsado.and.resolveTo(rangoDePrueba([{ AUTOR: 'Ana', TITULO: 'Nueva' }]));
+
+    await expectAsync(servicio.aplicar(calculo, decisiones)).toBeRejectedWithError(/calcular/i);
+
+    expect(datos.aplicar).not.toHaveBeenCalled();
+  });
+
+  it('calcular aborta si la hoja no tiene la columna ID WEB', async () => {
+    const { servicio, graph } = montar({ hoja: [], obras: [], fotos: [] });
+    const sinIdWeb = ENCABEZADOS_HOJA.filter((e) => e !== 'ID WEB');
+    graph.descargar.and.resolveTo(
+      crearXlsxDePrueba({ celdas: sinIdWeb.map((texto, i) => ({ ref: `${columnaALetra(i + 1)}1`, texto })) })
+    );
+
+    await expectAsync(servicio.calcular()).toBeRejectedWithError(/ID WEB/);
+  });
+});

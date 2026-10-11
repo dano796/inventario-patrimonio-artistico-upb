@@ -35,6 +35,8 @@ export interface ResultadoAplicacion {
 export class SincronizacionService {
   private graph = inject(GraphService);
   private datos = inject(SincronizacionDatosService);
+  /** Las altas no son idempotentes: reintentar con el mismo cálculo duplicaría obras. */
+  private gastados = new WeakSet<Calculo>();
 
   /** Nada se escribe aquí: el diff se revisa antes de aplicar. */
   async calcular(): Promise<Calculo> {
@@ -42,6 +44,7 @@ export class SincronizacionService {
     if (!hoja) throw new Error('No hay ninguna hoja vinculada. Vincúlala antes de sincronizar.');
     const contenido = await this.graph.descargar(hoja.drive_id, hoja.item_id);
     const lectura = leerFilasObras(leerHoja(descomprimirXlsx(contenido), hoja.nombre_hoja, new DOMParser()));
+    if (lectura.columnaIdWeb === null) throw new Error('Falta el encabezado ID WEB en la hoja.');
     const [obras, responsables, fotos] = await Promise.all([
       this.datos.obras(),
       this.datos.responsables(),
@@ -52,18 +55,23 @@ export class SincronizacionService {
   }
 
   /**
-   * Primero la base, en una transacción; después la hoja, rango a rango. La foto
-   * de lo escrito en la hoja se registra al final y solo de lo que se escribió:
-   * si Graph falla a medias, lo que falta reaparece en la siguiente ejecución.
+   * Primero se comprueba que la hoja se puede leer, porque lo que se confirme en
+   * la base ya no se deshace; después la base, en una transacción; después la
+   * hoja, rango a rango, empezando por el ID WEB de las obras nuevas. La foto de
+   * lo escrito en la hoja se registra al final y solo de lo que se escribió: si
+   * Graph falla a medias, lo que falta reaparece en la siguiente ejecución.
    */
   async aplicar(calculo: Calculo, decisiones: Decisiones): Promise<ResultadoAplicacion> {
+    if (this.gastados.has(calculo)) {
+      throw new Error('Este cálculo ya se aplicó o se intentó aplicar. Vuelve a calcular antes de reintentar.');
+    }
+    this.gastados.add(calculo);
     const filas = new Map(calculo.lectura.filas.map((f) => [f.fila, f]));
     const plan = planificarEjecucion(calculo.diff, decisiones, {
       obras: new Map(calculo.obras.map((o) => [o.id, o])),
       filas,
       prefijoBucket: PREFIJO_BUCKET,
     });
-    const base = await this.datos.aplicar(plan.peticion);
 
     const { drive_id, item_id, nombre_hoja } = calculo.hoja;
     const rango = await this.graph.leerRangoUsado(drive_id, item_id, nombre_hoja);
@@ -71,6 +79,8 @@ export class SincronizacionService {
     const columnas = columnasDeEncabezados(rango.values[1 - origen.fila] ?? []);
     if ('faltantes' in columnas) throw new Error(`Faltan encabezados en la hoja: ${columnas.faltantes.join(', ')}`);
     const lectura = lecturaDesdeRango(rango.values, rango.formulas, columnas.idWeb, origen);
+
+    const base = await this.datos.aplicar(plan.peticion);
 
     const ids = ubicarIdsNuevos(
       base.creadas.map((c) => ({ fila: c.fila, obraId: c.obra_id, campos: filas.get(c.fila)!.campos })),
@@ -87,7 +97,7 @@ export class SincronizacionService {
       if (Object.keys(foto).length) fotos.set(obraId, { ...fotos.get(obraId), ...foto });
     };
     try {
-      for (const bloque of agruparEnBloques([...ids.ubicadas, ...campos.ubicadas])) {
+      for (const bloque of [...agruparEnBloques(ids.ubicadas), ...agruparEnBloques(campos.ubicadas)]) {
         await this.graph.escribirValores(drive_id, item_id, nombre_hoja, bloque.direccion, bloque.valores);
         for (const e of bloque.escrituras) anotar(e.obraId, e.foto);
         resultado.escritasEnHoja += bloque.escrituras.length;
