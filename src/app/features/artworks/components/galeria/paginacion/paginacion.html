@@ -1,0 +1,18 @@
+@if (totalPaginas() > 1) {
+  <nav class="flex flex-col items-center gap-3.5 pt-2" aria-label="Paginación">
+    <div class="h-1 w-full max-w-[460px] overflow-hidden rounded-full bg-pista" aria-hidden="true">
+      <div class="h-full bg-acento" [style.width]="progreso()"></div>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <button type="button" class="btn-secundario" aria-label="Página anterior" [disabled]="paginaActual() <= 1" (click)="ir(paginaActual() - 1)">←</button>
+      <div class="flex items-center gap-2 text-xs font-medium text-tinta-5">
+        <label for="ir-a-pagina">Ir a la página</label>
+        <input #campo id="ir-a-pagina" type="number" inputmode="numeric" min="1" [max]="totalPaginas()" [value]="paginaActual()"
+          (change)="ir(campo.value); campo.value = '' + paginaActual()"
+          class="campo !w-16 !rounded-[9px] !px-2 !py-1.5 text-center" />
+        <span>de {{ totalPaginas() }}</span>
+      </div>
+      <button type="button" class="btn-secundario" aria-label="Página siguiente" [disabled]="paginaActual() >= totalPaginas()" (click)="ir(paginaActual() + 1)">→</button>
+    </div>
+  </nav>
+}

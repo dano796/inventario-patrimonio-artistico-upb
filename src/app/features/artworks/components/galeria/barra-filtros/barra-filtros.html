@@ -1,0 +1,55 @@
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2.5">
+  <div class="relative flex min-w-0 flex-1 items-center">
+    <svg class="pointer-events-none absolute left-3.5 h-[18px] w-[18px] text-tinta-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    <label for="filtro-busqueda" class="sr-only">Buscar por título</label>
+    <input id="filtro-busqueda" type="search" class="campo !py-[13px] !pl-[42px] !text-[15px]" placeholder="Buscar por título"
+      [value]="valores().busqueda" (input)="emitir('busqueda', $event)" />
+  </div>
+  <button type="button" [class]="abierto() ? 'btn-secundario !py-3 !border-acento !text-acento-tinta' : 'btn-secundario !py-3'"
+    [attr.aria-expanded]="abierto()" aria-controls="panel-filtros" (click)="alternar.emit()">
+    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M7 12h10M10 18h4"></path></svg>
+    Filtros
+    @if (contador() > 0) {
+      <span data-contador-filtros class="rounded-full bg-acento px-2 py-px text-[11px] font-bold text-white">{{ contador() }}</span>
+    }
+  </button>
+</div>
+
+@if (abierto()) {
+  <div id="panel-filtros" class="tarjeta flex flex-col gap-4 px-[22px] py-5">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      @for (campo of campos(); track campo.clave) {
+        <div>
+          <label class="etiqueta" [attr.for]="'filtro-' + campo.clave">{{ campo.etiqueta }}</label>
+          <div class="relative flex items-center">
+            <input [id]="'filtro-' + campo.clave" type="text" class="campo !pr-9" [placeholder]="campo.ejemplo"
+              [value]="valores()[campo.clave]" (input)="emitir(campo.clave, $event)"
+              (keydown.enter)="campo.clave === 'ubicacion' && agregarUbicacion.emit($any($event.target).value)" />
+            @if (valores()[campo.clave]) {
+              <button type="button" class="absolute right-2 h-[22px] w-[22px] rounded-[7px] bg-linea-suave text-[13px] font-semibold leading-none text-tinta-4"
+                [attr.aria-label]="'Limpiar ' + campo.etiqueta" (click)="cambio.emit({ clave: campo.clave, valor: '' })">×</button>
+            }
+          </div>
+          @if (campo.clave === 'ubicacion') {
+            <p class="mt-1 text-[11px] font-medium text-tinta-5">Enter para añadir otra ubicación.</p>
+          }
+        </div>
+      }
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-4 border-t border-linea-suave pt-3.5">
+      <div class="flex flex-wrap gap-[7px]">
+        @for (chip of chips(); track chip.clave + chip.valor) {
+          <span class="inline-flex items-center gap-2 rounded-full border border-acento-suave bg-acento-tenue px-3 py-[5px] text-xs font-semibold text-acento-tinta">
+            {{ chip.texto }}
+            <button type="button" class="text-sm leading-none" [attr.aria-label]="'Quitar filtro ' + chip.texto" (click)="quitar.emit(chip)">×</button>
+          </span>
+        } @empty {
+          <span class="text-xs font-medium text-tinta-5">Escribe en cualquier campo para acotar el listado.</span>
+        }
+      </div>
+      @if (chips().length) {
+        <button type="button" class="text-[13px] font-semibold text-rojo" (click)="limpiar.emit()">Limpiar todos los filtros</button>
+      }
+    </div>
+  </div>
+}

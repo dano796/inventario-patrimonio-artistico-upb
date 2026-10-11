@@ -1,0 +1,32 @@
+@if (modo() === 'mosaico') {
+  <a [routerLink]="['/obra', obra().id]" class="tarjeta group relative block aspect-square overflow-hidden text-white">
+    @if (imagen(); as url) {
+      <img [src]="url" [alt]="titulo()" loading="lazy" class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+    } @else {
+      <span class="marcador absolute inset-0" aria-hidden="true"></span>
+    }
+    <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/90 to-slate-900/0 px-3 pb-3 pt-7 text-[11px] font-medium">
+      <span class="block text-[15px] font-bold leading-tight">{{ titulo() }}</span>
+      <span class="opacity-75">{{ autor() }}</span>
+    </span>
+  </a>
+} @else {
+  <article class="tarjeta flex h-full flex-col overflow-hidden">
+    <a [routerLink]="['/obra', obra().id]" class="relative block aspect-[4/3] overflow-hidden" tabindex="-1" aria-hidden="true">
+      @if (imagen(); as url) {
+        <img [src]="url" alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover" />
+      } @else {
+        <span class="marcador absolute inset-0 grid place-items-center text-xs font-semibold text-tinta-5">Sin imagen</span>
+      }
+    </a>
+    <div class="flex flex-1 flex-col gap-1.5 px-[17px] pb-[17px] pt-[15px]">
+      <h3 class="text-[17px] font-bold tracking-[-0.01em]">
+        <a [routerLink]="['/obra', obra().id]" class="text-tinta hover:text-acento-tinta">{{ titulo() }}</a>
+      </h3>
+      <p class="text-[13px] font-medium text-tinta-4">{{ autor() }}</p>
+      @if (esAdmin()) {
+        <p class="mt-auto truncate border-t border-linea-suave pt-3 text-xs font-medium text-tinta-5">{{ ubicacion() }}</p>
+      }
+    </div>
+  </article>
+}
