@@ -17,6 +17,13 @@ export const routes: Routes = [
     children: SincronizacionRoutes,
   },
   {
+    path: 'tablero',
+    title: 'Tablero | Inventario Patrimonio Artístico UPB',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/tablero/components/tablero/tablero.component').then((m) => m.TableroComponent),
+  },
+  {
     path: '',
     children: ArtworkRoutes,
   },
