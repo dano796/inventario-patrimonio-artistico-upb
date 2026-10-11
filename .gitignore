@@ -59,3 +59,6 @@ Thumbs.db
 # Importación inicial: clave service_role y archivos de trabajo con datos restringidos
 .env.importacion
 /importacion/
+
+# Supabase local para probar la RPC: esquema volcado de producción
+/supabase/
