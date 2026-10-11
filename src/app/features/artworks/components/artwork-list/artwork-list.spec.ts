@@ -11,6 +11,13 @@ import { CLAVE_VISTA } from '../../utils/galeria';
 @Component({ template: '' })
 class Vacia {}
 
+const esperarEspera = () => new Promise((r) => setTimeout(r, 350));
+
+function escribir(campo: HTMLInputElement, texto: string) {
+  campo.value = texto;
+  campo.dispatchEvent(new Event('input'));
+}
+
 function montar(esAdmin: boolean, admin = signal(esAdmin), listo: () => Promise<void> = () => Promise.resolve()) {
   const artworks = signal([obraDePrueba(), obraDePrueba({ id: 15, titulo: null })]);
   const servicio = {
@@ -146,5 +153,18 @@ describe('ArtworkListComponent', () => {
     await fixture.whenStable();
     expect(servicio.filterArtworks).toHaveBeenCalledTimes(2);
     expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: 'Ana', tecnica: 'Óleo' }));
+  });
+
+  it('Enter en Ubicación antes de la espera añade la ubicación y vacía el campo', async () => {
+    const { fixture, html } = montar(true);
+    await fixture.whenStable();
+    fixture.componentInstance.showAdvancedFilters.set(true);
+    fixture.detectChanges();
+    const campo = html.querySelector<HTMLInputElement>('#filtro-ubicacion')!;
+    escribir(campo, 'Bloque 3');
+    campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.selectedUbicaciones()).toEqual(['Bloque 3']);
+    expect(campo.value).toBe('');
   });
 });

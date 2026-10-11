@@ -24,7 +24,7 @@
           <div class="relative flex items-center">
             <input [id]="'filtro-' + campo.clave" type="text" class="campo !pr-9" [placeholder]="campo.ejemplo"
               [value]="valores()[campo.clave]" (input)="emitir(campo.clave, $event)"
-              (keydown.enter)="campo.clave === 'ubicacion' && agregarUbicacion.emit($any($event.target).value)" />
+              (keydown.enter)="alPulsarEnter(campo.clave, $event)" />
             @if (valores()[campo.clave]) {
               <button type="button" class="absolute right-2 h-[22px] w-[22px] rounded-[7px] bg-linea-suave text-[13px] font-semibold leading-none text-tinta-4"
                 [attr.aria-label]="'Limpiar ' + campo.etiqueta" (click)="cambio.emit({ clave: campo.clave, valor: '' })">×</button>

@@ -39,4 +39,12 @@ export class BarraFiltrosComponent {
   emitir(clave: ClaveFiltro, evento: Event): void {
     this.cambio.emit({ clave, valor: (evento.target as HTMLInputElement).value });
   }
+
+  /** Antes de la espera de 300 ms la señal aún vale '' y el enlace [value] no vería cambio al vaciarla. */
+  alPulsarEnter(clave: ClaveFiltro, evento: Event): void {
+    if (clave !== 'ubicacion') return;
+    const campo = evento.target as HTMLInputElement;
+    this.agregarUbicacion.emit(campo.value);
+    campo.value = '';
+  }
 }
