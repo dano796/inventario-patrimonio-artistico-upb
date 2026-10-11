@@ -81,6 +81,21 @@ describe('planificarEjecucion', () => {
     expect(plan.escrituras.map((e) => e.destino)).toEqual([{ tipo: 'campo', campo: 'responsable' }]);
   });
 
+  it('si el responsable de la fila va a la hoja, no escribe además el cargo de la persona anterior', () => {
+    const plan = planDe({
+      cambios: [cambio({ campo: 'responsable', destino: 'hoja', hoja: 'LUIS GÓMEZ', base: 'ANA PÉREZ', foto: 'LUIS GÓMEZ' })],
+      cargos: [{
+        clave: 'LUIS GÓMEZ', nombre: 'LUIS GÓMEZ', destino: 'hoja', hoja: 'RECTOR', base: 'VICERRECTOR', foto: 'RECTOR',
+        filas: [{ fila: 2, obraId: 14, cargo: 'RECTOR', combinada: false }, { fila: 5, obraId: 20, cargo: 'RECTOR', combinada: false }],
+      }],
+    });
+    expect(plan.escrituras.filter((e) => e.fila === 2).map((e) => [e.destino, e.valor])).toEqual([
+      [{ tipo: 'campo', campo: 'responsable' }, "'ANA PÉREZ"],
+      [{ tipo: 'campo', campo: 'cargo' }, "'DECANA"],
+    ]);
+    expect(plan.escrituras.filter((e) => e.fila === 5).map((e) => e.valor)).toEqual(["'VICERRECTOR"]);
+  });
+
   it('un cargo cambiado en la hoja actualiza la persona y la foto de todas sus obras', () => {
     const plan = planDe({
       cargos: [{

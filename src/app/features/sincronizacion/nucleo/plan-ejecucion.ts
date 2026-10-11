@@ -131,6 +131,8 @@ export function planificarEjecucion(diff: Diff, decisiones: Decisiones, contexto
       foto: { [campo]: normalizarCampo(campo, valor) },
     });
 
+  /** Su CARGO ya lo escribe el cambio de responsable: el de la persona anterior lo pisaría. */
+  const filasConResponsableNuevo = new Set<number>();
   const aplicarCampo = (c: CampoDecidido, destino: Lado) => {
     const cargoEnHoja = contexto.filas.get(c.fila)?.campos.cargo ?? null;
     if (destino === 'base') {
@@ -142,6 +144,7 @@ export function planificarEjecucion(diff: Diff, decisiones: Decisiones, contexto
       return;
     }
     escribirCampo(c.obraId, c.fila, c.campo, c.base, c.hoja);
+    if (c.campo === 'responsable') filasConResponsableNuevo.add(c.fila);
     if (c.campo === 'responsable' && !contexto.filas.get(c.fila)?.combinados.includes('cargo')) {
       escribirCampo(c.obraId, c.fila, 'cargo', contexto.obras.get(c.obraId)?.campos.cargo ?? null, cargoEnHoja);
     }
@@ -165,7 +168,9 @@ export function planificarEjecucion(diff: Diff, decisiones: Decisiones, contexto
         obras: cargo.filas.map((f) => f.obraId), foto: { cargo: normalizarTexto(cargo.hoja) },
       });
     } else {
-      for (const f of cargo.filas) escribirCampo(f.obraId, f.fila, 'cargo', cargo.base, f.cargo);
+      for (const f of cargo.filas) {
+        if (!filasConResponsableNuevo.has(f.fila)) escribirCampo(f.obraId, f.fila, 'cargo', cargo.base, f.cargo);
+      }
     }
   }
   for (const conflicto of diff.conflictosCargo) {
@@ -185,7 +190,9 @@ export function planificarEjecucion(diff: Diff, decisiones: Decisiones, contexto
       for (const f of conElElegido) anotarFoto(f.obraId, 'cargo', normalizado);
     }
     for (const f of conflicto.filas) {
-      if (normalizarTexto(f.cargo) !== normalizado && !f.combinada) escribirCampo(f.obraId, f.fila, 'cargo', elegido, f.cargo);
+      if (normalizarTexto(f.cargo) !== normalizado && !f.combinada && !filasConResponsableNuevo.has(f.fila)) {
+        escribirCampo(f.obraId, f.fila, 'cargo', elegido, f.cargo);
+      }
     }
   }
 
