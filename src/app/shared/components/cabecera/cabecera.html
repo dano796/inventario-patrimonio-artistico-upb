@@ -18,13 +18,14 @@
       @if (conSesion()) {
         <div #perfil class="relative">
           <button #botonPerfil type="button" (click)="perfilAbierto.set(!perfilAbierto())" aria-haspopup="true"
-            [attr.aria-expanded]="perfilAbierto()" aria-controls="menu-perfil" class="flex items-center gap-2.5 text-left">
+            [attr.aria-expanded]="perfilAbierto()" aria-controls="menu-perfil"
+            class="-my-1 flex items-center gap-2.5 rounded-[14px] border border-transparent p-1 text-left hover:border-linea-3 aria-expanded:border-linea-3 sm:pr-3">
             <span class="grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] bg-acento-suave text-[14px] font-bold text-acento-tinta">{{ iniciales() }}</span>
             <span class="sr-only sm:not-sr-only">
               <span class="block text-[14px] font-semibold text-tinta">{{ nombre() }}</span>
               <span class="block text-[12px] font-semibold text-tinta-5">{{ rol() }}</span>
             </span>
-            <svg class="hidden flex-none text-tinta-5 transition-transform sm:block" [class.rotate-180]="perfilAbierto()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+            <svg class="ml-2 hidden flex-none text-tinta-5 transition-transform sm:block" [class.rotate-180]="perfilAbierto()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
           </button>
 
           @if (perfilAbierto()) {
