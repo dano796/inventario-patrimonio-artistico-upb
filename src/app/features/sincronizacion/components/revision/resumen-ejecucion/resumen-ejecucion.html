@@ -1,0 +1,24 @@
+<section class="tarjeta flex flex-col gap-3.5 px-[22px] py-5">
+  <h2 class="text-[18px] font-bold">Resumen de la ejecución</h2>
+  <dl>
+    @for (linea of lineas(); track linea.etiqueta) {
+      <div class="flex items-center justify-between gap-3 border-t border-linea-suave py-[9px]">
+        <dt class="text-[14px] font-medium text-tinta-2">{{ linea.etiqueta }}</dt>
+        <dd class="text-[16px] font-extrabold" [class]="linea.cifra ? 'text-tinta' : 'text-linea-3'">{{ linea.cifra }}</dd>
+      </div>
+    }
+    <div class="flex items-center justify-between gap-3 border-t border-linea-suave py-[9px]">
+      <dt class="text-[14px] font-medium text-tinta-2">Pendientes de decidir</dt>
+      <dd class="text-[16px] font-extrabold" [class]="revision().resumen.pendientes ? 'text-ambar-3' : 'text-verde'">{{ revision().resumen.pendientes }}</dd>
+    </div>
+  </dl>
+  @if (faltan(); as texto) {
+    <p class="rounded-xl border border-ambar-linea bg-ambar-tenue px-3 py-2.5 text-[13px] font-semibold leading-normal text-ambar">{{ texto }}</p>
+  }
+  <button type="button" class="btn-primario w-full !py-3" [disabled]="!!faltan() || aplicando()" (click)="aprobar.emit()">
+    {{ aplicando() ? 'Aplicando…' : 'Aprobar y aplicar' }}
+  </button>
+  <p class="text-[13px] font-medium leading-normal text-tinta-5">
+    Todavía no se ha escrito nada. Primero se actualiza la base y después las celdas de la hoja.
+  </p>
+</section>
