@@ -200,4 +200,18 @@ describe('ArtworkListComponent', () => {
     await fixture.whenStable();
     expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: 'Ana' }));
   });
+
+  it('en mosaico, a cualquier ancho, las filas de una página de 24 obras quedan completas', () => {
+    localStorage.setItem(CLAVE_VISTA, 'mosaico');
+    const { fixture, servicio, html } = montar(false);
+    servicio.artworks.set(Array.from({ length: 24 }, (_, i) => obraDePrueba({ id: i + 1 })));
+    fixture.detectChanges();
+    const rejilla = html.querySelector<HTMLElement>('app-tarjeta-obra')!.parentElement!;
+    for (const ancho of [360, 700, 1000, 1336]) {
+      html.style.display = 'block';
+      html.style.width = `${ancho}px`;
+      const columnas = getComputedStyle(rejilla).gridTemplateColumns.split(' ').length;
+      expect(24 % columnas).withContext(`${ancho}px: ${columnas} columnas`).toBe(0);
+    }
+  });
 });
