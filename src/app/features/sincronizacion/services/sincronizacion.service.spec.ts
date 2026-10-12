@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { SincronizacionService } from './sincronizacion.service';
+import { MARGEN_TOKEN_MIN, PasoCalculo, SincronizacionService } from './sincronizacion.service';
 import { ErrorGraph, GraphService } from './graph.service';
 import { SincronizacionDatosService } from './sincronizacion-datos.service';
 import { crearXlsxDePrueba } from '../nucleo/pruebas/xlsx-de-prueba';
@@ -11,6 +11,7 @@ import { CamposObra } from '../nucleo/hoja-obras';
 import { ObraBase } from '../nucleo/importacion';
 import { decisionesPorDefecto } from '../nucleo/plan-ejecucion';
 import { MOTIVO_CELDA_CAMBIADA } from '../nucleo/verificar-hoja';
+import { ErrorEncabezados } from '../nucleo/hoja-obras';
 
 const HOJA = { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: 'etag-1' };
 const SIN_RESULTADO = { aplicados: 0, descartados: [], creadas: [] };
@@ -38,6 +39,7 @@ function montar(opciones: { hoja: FilaDePrueba[]; segundaLectura?: FilaDePrueba[
     leerRangoUsado: jasmine.createSpy('leerRangoUsado').and.resolveTo(rangoDePrueba(opciones.segundaLectura ?? opciones.hoja)),
     escribirValores: jasmine.createSpy('escribirValores').and.resolveTo(undefined),
     archivo: jasmine.createSpy('archivo').and.resolveTo({ eTag: 'etag-2' }),
+    minutosRestantes: jasmine.createSpy('minutosRestantes').and.resolveTo(60),
   };
   const datos = {
     hojaVinculada: jasmine.createSpy('hojaVinculada').and.resolveTo(HOJA),
@@ -207,6 +209,44 @@ describe('SincronizacionService, protecciones al aplicar', () => {
       crearXlsxDePrueba({ celdas: sinIdWeb.map((texto, i) => ({ ref: `${columnaALetra(i + 1)}1`, texto })) })
     );
 
-    await expectAsync(servicio.calcular()).toBeRejectedWithError(/ID WEB/);
+    const error = await servicio.calcular().catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ErrorEncabezados);
+    expect((error as ErrorEncabezados).faltantes).toEqual(['ID WEB']);
+  });
+
+  it('calcular avisa de cada paso con su dato', async () => {
+    const { servicio } = montar({
+      hoja: [{ TITULO: 'Paisaje', 'ID WEB': 14 }, { TITULO: 'Otra', 'ID WEB': 15 }],
+      obras: [obraBase(14, { titulo: 'Paisaje' }), obraBase(15, { titulo: 'Otra' })],
+      fotos: [[14, foto({ titulo: 'Paisaje' })]],
+    });
+    const pasos: [PasoCalculo, string][] = [];
+
+    await servicio.calcular((paso, detalle) => pasos.push([paso, detalle]));
+
+    expect(pasos.map(([paso]) => paso)).toEqual(['descargar', 'encabezados', 'inventario', 'foto', 'comparar']);
+    expect(pasos[0][1]).toMatch(/^\d+,\d MB$/);
+    expect(pasos.slice(1).map(([, detalle]) => detalle)).toEqual(['16 de 16', '2 obras', '1 foto', '2 filas']);
+  });
+
+  it('aplicar no toca nada si al token le queda poco y deja reintentar el mismo cálculo', async () => {
+    const { servicio, graph, datos } = montar({
+      hoja: [{ TITULO: 'Paisaje', OBSERVACIONES: 'Nota', 'ID WEB': 14 }],
+      obras: [obraBase(14, { titulo: 'Paisaje', observaciones: 'Nota corregida' })],
+      fotos: [[14, foto({ titulo: 'Paisaje', observaciones: 'Nota' })]],
+    });
+    const calculo = await servicio.calcular();
+    graph.minutosRestantes.and.resolveTo(MARGEN_TOKEN_MIN - 5);
+
+    const error = await servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff)).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ErrorGraph);
+    expect((error as ErrorGraph).estado).toBe(401);
+    expect(graph.leerRangoUsado).not.toHaveBeenCalled();
+    expect(datos.aplicar).not.toHaveBeenCalled();
+
+    graph.minutosRestantes.and.resolveTo(60);
+    await expectAsync(servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff))).toBeResolved();
   });
 });

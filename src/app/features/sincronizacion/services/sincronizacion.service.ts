@@ -3,7 +3,9 @@ import { environment } from '../../../../environments/environment';
 import { ErrorGraph, GraphService } from './graph.service';
 import { HojaVinculada, ResultadoRpc, SincronizacionDatosService } from './sincronizacion-datos.service';
 import { descomprimirXlsx, leerHoja } from '../nucleo/leer-xlsx';
-import { leerFilasObras, mensajeEncabezados, ResultadoHoja } from '../nucleo/hoja-obras';
+import {
+  CAMPOS, ENCABEZADO_ID_WEB, ENCABEZADOS_IMAGEN, ErrorEncabezados, leerFilasObras, mensajeEncabezados, ResultadoHoja,
+} from '../nucleo/hoja-obras';
 import { ObraBase } from '../nucleo/importacion';
 import { ValoresFoto } from '../nucleo/foto';
 import { Diff } from '../nucleo/diff-tipos';
@@ -15,6 +17,15 @@ import {
 } from '../nucleo/verificar-hoja';
 
 export const PREFIJO_BUCKET = `${environment.SUPABASE_URL}/storage/v1/object/public/imagenes-obras/`;
+
+export type PasoCalculo = 'descargar' | 'encabezados' | 'inventario' | 'foto' | 'comparar';
+export type AvisoProgreso = (paso: PasoCalculo, detalle: string) => void;
+
+/** Margen para que el token no caduque entre la prelectura de la hoja y las escrituras. */
+export const MARGEN_TOKEN_MIN = 10;
+
+const TOTAL_ENCABEZADOS = CAMPOS.length + ENCABEZADOS_IMAGEN.length + 1;
+const plural = (n: number, palabra: string) => `${n.toLocaleString('es-CO')} ${palabra}${n === 1 ? '' : 's'}`;
 
 export interface Calculo {
   hoja: HojaVinculada;
@@ -39,18 +50,23 @@ export class SincronizacionService {
   private gastados = new WeakSet<Calculo>();
 
   /** Nada se escribe aquí: el diff se revisa antes de aplicar. */
-  async calcular(): Promise<Calculo> {
+  async calcular(progreso: AvisoProgreso = () => undefined): Promise<Calculo> {
     const hoja = await this.datos.hojaVinculada();
     if (!hoja) throw new Error('No hay ninguna hoja vinculada. Vincúlala antes de sincronizar.');
     const contenido = await this.graph.descargar(hoja.drive_id, hoja.item_id);
+    progreso('descargar', `${(contenido.byteLength / 1024 / 1024).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`);
     const lectura = leerFilasObras(leerHoja(descomprimirXlsx(contenido), hoja.nombre_hoja, new DOMParser()));
-    if (lectura.columnaIdWeb === null) throw new Error('Falta el encabezado ID WEB en la hoja.');
+    if (lectura.columnaIdWeb === null) throw new ErrorEncabezados([ENCABEZADO_ID_WEB]);
+    progreso('encabezados', `${TOTAL_ENCABEZADOS} de ${TOTAL_ENCABEZADOS}`);
     const [obras, responsables, fotos] = await Promise.all([
       this.datos.obras(),
       this.datos.responsables(),
       this.datos.fotos(),
     ]);
+    progreso('inventario', plural(obras.length, 'obra'));
+    progreso('foto', plural(fotos.size, 'foto'));
     const diff = calcularDiff({ lectura, obras, responsables, fotos, prefijoBucket: PREFIJO_BUCKET });
+    progreso('comparar', plural(lectura.filas.length, 'fila'));
     return { hoja, lectura, obras, diff };
   }
 
@@ -62,6 +78,9 @@ export class SincronizacionService {
    * Graph falla a medias, lo que falta reaparece en la siguiente ejecución.
    */
   async aplicar(calculo: Calculo, decisiones: Decisiones): Promise<ResultadoAplicacion> {
+    if ((await this.graph.minutosRestantes()) < MARGEN_TOKEN_MIN) {
+      throw new ErrorGraph(401, 'La conexión con OneDrive está a punto de caducar. Reconecta antes de aplicar.');
+    }
     if (this.gastados.has(calculo)) {
       throw new Error('Este cálculo ya se aplicó o se intentó aplicar. Vuelve a calcular antes de reintentar.');
     }
