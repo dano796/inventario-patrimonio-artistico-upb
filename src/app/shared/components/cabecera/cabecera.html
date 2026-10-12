@@ -33,7 +33,10 @@
             <span class="block text-[13px] font-semibold">{{ nombre() }}</span>
             <span class="block text-[11px] font-semibold text-tinta-5">{{ rol() }}</span>
           </span>
-          <button type="button" (click)="cerrarSesion()" class="ml-2 text-[13px] font-semibold text-tinta-4 hover:text-rojo">Cerrar sesión</button>
+          <button type="button" (click)="cerrarSesion()" aria-label="Cerrar sesión" title="Cerrar sesión"
+            class="ml-2 grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 hover:border-linea-3 hover:text-rojo">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+          </button>
         </div>
       } @else {
         <a routerLink="/autenticacion/iniciar-sesion" class="btn-secundario hidden !px-3.5 !py-2 sm:inline-flex">Iniciar sesión</a>

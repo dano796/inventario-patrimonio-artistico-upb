@@ -28,6 +28,7 @@ function montar(opciones: { admin: boolean; sesion: boolean; nombre?: string | n
   return fixture.nativeElement as HTMLElement;
 }
 
+
 describe('CabeceraComponent', () => {
   it('sin sesión ofrece iniciar sesión y no muestra el Tablero', () => {
     const html = montar({ admin: false, sesion: false });
@@ -60,5 +61,15 @@ describe('CabeceraComponent', () => {
   it('el botón de tema tiene nombre accesible', () => {
     const html = montar({ admin: false, sesion: false });
     expect(html.querySelector('button[aria-label^="Cambiar a tema"]')).not.toBeNull();
+  });
+
+  it('cerrar sesión es un botón con icono y nombre accesible', () => {
+    const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
+    const boton = html.querySelector<HTMLButtonElement>('button[aria-label="Cerrar sesión"]')!;
+    expect(boton).not.toBeNull();
+    expect(boton.querySelector('svg')).not.toBeNull();
+    expect(boton.textContent?.trim()).toBe('');
+    boton.click();
+    expect(TestBed.inject(AuthService).signOut).toHaveBeenCalled();
   });
 });
