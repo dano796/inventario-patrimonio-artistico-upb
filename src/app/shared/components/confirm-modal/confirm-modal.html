@@ -1,7 +1,7 @@
 @if (abierto()) {
   <div class="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 p-6" (click)="cerrar(false)">
-    <div class="tarjeta w-full max-w-[430px] px-7 py-[26px]" role="dialog" aria-modal="true" aria-labelledby="titulo-confirmacion"
-      (click)="$event.stopPropagation()">
+    <div #dialogo class="tarjeta w-full max-w-[430px] px-7 py-[26px] outline-none" role="dialog" aria-modal="true" aria-labelledby="titulo-confirmacion"
+      tabindex="-1" (click)="$event.stopPropagation()" (keydown)="atraparFoco($event)">
       <div class="mb-3.5 grid h-11 w-11 place-items-center rounded-[14px] bg-rojo-suave text-xl font-bold text-rojo" aria-hidden="true">!</div>
       <h2 id="titulo-confirmacion" class="mb-1.5 text-xl font-bold">{{ titulo() }}</h2>
       @if (mensaje()) {
@@ -14,7 +14,7 @@
         <button type="button" class="btn-secundario" [disabled]="cargando()" (click)="cerrar(false)">Cancelar</button>
         <button type="button" [disabled]="cargando()" (click)="cerrar(true)"
           class="inline-flex items-center gap-2 rounded-xl bg-rojo px-[18px] py-2.5 text-sm font-semibold text-white hover:bg-rojo-2 disabled:opacity-60">
-          {{ cargando() ? 'Eliminando…' : textoConfirmar() }}
+          {{ cargando() ? textoCargando() : textoConfirmar() }}
         </button>
       </div>
     </div>

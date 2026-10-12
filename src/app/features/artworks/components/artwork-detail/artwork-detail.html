@@ -91,6 +91,7 @@
     titulo="Eliminar obra del inventario"
     [mensaje]="mensajeBorrado()"
     textoConfirmar="Sí, eliminar"
+    textoCargando="Eliminando…"
     [cargando]="isDeleting()"
     [error]="deleteError()"
     (confirmar)="handleDeleteConfirmation($event)"

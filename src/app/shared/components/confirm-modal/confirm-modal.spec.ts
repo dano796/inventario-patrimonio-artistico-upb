@@ -38,4 +38,49 @@ describe('ConfirmModalComponent', () => {
     expect(respuestas).toEqual([]);
     expect(html.textContent).toContain('No se pudo eliminar.');
   });
+
+  it('al abrirse lleva el foco a Cancelar y al cerrarse lo devuelve a quien lo abrió', () => {
+    const disparador = document.body.appendChild(document.createElement('button'));
+    disparador.focus();
+    const { fixture, html } = montar({ abierto: false, textoConfirmar: 'Sí, eliminar' });
+    fixture.componentRef.setInput('abierto', true);
+    fixture.detectChanges();
+    expect(document.activeElement?.textContent?.trim()).toBe('Cancelar');
+    expect(html.contains(document.activeElement)).toBeTrue();
+    fixture.componentRef.setInput('abierto', false);
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(disparador);
+    disparador.remove();
+  });
+
+  it('Tab y Mayús+Tab no sacan el foco del diálogo', () => {
+    const { fixture, html } = montar({ abierto: false, textoConfirmar: 'Sí, eliminar' });
+    fixture.componentRef.setInput('abierto', true);
+    fixture.detectChanges();
+    const [cancelar, confirmar] = [...html.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')];
+    const tab = (shiftKey: boolean) => {
+      const evento = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+      document.activeElement!.dispatchEvent(evento);
+      return evento.defaultPrevented;
+    };
+    expect(tab(true)).toBeTrue();
+    expect(document.activeElement).toBe(confirmar);
+    expect(tab(false)).toBeTrue();
+    expect(document.activeElement).toBe(cancelar);
+  });
+
+  it('si los botones se desactivan al cargar, el foco se queda en el diálogo', () => {
+    const { fixture, html } = montar({ abierto: false, textoConfirmar: 'Sí, eliminar' });
+    fixture.componentRef.setInput('abierto', true);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('cargando', true);
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(html.querySelector('[role="dialog"]'));
+  });
+
+  it('mientras carga muestra el texto de carga que se le pasa', () => {
+    const { html } = montar({ abierto: true, cargando: true, textoCargando: 'Guardando…' });
+    expect(html.textContent).toContain('Guardando…');
+    expect(html.textContent).not.toContain('Eliminando…');
+  });
 });
