@@ -111,6 +111,24 @@ describe('SincronizacionService', () => {
     });
   });
 
+  it('si no puede leer el eTag al final, guarda igualmente la foto de lo escrito y avisa', async () => {
+    const { servicio, graph, datos } = montar({
+      hoja: [{ TITULO: 'Paisaje', OBSERVACIONES: 'Nota', 'ID WEB': 14 }],
+      obras: [obraBase(14, { titulo: 'Paisaje', observaciones: 'Nota corregida' })],
+      fotos: [[14, foto({ titulo: 'Paisaje', observaciones: 'Nota' })]],
+    });
+    graph.archivo.and.rejectWith(new ErrorGraph(401, 'caducado'));
+    const calculo = await servicio.calcular();
+
+    const resultado = await servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff));
+
+    expect(resultado.escritasEnHoja).toBe(1);
+    expect(resultado.error).toMatch(/caducó/);
+    expect(datos.aplicar.calls.mostRecent().args[0]).toEqual({
+      campos: [], cargos: [], altas: [], fotos: [{ obra_id: 14, valores: { observaciones: 'Nota corregida' } }],
+    });
+  });
+
   it('no escribe una celda que cambió desde el diff y la informa', async () => {
     const { servicio, graph } = montar({
       hoja: [{ TITULO: 'Paisaje', OBSERVACIONES: 'Nota', 'ID WEB': 14 }],

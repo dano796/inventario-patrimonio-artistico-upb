@@ -112,15 +112,17 @@ export class SincronizacionService {
         resultado.altasEnHoja = altas.altas.length;
       }
     } catch (e) {
-      resultado.error =
-        e instanceof ErrorGraph && e.estado === 401
-          ? 'La conexión con OneDrive caducó. Conecta de nuevo y vuelve a sincronizar: lo que falta reaparecerá.'
-          : e instanceof Error
-            ? e.message
-            : 'No se pudo terminar de escribir en la hoja.';
+      resultado.error = mensajeDeError(e);
     }
 
-    const etag = resultado.error === null ? (await this.graph.archivo(drive_id, item_id)).eTag : null;
+    let etag: string | null = null;
+    if (resultado.error === null) {
+      try {
+        etag = (await this.graph.archivo(drive_id, item_id)).eTag;
+      } catch (e) {
+        resultado.error = mensajeDeError(e);
+      }
+    }
     if (fotos.size || etag) {
       await this.datos.aplicar({
         campos: [], cargos: [], altas: [],
@@ -130,4 +132,11 @@ export class SincronizacionService {
     }
     return resultado;
   }
+}
+
+function mensajeDeError(e: unknown): string {
+  if (e instanceof ErrorGraph && e.estado === 401) {
+    return 'La conexión con OneDrive caducó. Conecta de nuevo y vuelve a sincronizar: lo que falta reaparecerá.';
+  }
+  return e instanceof Error ? e.message : 'No se pudo terminar de escribir en la hoja.';
 }
