@@ -1,4 +1,5 @@
 import { calcularTablero, ObraTablero } from './tablero';
+import { haceCuanto } from './tablero';
 
 const obra = (id: number, o: Partial<ObraTablero> = {}): ObraTablero => ({
   id, titulo: `Obra ${id}`, autor: 'Ana', tecnica: 'Óleo', ubicacion: 'Bloque 6', responsable: 'JOBANY',
@@ -61,5 +62,14 @@ describe('calcularTablero', () => {
   it('con el inventario vacío no divide por cero', () => {
     const r = calcularTablero([], HOY);
     expect([r.total, r.incompletas, r.porcentajeIncompletas, r.ubicaciones, r.porUbicacion.length]).toEqual([0, 0, 0, 0, 0]);
+  });
+});
+
+describe('haceCuanto', () => {
+  const ahora = new Date('2026-10-12T15:00:00Z');
+  it('dice hoy, ayer o hace N días', () => {
+    expect(haceCuanto('2026-10-12T09:00:00Z', ahora)).toBe('hoy');
+    expect(haceCuanto('2026-10-11T09:00:00Z', ahora)).toBe('ayer');
+    expect(haceCuanto('2026-10-07T15:00:00Z', ahora)).toBe('hace 5 días');
   });
 });

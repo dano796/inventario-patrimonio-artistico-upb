@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TableroService } from '../../tablero.service';
-import { calcularTablero, ObraTablero, Pendiente, PENDIENTES, ResumenTablero } from '../../tablero';
+import { EstadoSincronizacion, TableroService } from '../../tablero.service';
+import { calcularTablero, haceCuanto, ObraTablero, Pendiente, PENDIENTES, ResumenTablero } from '../../tablero';
 import { ArtworkExportService } from '../../../artworks/services/artwork-export.service';
 
 interface Cifra {
@@ -29,6 +29,14 @@ export class TableroComponent implements OnInit {
   abierta = signal<Pendiente | null>(null);
   exportando = signal(false);
   errorExportar = signal<string | null>(null);
+  sincronizacion = signal<EstadoSincronizacion | null>(null);
+
+  textoSincronizacion = computed(() => {
+    const s = this.sincronizacion();
+    if (!s?.fechaUltima) return 'Nunca se ha sincronizado con la hoja oficial.';
+    const editadas = s.editadas === 1 ? '1 obra editada' : `${this.numero(s.editadas)} obras editadas`;
+    return `Última sincronización: ${haceCuanto(s.fechaUltima, new Date())} · ${editadas} en la web desde entonces`;
+  });
 
   cifras = computed<Cifra[]>(() => {
     const r = this.resumen();
@@ -53,6 +61,10 @@ export class TableroComponent implements OnInit {
   }
 
   async cargar(): Promise<void> {
+    this.tablero.estadoSincronizacion().then(
+      (estado) => this.sincronizacion.set(estado),
+      () => this.sincronizacion.set(null)
+    );
     this.cargando.set(true);
     this.error.set(false);
     try {

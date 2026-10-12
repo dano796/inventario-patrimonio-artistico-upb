@@ -28,6 +28,11 @@ export const obraTableroDesdeFila = (fila: FilaTablero): ObraTablero => ({
   imagenes: fila.imagenes?.length ?? 0,
 });
 
+export interface EstadoSincronizacion {
+  fechaUltima: string | null;
+  editadas: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TableroService {
   private supabaseService = inject(SupabaseService);
@@ -39,6 +44,20 @@ export class TableroService {
       this.supabaseClient.from('obras_admin').select(COLUMNAS).order('id').range(desde, hasta)
     );
     return filas.map(obraTableroDesdeFila);
+  }
+
+  async estadoSincronizacion(): Promise<EstadoSincronizacion> {
+    await this.prepareClient();
+    const { data, error } = await this.supabaseClient.from('sincronizacion_hoja').select('fecha_ultima').maybeSingle();
+    if (error) throw error;
+    const fechaUltima: string | null = data?.fecha_ultima ?? null;
+    if (!fechaUltima) return { fechaUltima: null, editadas: 0 };
+    const { count, error: errorCuenta } = await this.supabaseClient
+      .from('obras')
+      .select('id', { count: 'exact', head: true })
+      .gt('fecha_actualizacion', fechaUltima);
+    if (errorCuenta) throw errorCuenta;
+    return { fechaUltima, editadas: count ?? 0 };
   }
 
   /**

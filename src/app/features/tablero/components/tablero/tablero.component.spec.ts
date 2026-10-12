@@ -10,8 +10,14 @@ const obra = (id: number, o: Partial<ObraTablero> = {}): ObraTablero => ({
   fechaCreacion: null, imagenes: 1, ...o,
 });
 
-async function montar(obras: Promise<ObraTablero[]>) {
-  const servicio = { obras: jasmine.createSpy('obras').and.returnValue(obras) };
+async function montar(
+  obras: Promise<ObraTablero[]>,
+  sincronizacion: () => Promise<{ fechaUltima: string | null; editadas: number }> = async () => ({ fechaUltima: null, editadas: 0 })
+) {
+  const servicio = {
+    obras: jasmine.createSpy('obras').and.returnValue(obras),
+    estadoSincronizacion: jasmine.createSpy('estadoSincronizacion').and.callFake(sincronizacion),
+  };
   TestBed.configureTestingModule({
     imports: [TableroComponent],
     providers: [
@@ -58,6 +64,26 @@ describe('TableroComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(servicio.obras).toHaveBeenCalledTimes(2);
+    expect(html.textContent).toContain('Obras registradas');
+  });
+
+  it('avisa de la última sincronización y enlaza a sincronizar', async () => {
+    const hace3 = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
+    const { html } = await montar(Promise.resolve([obra(1)]), async () => ({ fechaUltima: hace3, editadas: 5 }));
+
+    expect(html.textContent).toContain('Última sincronización: hace 3 días · 5 obras editadas en la web desde entonces');
+    expect(html.querySelector('a[href="/sincronizacion"]')?.textContent?.trim()).toBe('Sincronizar');
+  });
+
+  it('si nunca se sincronizó lo dice', async () => {
+    const { html } = await montar(Promise.resolve([obra(1)]));
+    expect(html.textContent).toContain('Nunca se ha sincronizado con la hoja oficial.');
+  });
+
+  it('si no puede leer la sincronización no muestra la tarjeta y el resto sí', async () => {
+    const { html } = await montar(Promise.resolve([obra(1)]), () => Promise.reject(new Error('sin permiso')));
+
+    expect(html.querySelector('a[href="/sincronizacion"]')).toBeNull();
     expect(html.textContent).toContain('Obras registradas');
   });
 });

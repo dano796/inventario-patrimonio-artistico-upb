@@ -87,3 +87,11 @@ export function calcularTablero(obras: readonly ObraTablero[], hoy: Date): Resum
     pendientes,
   };
 }
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+export function haceCuanto(fecha: string, ahora: Date): string {
+  const dias = Math.floor((ahora.getTime() - new Date(fecha).getTime()) / DIA_MS);
+  if (dias <= 0) return 'hoy';
+  return dias === 1 ? 'ayer' : `hace ${dias} días`;
+}
