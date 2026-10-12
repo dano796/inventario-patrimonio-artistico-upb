@@ -28,8 +28,12 @@ describe('columnasDeEncabezados', () => {
     expect([c.campos.ubicacion, c.campos.valor, c.imagenes, c.idWeb]).toEqual([7, 9, [14, 15, 16], 18]);
   });
 
+  it('nombra los encabezados que usa la sincronización y están repetidos', () => {
+    expect(columnasDeEncabezados([...ENCABEZADOS_HOJA, 'OBSERVACIONES'])).toEqual({ faltantes: [], repetidos: ['OBSERVACIONES'] });
+  });
+
   it('nombra los encabezados que faltan', () => {
-    expect(columnasDeEncabezados(ENCABEZADOS_HOJA.filter((e) => e !== 'ID WEB'))).toEqual({ faltantes: ['ID WEB'] });
+    expect(columnasDeEncabezados(ENCABEZADOS_HOJA.filter((e) => e !== 'ID WEB'))).toEqual({ faltantes: ['ID WEB'], repetidos: [] });
   });
 });
 

@@ -60,9 +60,16 @@ export interface ResultadoHoja {
   avisos: AvisoFila[];
 }
 
+export function mensajeEncabezados(faltantes: readonly string[], repetidos: readonly string[]): string {
+  return [
+    faltantes.length ? `Faltan encabezados en la hoja: ${faltantes.join(', ')}` : '',
+    repetidos.length ? `Hay encabezados repetidos en la hoja: ${repetidos.join(', ')}` : '',
+  ].filter(Boolean).join('. ');
+}
+
 export class ErrorEncabezados extends Error {
-  constructor(readonly faltantes: string[]) {
-    super(`Faltan encabezados en la hoja: ${faltantes.join(', ')}`);
+  constructor(readonly faltantes: string[], readonly repetidos: string[] = []) {
+    super(mensajeEncabezados(faltantes, repetidos));
   }
 }
 
@@ -70,13 +77,23 @@ export const FORMULA_IMAGEN = /^(?:_xlfn\.)?IMAGE\(\s*"([^"]*)"/i;
 
 export function leerFilasObras(hoja: Hoja): ResultadoHoja {
   const encabezados = new Map<string, number>();
+  const vistos = new Map<string, number>();
   let ultimaFila = 1;
   for (const [ref, celda] of hoja.celdas) {
     const { columna, fila } = separarReferencia(ref);
     ultimaFila = Math.max(ultimaFila, fila);
-    if (fila === 1 && celda.tipo === 'texto') encabezados.set(claveEmparejamiento(celda.valor), columna);
+    if (fila === 1 && celda.tipo === 'texto') {
+      const clave = claveEmparejamiento(celda.valor);
+      encabezados.set(clave, columna);
+      vistos.set(clave, (vistos.get(clave) ?? 0) + 1);
+    }
   }
-  const buscar = (nombre: string) => encabezados.get(claveEmparejamiento(nombre));
+  const repetidos: string[] = [];
+  const buscar = (nombre: string) => {
+    const clave = claveEmparejamiento(nombre);
+    if ((vistos.get(clave) ?? 0) > 1) repetidos.push(nombre);
+    return encabezados.get(clave);
+  };
 
   const faltantes: string[] = [];
   const columnas = {} as Record<Campo, number>;
@@ -90,8 +107,8 @@ export function leerFilasObras(hoja: Hoja): ResultadoHoja {
     if (columna === undefined) faltantes.push(nombre);
     return columna ?? 0;
   });
-  if (faltantes.length) throw new ErrorEncabezados(faltantes);
   const columnaIdWeb = buscar(ENCABEZADO_ID_WEB) ?? null;
+  if (faltantes.length || repetidos.length) throw new ErrorEncabezados(faltantes, repetidos);
 
   const origenCombinado = new Map<string, string>();
   for (const rango of hoja.combinadas) {

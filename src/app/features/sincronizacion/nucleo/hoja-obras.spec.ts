@@ -66,6 +66,17 @@ describe('leerFilasObras', () => {
     );
   });
 
+  it('aborta si un encabezado que usa la sincronización está repetido', () => {
+    expect(() => filas([], { encabezados: [...ENCABEZADOS_HOJA, ['R', 'OBSERVACIONES']] })).toThrowError(
+      ErrorEncabezados,
+      /OBSERVACIONES/
+    );
+  });
+
+  it('no aborta si lo repetido es una columna que la sincronización no usa', () => {
+    expect(() => filas([], { encabezados: [...ENCABEZADOS_HOJA, ['R', 'NÚMERO DE INVENTARIO']] })).not.toThrow();
+  });
+
   it('marca como no convertibles los valores que no caben en la base', () => {
     const r = filas([
       { ref: 'C2', texto: 'Obra' },

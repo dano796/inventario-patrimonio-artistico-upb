@@ -59,22 +59,30 @@ export const MOTIVO_SIN_FILA = 'la fila ya no está en la hoja';
 export const MOTIVO_ID_REPETIDO = 'el ID WEB está repetido en la hoja';
 export const MOTIVO_CELDA_CAMBIADA = 'la celda cambió desde que se calculó el diff';
 
-export function columnasDeEncabezados(encabezados: readonly unknown[]): ColumnasHoja | { faltantes: string[] } {
+export function columnasDeEncabezados(
+  encabezados: readonly unknown[]
+): ColumnasHoja | { faltantes: string[]; repetidos: string[] } {
   const posicion = new Map<string, number>();
+  const vistos = new Map<string, number>();
   encabezados.forEach((e, i) => {
     const clave = claveEmparejamiento(e);
-    if (clave && !posicion.has(clave)) posicion.set(clave, i + 1);
+    if (!clave) return;
+    if (!posicion.has(clave)) posicion.set(clave, i + 1);
+    vistos.set(clave, (vistos.get(clave) ?? 0) + 1);
   });
   const faltantes: string[] = [];
+  const repetidos: string[] = [];
   const buscar = (nombre: string) => {
-    const columna = posicion.get(claveEmparejamiento(nombre));
+    const clave = claveEmparejamiento(nombre);
+    const columna = posicion.get(clave);
     if (columna === undefined) faltantes.push(nombre);
+    if ((vistos.get(clave) ?? 0) > 1) repetidos.push(nombre);
     return columna ?? 0;
   };
   const campos = Object.fromEntries(CAMPOS.map((c) => [c, buscar(ENCABEZADOS[c])])) as Record<Campo, number>;
   const imagenes = ENCABEZADOS_IMAGEN.map(buscar);
   const idWeb = buscar(ENCABEZADO_ID_WEB);
-  return faltantes.length ? { faltantes } : { campos, imagenes, idWeb };
+  return faltantes.length || repetidos.length ? { faltantes, repetidos } : { campos, imagenes, idWeb };
 }
 
 export function origenDeDireccion(direccion: string): { fila: number; columna: number } {

@@ -3,7 +3,7 @@ import { environment } from '../../../../environments/environment';
 import { ErrorGraph, GraphService } from './graph.service';
 import { HojaVinculada, ResultadoRpc, SincronizacionDatosService } from './sincronizacion-datos.service';
 import { descomprimirXlsx, leerHoja } from '../nucleo/leer-xlsx';
-import { leerFilasObras, ResultadoHoja } from '../nucleo/hoja-obras';
+import { leerFilasObras, mensajeEncabezados, ResultadoHoja } from '../nucleo/hoja-obras';
 import { ObraBase } from '../nucleo/importacion';
 import { ValoresFoto } from '../nucleo/foto';
 import { Diff } from '../nucleo/diff-tipos';
@@ -77,7 +77,7 @@ export class SincronizacionService {
     const rango = await this.graph.leerRangoUsado(drive_id, item_id, nombre_hoja);
     const origen = origenDeDireccion(rango.address);
     const columnas = columnasDeEncabezados(rango.values[1 - origen.fila] ?? []);
-    if ('faltantes' in columnas) throw new Error(`Faltan encabezados en la hoja: ${columnas.faltantes.join(', ')}`);
+    if ('faltantes' in columnas) throw new Error(mensajeEncabezados(columnas.faltantes, columnas.repetidos));
     const lectura = lecturaDesdeRango(rango.values, rango.formulas, columnas.idWeb, origen);
 
     const base = await this.datos.aplicar(plan.peticion);
