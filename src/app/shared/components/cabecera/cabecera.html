@@ -18,8 +18,15 @@
       @if (conSesion()) {
         <div #perfil class="relative">
           <button #botonPerfil type="button" (click)="perfilAbierto.set(!perfilAbierto())" aria-haspopup="true"
-            [attr.aria-expanded]="perfilAbierto()" aria-controls="menu-perfil" [attr.aria-label]="'Perfil de ' + nombre()" [attr.title]="nombre()"
-            class="grid h-[34px] w-[34px] place-items-center rounded-[11px] bg-acento-suave text-[14px] font-bold text-acento-tinta hover:ring-2 hover:ring-acento-linea">{{ iniciales() }}</button>
+            [attr.aria-expanded]="perfilAbierto()" aria-controls="menu-perfil"
+            class="flex items-center gap-2.5 rounded-xl p-0.5 text-left hover:bg-sub sm:pr-2">
+            <span class="grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] bg-acento-suave text-[14px] font-bold text-acento-tinta">{{ iniciales() }}</span>
+            <span class="sr-only sm:not-sr-only">
+              <span class="block text-[14px] font-semibold text-tinta">{{ nombre() }}</span>
+              <span class="block text-[12px] font-semibold text-tinta-5">{{ rol() }}</span>
+            </span>
+            <svg class="hidden flex-none text-tinta-5 sm:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
 
           @if (perfilAbierto()) {
             <div id="menu-perfil" class="tarjeta absolute right-0 top-[calc(100%+10px)] z-50 w-[min(300px,calc(100vw-32px))] p-4">

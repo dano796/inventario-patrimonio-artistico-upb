@@ -47,11 +47,14 @@ describe('CabeceraComponent', () => {
     expect(html.textContent).not.toContain('Tablero');
   });
 
-  it('un administrador ve el Tablero y sus iniciales; nombre, rol y correo están en su perfil', () => {
+  it('un administrador ve el Tablero, sus iniciales, su nombre y su rol; el correo está en su perfil', () => {
     const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
     expect(html.textContent).toContain('Tablero');
-    expect(botonPerfil(html).textContent?.trim()).toBe('JT');
-    expect(html.textContent).not.toContain('Administrador');
+    const boton = botonPerfil(html).textContent!;
+    expect(boton).toContain('JT');
+    expect(boton).toContain('Jobany Tobón');
+    expect(boton).toContain('Administrador');
+    expect(html.textContent).not.toContain('jobany.tobon@upb.edu.co');
     abrirPerfil(html);
     const tarjeta = html.querySelector('#menu-perfil')!;
     expect(tarjeta.textContent).toContain('Jobany Tobón');
