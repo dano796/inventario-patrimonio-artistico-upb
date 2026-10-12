@@ -116,3 +116,63 @@ describe('GraphService.leerRangoUsado', () => {
     );
   });
 });
+
+describe('GraphService: token de Microsoft en memoria', () => {
+  type Sesion = { provider_token?: string; expires_at?: number; expires_in?: number } | null;
+  let sesion: Sesion;
+  const ahora = () => Math.floor(Date.now() / 1000);
+
+  function montar(): GraphService {
+    TestBed.configureTestingModule({
+      providers: [{
+        provide: SupabaseService,
+        useValue: { supabaseClient: { auth: { getSession: async () => ({ data: { session: sesion } }) } } },
+      }],
+    });
+    return TestBed.inject(GraphService);
+  }
+
+  it('sigue usando el token aunque un refresco de la sesión lo quite', async () => {
+    sesion = { provider_token: 'token-1', expires_at: ahora() + 3600, expires_in: 3600 };
+    const graph = montar();
+    expect(await graph.token()).toBe('token-1');
+
+    sesion = { expires_at: ahora() + 3600, expires_in: 3600 };
+
+    expect(await graph.token()).toBe('token-1');
+  });
+
+  it('un token nuevo en la sesión sustituye al guardado', async () => {
+    sesion = { provider_token: 'token-1', expires_at: ahora() + 3600, expires_in: 3600 };
+    const graph = montar();
+    await graph.token();
+
+    sesion = { provider_token: 'token-2', expires_at: ahora() + 3600, expires_in: 3600 };
+
+    expect(await graph.token()).toBe('token-2');
+  });
+
+  it('al cerrar sesión olvida el token guardado', async () => {
+    sesion = { provider_token: 'token-1', expires_at: ahora() + 3600, expires_in: 3600 };
+    const graph = montar();
+    await graph.token();
+
+    sesion = null;
+
+    expect(await graph.token()).toBeNull();
+  });
+
+  it('calcula los minutos que le quedan desde que se emitió', async () => {
+    sesion = { provider_token: 'token-1', expires_at: ahora() + 1800, expires_in: 3600 };
+    const graph = montar();
+
+    expect(Math.round(await graph.minutosRestantes())).toBe(30);
+  });
+
+  it('sin token le quedan 0 minutos', async () => {
+    sesion = { expires_at: ahora() + 3600, expires_in: 3600 };
+    const graph = montar();
+
+    expect(await graph.minutosRestantes()).toBe(0);
+  });
+});

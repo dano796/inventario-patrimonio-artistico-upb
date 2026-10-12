@@ -21,6 +21,8 @@ const TOPE_MS = 15000;
 /** La hoja pesa unos 112 MB por las imágenes: 15 s no alcanzan para descargarla. */
 const TOPE_DESCARGA_MS = 5 * 60 * 1000;
 
+const VIDA_TOKEN_MS = 60 * 60 * 1000;
+
 export interface RangoLeido {
   address: string;
   values: unknown[][];
@@ -47,18 +49,34 @@ export class GraphService {
     if (error) throw error;
   }
 
-  /** Supabase no renueva `provider_token`: desaparece al refrescar la sesión y hay que reconectar. */
+  /**
+   * supabase-js entrega `provider_token` una sola vez: cualquier refresco de la
+   * sesión (inactividad, vuelta a la pestaña, caducidad del JWT) lo quita. Se
+   * guarda aquí, en memoria, para que dure lo que dura el token de Microsoft.
+   */
+  private guardado: { token: string; emitido: number } | null = null;
+
   async token(): Promise<string | null> {
     const { data } = await this.supabaseService.supabaseClient.auth.getSession();
-    return data.session?.provider_token ?? null;
+    const sesion = data.session;
+    if (!sesion) {
+      this.guardado = null;
+      return null;
+    }
+    if (sesion.provider_token && sesion.provider_token !== this.guardado?.token) {
+      const emitido =
+        sesion.expires_at && sesion.expires_in ? (sesion.expires_at - sesion.expires_in) * 1000 : Date.now();
+      this.guardado = { token: sesion.provider_token, emitido };
+    }
+    return this.guardado?.token ?? null;
   }
 
-  /**
-   * El token de la sesión normal (scopes `openid profile email`) también
-   * responde 2xx aquí si por casualidad alcanza, pero /me/drive exige el
-   * permiso de archivos: es la forma barata de distinguir un token sin ese
-   * permiso de uno que sí lo tiene.
-   */
+  /** Microsoft garantiza al menos una hora de vida al token. */
+  async minutosRestantes(): Promise<number> {
+    if (!(await this.token()) || !this.guardado) return 0;
+    return (this.guardado.emitido + VIDA_TOKEN_MS - Date.now()) / 60000;
+  }
+
   async tieneAccesoArchivos(): Promise<boolean> {
     const token = await this.token();
     if (!token) return false;
