@@ -27,6 +27,11 @@ function montar(esAdmin: boolean, admin = signal(esAdmin), listo: () => Promise<
     filterArtworks: jasmine.createSpy('filterArtworks').and.resolveTo(undefined),
     clearAllFilters: jasmine.createSpy('clearAllFilters').and.resolveTo(undefined),
     goToPage: jasmine.createSpy('goToPage').and.resolveTo(undefined),
+    cargasAlFijarTamano: -1,
+    fijarTamanoPagina: jasmine.createSpy('fijarTamanoPagina').and.callFake(() => {
+      servicio.cargasAlFijarTamano = servicio.getAllArtworks.calls.count() + servicio.filterArtworks.calls.count();
+    }),
+    cambiarTamanoPagina: jasmine.createSpy('cambiarTamanoPagina').and.resolveTo(undefined),
     isValidPageNumber: () => true,
   };
   TestBed.configureTestingModule({
@@ -201,17 +206,34 @@ describe('ArtworkListComponent', () => {
     expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: 'Ana' }));
   });
 
-  it('en mosaico, a cualquier ancho, las filas de una página de 24 obras quedan completas', () => {
+  it('en mosaico, a cualquier ancho, las filas de una página de 30 obras quedan completas', () => {
     localStorage.setItem(CLAVE_VISTA, 'mosaico');
     const { fixture, servicio, html } = montar(false);
-    servicio.artworks.set(Array.from({ length: 24 }, (_, i) => obraDePrueba({ id: i + 1 })));
+    servicio.artworks.set(Array.from({ length: 30 }, (_, i) => obraDePrueba({ id: i + 1 })));
     fixture.detectChanges();
     const rejilla = html.querySelector<HTMLElement>('app-tarjeta-obra')!.parentElement!;
     for (const ancho of [360, 700, 1000, 1336]) {
       html.style.display = 'block';
       html.style.width = `${ancho}px`;
       const columnas = getComputedStyle(rejilla).gridTemplateColumns.split(' ').length;
-      expect(24 % columnas).withContext(`${ancho}px: ${columnas} columnas`).toBe(0);
+      expect(30 % columnas).withContext(`${ancho}px: ${columnas} columnas`).toBe(0);
     }
+  });
+
+  it('con la vista Mosaico guardada, pide 30 obras por página desde la primera carga', async () => {
+    localStorage.setItem(CLAVE_VISTA, 'mosaico');
+    const { fixture, servicio } = montar(false);
+    await fixture.whenStable();
+    expect(servicio.fijarTamanoPagina).toHaveBeenCalledOnceWith(30);
+    expect(servicio.cargasAlFijarTamano).toBe(0);
+  });
+
+  it('cambiar a Mosaico pide 30 obras por página y volver a Galería, 24', async () => {
+    const { fixture, servicio, html } = montar(false);
+    await fixture.whenStable();
+    const boton = (texto: string) => [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto)!;
+    boton('Mosaico').click();
+    boton('Galería').click();
+    expect(servicio.cambiarTamanoPagina.calls.allArgs()).toEqual([[30], [24]]);
   });
 });

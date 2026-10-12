@@ -6,7 +6,8 @@ import { ArtworkExportService } from '../../services/artwork-export.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { borrarAlmacen, guardarAlmacen, leerAlmacen } from '../../../../shared/utils/almacen';
 import {
-  ChipFiltro, ClaveFiltro, chipsFiltros, guardarVista, leerVista, lineaResultado, ValoresFiltros, Vista,
+  ChipFiltro, ClaveFiltro, chipsFiltros, guardarVista,
+  leerVista, lineaResultado, tamanoPagina, ValoresFiltros, Vista,
 } from '../../utils/galeria';
 import { BarraFiltrosComponent } from '../galeria/barra-filtros/barra-filtros.component';
 import { TarjetaObraComponent } from '../galeria/tarjeta-obra/tarjeta-obra.component';
@@ -78,6 +79,7 @@ export class ArtworkListComponent implements OnDestroy {
   linea = computed(() => lineaResultado(this.totalItems(), this.chips()));
 
   constructor() {
+    this.artworksService.fijarTamanoPagina(tamanoPagina(this.vista()));
     this.setupFilters();
     // Hasta que el perfil carga, isAdmin() es false: la primera lectura saldria de `obras`, sin las
     // columnas restringidas, y los filtros de ubicacion y responsable guardados se descartarian.
@@ -102,9 +104,12 @@ export class ArtworkListComponent implements OnDestroy {
     }
   }
 
-  cambiarVista(vista: Vista): void {
+  async cambiarVista(vista: Vista): Promise<void> {
     this.vista.set(vista);
     guardarVista(vista);
+    await this.artworksService.cambiarTamanoPagina(tamanoPagina(vista));
+    this.savedPage.set(this.currentPage());
+    this.saveFiltersToStorage();
   }
 
   onCambioFiltro({ clave, valor }: { clave: ClaveFiltro; valor: string }): void {

@@ -450,6 +450,18 @@ export class ArtworksService {
   }
 
   // Métodos de navegación de páginas
+  /** Para antes de la primera carga: no pide nada. */
+  fijarTamanoPagina(tamano: number) {
+    this.state.update((state) => ({ ...state, itemsPerPage: tamano }));
+  }
+
+  /** Vuelve a cargar en la página que contiene la primera obra que se mostraba. */
+  async cambiarTamanoPagina(tamano: number) {
+    if (tamano === this.itemsPerPage()) return;
+    const primera = (this.currentPage() - 1) * this.itemsPerPage();
+    await this.getAllArtworks({ page: Math.floor(primera / tamano) + 1, limit: tamano });
+  }
+
   async goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages()) {
       await this.getAllArtworks({ page });

@@ -13,6 +13,9 @@ export function guardarVista(vista: Vista): void {
   guardarAlmacen(CLAVE_VISTA, vista);
 }
 
+/** Múltiplos de las columnas de cada vista, para que las filas queden completas. */
+export const tamanoPagina = (vista: Vista) => (vista === 'mosaico' ? 30 : 24);
+
 export type ClaveFiltro = 'busqueda' | 'ubicacion' | 'responsable' | 'autor' | 'tecnica';
 
 export interface ValoresFiltros {

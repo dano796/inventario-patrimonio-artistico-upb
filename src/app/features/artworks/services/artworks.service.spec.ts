@@ -44,6 +44,22 @@ function montar() {
 }
 
 describe('ArtworksService', () => {
+  it('cambiar el tamaño de página conserva a la vista la primera obra que se mostraba', async () => {
+    const { servicio, rangos } = montar();
+    await servicio.filterArtworks({}, 3);
+    await servicio.cambiarTamanoPagina(30);
+    expect(rangos).toEqual([[48, 71], [30, 59]]);
+    expect([servicio.currentPage(), servicio.itemsPerPage()]).toEqual([2, 30]);
+  });
+
+  it('fijar el tamaño de página antes de la primera carga no lanza ninguna petición', async () => {
+    const { servicio, rangos } = montar();
+    servicio.fijarTamanoPagina(30);
+    expect(rangos).toEqual([]);
+    await servicio.filterArtworks({}, 1);
+    expect(rangos).toEqual([[0, 29]]);
+  });
+
   it('una página fuera de rango vuelve a la primera en lugar de dar error', async () => {
     const { servicio, rangos, supabase } = montar();
     await servicio.filterArtworks({}, 30);
