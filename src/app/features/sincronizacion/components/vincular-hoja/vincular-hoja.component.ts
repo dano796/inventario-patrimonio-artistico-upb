@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ArchivoOneDrive, ErrorGraph, GraphService } from '../../services/graph.service';
 import { HojaVinculada, SincronizacionDatosService } from '../../services/sincronizacion-datos.service';
 import { IdWebService } from '../../services/id-web.service';
@@ -9,6 +10,7 @@ const HOJA = 'Inventario Obras';
 @Component({
   selector: 'app-vincular-hoja',
   standalone: true,
+  imports: [RouterLink],
   templateUrl: './vincular-hoja.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

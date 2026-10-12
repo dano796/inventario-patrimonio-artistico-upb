@@ -1,86 +1,83 @@
-<main class="max-w-3xl mx-auto px-4 py-8 space-y-6">
-  <h1 class="text-2xl font-bold text-gray-900">Vincular la hoja oficial</h1>
+<main class="mx-auto flex max-w-[1400px] flex-col gap-[22px] px-4 pb-16 pt-[26px] md:px-8">
+  <a routerLink="/sincronizacion" class="self-start text-sm font-semibold text-acento hover:text-acento-tinta">← Volver a la sincronización</a>
+  <header>
+    <p class="antetitulo">Sincronización</p>
+    <h1 class="titulo-pantalla">Vincular la hoja oficial</h1>
+  </header>
 
   @if (error()) {
-    <p class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ error() }}</p>
+    <p role="alert" class="max-w-[820px] rounded-xl border border-rojo-linea bg-rojo-tenue px-4 py-3 text-sm font-medium text-rojo-2">{{ error() }}</p>
   }
   @if (mensaje()) {
-    <p class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{{ mensaje() }}</p>
+    <p role="status" class="max-w-[820px] rounded-xl border border-linea bg-superficie px-4 py-3 text-sm font-semibold text-verde">{{ mensaje() }}</p>
   }
 
-  <section class="rounded-lg border border-gray-200 bg-white p-5 space-y-3">
-    <h2 class="text-base font-semibold text-gray-900">1. Conectar con OneDrive</h2>
-    @if (comprobando()) {
-      <p class="text-sm text-gray-600">Comprobando conexión…</p>
-    } @else if (conectado()) {
-      <p class="text-sm text-green-700">Conectado. La conexión dura alrededor de una hora.</p>
-    } @else {
-      <p class="text-sm text-gray-600">
-        Microsoft pedirá permiso para acceder a tus archivos. La aplicación solo usa la hoja que elijas.
-      </p>
-      <button type="button" (click)="conectar()" [disabled]="ocupado()"
-        class="bg-blue-600 text-white px-4 py-2.5 text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-        Conectar con OneDrive
-      </button>
-    }
-  </section>
-
-  @if (conectado()) {
-    <section class="rounded-lg border border-gray-200 bg-white p-5 space-y-3">
-      <h2 class="text-base font-semibold text-gray-900">2. Elegir la hoja</h2>
-      @if (hoja()) {
-        <p class="text-sm text-gray-700">Hay una hoja vinculada. Elegir otra la reemplaza.</p>
+  <div class="flex max-w-[820px] flex-col gap-[18px]">
+    <section class="tarjeta flex flex-col gap-3 px-[22px] py-5">
+      <h2 class="text-[18px] font-bold">1. Conectar con OneDrive</h2>
+      @if (comprobando()) {
+        <p class="text-sm font-medium text-tinta-4">Comprobando conexión…</p>
+      } @else if (conectado()) {
+        <p class="text-sm font-semibold text-verde">Conectado. La conexión dura alrededor de una hora.</p>
+      } @else {
+        <p class="text-sm font-medium text-tinta-4">
+          Microsoft pedirá permiso para acceder a tus archivos. La aplicación solo usa la hoja que elijas.
+        </p>
+        <div><button type="button" class="btn-primario" (click)="conectar()" [disabled]="ocupado()">Conectar con OneDrive</button></div>
       }
-      <form class="flex gap-2" (submit)="$event.preventDefault(); buscar(texto.value)">
-        <input #texto type="text" placeholder="Nombre del archivo" value="Inventario"
-          class="flex-1 px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <button type="submit" [disabled]="ocupado()"
-          class="px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
-          Buscar
-        </button>
-      </form>
-      <ul class="divide-y divide-gray-100">
-        @for (archivo of resultados(); track archivo.id) {
-          <li class="flex items-center justify-between py-2">
-            <span class="text-sm text-gray-800">{{ archivo.name }}
-              <span class="text-gray-500">{{ archivo.parentReference.path }}</span>
-            </span>
-            <button type="button" (click)="elegir(archivo)" [disabled]="ocupado()"
-              class="text-sm font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50">
-              Vincular
-            </button>
-          </li>
-        }
-      </ul>
     </section>
 
-    @if (hoja()) {
-      <section class="rounded-lg border border-gray-200 bg-white p-5 space-y-3">
-        <h2 class="text-base font-semibold text-gray-900">3. Escribir «ID WEB»</h2>
-        <p class="text-sm text-gray-600">
-          Carga <code>importacion/id-web.json</code>, generado por el script de importación. Antes de escribir se
-          comprueba que cada fila sigue teniendo el mismo autor y título que la copia importada.
-        </p>
-        <input type="file" accept=".json,application/json" (change)="cargarAsignaciones($event)" class="text-sm" />
-        @if (asignaciones(); as lista) {
-          <p class="text-sm text-gray-700">{{ lista.length }} filas por escribir.</p>
-          <button type="button" (click)="escribir()" [disabled]="ocupado()"
-            class="bg-blue-600 text-white px-4 py-2.5 text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-            Escribir ID WEB en la hoja
-          </button>
+    @if (conectado()) {
+      <section class="tarjeta flex flex-col gap-3 px-[22px] py-5">
+        <h2 class="text-[18px] font-bold">2. Elegir la hoja</h2>
+        @if (hoja()) {
+          <p class="text-sm font-medium text-tinta-3">Hay una hoja vinculada. Elegir otra la reemplaza.</p>
         }
-        @if (progreso(); as p) {
-          <p class="text-sm text-gray-700">Escritas {{ p.escritas }} de {{ p.total }}.</p>
-        }
-        @if (discrepancias().length) {
-          <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
-            <p class="font-medium">No se escribió nada: la hoja no coincide con la copia importada.</p>
-            @for (d of discrepancias(); track d.fila) {
-              <p>Fila {{ d.fila }}: {{ d.motivo }}</p>
+        <form class="flex gap-2.5" (submit)="$event.preventDefault(); buscar(texto.value)">
+          <input #texto type="text" placeholder="Nombre del archivo" value="Inventario" class="campo flex-1" aria-label="Nombre del archivo" />
+          <button type="submit" class="btn-secundario" [disabled]="ocupado()">Buscar</button>
+        </form>
+        @if (resultados().length) {
+          <ul>
+            @for (archivo of resultados(); track archivo.id) {
+              <li class="flex items-center justify-between gap-3 border-t border-linea-suave py-2.5">
+                <span class="min-w-0 text-[14px] font-medium">{{ archivo.name }}
+                  <span class="text-tinta-5">{{ archivo.parentReference.path }}</span>
+                </span>
+                <button type="button" class="text-sm font-semibold text-acento hover:text-acento-tinta disabled:opacity-50" (click)="elegir(archivo)" [disabled]="ocupado()">
+                  Vincular
+                </button>
+              </li>
             }
-          </div>
+          </ul>
         }
       </section>
+
+      @if (hoja()) {
+        <section class="tarjeta flex flex-col gap-3 px-[22px] py-5">
+          <h2 class="text-[18px] font-bold">3. Escribir «ID WEB»</h2>
+          <p class="text-sm font-medium leading-relaxed text-tinta-4">
+            Carga <code class="font-mono text-[13px]">importacion/id-web.json</code>, generado por el script de importación. Antes de
+            escribir se comprueba que cada fila sigue teniendo el mismo autor y título que la copia importada.
+          </p>
+          <input type="file" accept=".json,application/json" (change)="cargarAsignaciones($event)" class="text-sm text-tinta-3" />
+          @if (asignaciones(); as lista) {
+            <p class="text-sm font-medium text-tinta-3">{{ lista.length }} filas por escribir.</p>
+            <div><button type="button" class="btn-primario" (click)="escribir()" [disabled]="ocupado()">Escribir ID WEB en la hoja</button></div>
+          }
+          @if (progreso(); as p) {
+            <p class="text-sm font-medium text-tinta-3">Escritas {{ p.escritas }} de {{ p.total }}.</p>
+          }
+          @if (discrepancias().length) {
+            <div class="flex flex-col gap-1 rounded-xl border border-ambar-linea bg-ambar-tenue px-4 py-3 text-sm font-medium text-ambar">
+              <p class="font-bold">No se escribió nada: la hoja no coincide con la copia importada.</p>
+              @for (d of discrepancias(); track d.fila) {
+                <p>Fila {{ d.fila }}: {{ d.motivo }}</p>
+              }
+            </div>
+          }
+        </section>
+      }
     }
-  }
+  </div>
 </main>
