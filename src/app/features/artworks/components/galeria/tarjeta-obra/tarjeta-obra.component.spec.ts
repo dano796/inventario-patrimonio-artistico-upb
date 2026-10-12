@@ -35,6 +35,13 @@ describe('TarjetaObraComponent', () => {
     expect(icono.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('el autor lleva un icono decorativo delante', () => {
+    const fila = [...montar(obraDePrueba(), false).querySelectorAll('p')].find((p) => p.textContent?.includes('Ana Pérez'))!;
+    const icono = fila.firstElementChild!;
+    expect(icono.tagName.toLowerCase()).toBe('svg');
+    expect(icono.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('una obra sin título ni autor no queda vacía', () => {
     const html = montar(obraDePrueba({ titulo: null, autor: '  ' }), false);
     expect(html.textContent).toContain('Sin título');
