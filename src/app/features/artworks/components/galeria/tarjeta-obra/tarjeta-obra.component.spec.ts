@@ -28,6 +28,13 @@ describe('TarjetaObraComponent', () => {
     expect(montar(obraDePrueba(), true).textContent).toContain('Bloque 6');
   });
 
+  it('la ubicación lleva un icono decorativo delante', () => {
+    const fila = [...montar(obraDePrueba(), true).querySelectorAll('p')].find((p) => p.textContent?.includes('Bloque 6'))!;
+    const icono = fila.firstElementChild!;
+    expect(icono.tagName.toLowerCase()).toBe('svg');
+    expect(icono.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('una obra sin título ni autor no queda vacía', () => {
     const html = montar(obraDePrueba({ titulo: null, autor: '  ' }), false);
     expect(html.textContent).toContain('Sin título');

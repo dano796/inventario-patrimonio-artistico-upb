@@ -25,7 +25,10 @@
       </h3>
       <p class="text-[14px] font-medium text-tinta-4">{{ autor() }}</p>
       @if (esAdmin()) {
-        <p class="mt-auto truncate border-t border-linea-suave pt-3 text-xs font-medium text-tinta-5">{{ ubicacion() }}</p>
+        <p class="mt-auto flex items-center gap-1.5 border-t border-linea-suave pt-3 text-xs font-medium text-tinta-5">
+          <svg class="flex-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <span class="truncate">{{ ubicacion() }}</span>
+        </p>
       }
     </div>
   </article>
