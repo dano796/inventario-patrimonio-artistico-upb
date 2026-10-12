@@ -35,7 +35,6 @@ module.exports = {
       },
       boxShadow: {
         tarjeta: '0 1px 2px rgba(15,23,42,.04), 0 10px 24px -20px rgba(15,23,42,.35)',
-        boton: '0 8px 18px -10px rgba(37,99,235,.9)',
         anillo: '0 0 0 3px rgba(37,99,235,.15)',
       },
     },

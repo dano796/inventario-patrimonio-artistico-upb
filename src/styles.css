@@ -43,7 +43,7 @@
 
 @layer components {
   .btn-primario {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-acento px-[18px] py-2.5 text-sm font-semibold text-white shadow-boton hover:bg-acento-hover disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-acento px-[18px] py-2.5 text-sm font-semibold text-white hover:bg-acento-hover disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-secundario {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-linea-2 bg-superficie px-[18px] py-2.5 text-sm font-semibold text-tinta-2 hover:border-linea-3 hover:bg-sub disabled:cursor-not-allowed disabled:opacity-50;
