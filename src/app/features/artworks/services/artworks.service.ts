@@ -5,6 +5,7 @@ import {
   ImageUploadRequest,
 } from '../../../shared/models/image.model';
 import { ImageService } from '../../../shared/services/image.service';
+import { patronSinTildes } from '../../../shared/utils/busqueda';
 import { AuthService } from '../../../core/services/auth.service';
 import {
   Artwork,
@@ -233,7 +234,7 @@ export class ArtworksService {
       const activeFilters = [];
 
       if (search?.trim()) {
-        query = query.ilike('titulo', `%${search.trim()}%`);
+        query = query.filter('titulo', 'imatch', patronSinTildes(search));
         activeFilters.push('titulo');
       }
 
@@ -245,30 +246,30 @@ export class ArtworksService {
           if (ubicacionesValidas.length > 0) {
             const ubicacionConditions = ubicacionesValidas.map(
               (u) =>
-                `ubicacion.ilike.${this.quoteFilterValue(`%${u.trim()}%`)}`
+                `ubicacion.imatch.${this.quoteFilterValue(patronSinTildes(u))}`
             );
             query = query.or(ubicacionConditions.join(','));
             activeFilters.push('ubicacion');
           }
         } else if (ubicacion.trim()) {
           // Una sola ubicación: usar ILIKE normal
-          query = query.ilike('ubicacion', `%${ubicacion.trim()}%`);
+          query = query.filter('ubicacion', 'imatch', patronSinTildes(ubicacion));
           activeFilters.push('ubicacion');
         }
       }
 
       if (responsable?.trim()) {
-        query = query.ilike('responsable', `%${responsable.trim()}%`);
+        query = query.filter('responsable', 'imatch', patronSinTildes(responsable));
         activeFilters.push('responsable');
       }
 
       if (autor?.trim()) {
-        query = query.ilike('autor', `%${autor.trim()}%`);
+        query = query.filter('autor', 'imatch', patronSinTildes(autor));
         activeFilters.push('autor');
       }
 
       if (tecnica?.trim()) {
-        query = query.ilike('tecnica', `%${tecnica.trim()}%`);
+        query = query.filter('tecnica', 'imatch', patronSinTildes(tecnica));
         activeFilters.push('tecnica');
       }
 

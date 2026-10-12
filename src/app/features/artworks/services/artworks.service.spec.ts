@@ -4,6 +4,7 @@ import { ArtworksService } from './artworks.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ImageService } from '../../../shared/services/image.service';
+import { patronSinTildes } from '../../../shared/utils/busqueda';
 
 const FUERA_DE_RANGO = {
   code: 'PGRST103',
@@ -13,8 +14,15 @@ const FUERA_DE_RANGO = {
 
 function montar() {
   const rangos: [number, number][] = [];
+  const filtros: unknown[][] = [];
   const consulta: Record<string, unknown> = {};
-  for (const metodo of ['select', 'ilike', 'or', 'order', 'abortSignal', 'returns']) consulta[metodo] = () => consulta;
+  for (const metodo of ['select', 'order', 'abortSignal', 'returns']) consulta[metodo] = () => consulta;
+  for (const metodo of ['ilike', 'filter', 'or']) {
+    consulta[metodo] = (...args: unknown[]) => {
+      filtros.push([metodo, ...args]);
+      return consulta;
+    };
+  }
   consulta['range'] = (desde: number, hasta: number) => {
     rangos.push([desde, hasta]);
     return consulta;
@@ -40,10 +48,32 @@ function montar() {
       { provide: ImageService, useValue: {} },
     ],
   });
-  return { servicio: TestBed.inject(ArtworksService), rangos, supabase };
+  return { servicio: TestBed.inject(ArtworksService), rangos, supabase, filtros };
 }
 
 describe('ArtworksService', () => {
+  it('los filtros de texto encuentran el valor con o sin tildes', async () => {
+    const { servicio, filtros } = montar();
+    await servicio.filterArtworks({ search: 'Fachada', autor: 'Gomez', tecnica: 'oleo', responsable: 'Pena', ubicacion: 'Bloque' });
+    const patron = patronSinTildes;
+    expect(filtros).toEqual([
+      ['filter', 'titulo', 'imatch', patron('Fachada')],
+      ['filter', 'ubicacion', 'imatch', patron('Bloque')],
+      ['filter', 'responsable', 'imatch', patron('Pena')],
+      ['filter', 'autor', 'imatch', patron('Gomez')],
+      ['filter', 'tecnica', 'imatch', patron('oleo')],
+    ]);
+  });
+
+  it('varias ubicaciones se combinan con or, también sin distinguir tildes', async () => {
+    const { servicio, filtros } = montar();
+    await servicio.filterArtworks({ ubicacion: ['Bloque 6', 'Biblioteca'] });
+    const comillas = (v: string) => `"${v.replace(/\\/g, '\\\\')}"`;
+    expect(filtros).toEqual([
+      ['or', `ubicacion.imatch.${comillas(patronSinTildes('Bloque 6'))},ubicacion.imatch.${comillas(patronSinTildes('Biblioteca'))}`],
+    ]);
+  });
+
   it('cambiar el tamaño de página conserva a la vista la primera obra que se mostraba', async () => {
     const { servicio, rangos } = montar();
     await servicio.filterArtworks({}, 3);
