@@ -36,6 +36,7 @@ describe('TableroComponent', () => {
     expect(html.textContent).toContain('Bloque 6');
     expect(html.textContent).toContain('Sin autor registrado');
     expect(html.textContent).not.toContain('Movimientos recientes');
+    expect(html.querySelector('a[href="/nueva"]')?.textContent?.trim()).toBe('Registrar obra');
   });
 
   it('«Revisar» despliega las obras de esa fila con enlace a su ficha', async () => {

@@ -65,7 +65,7 @@ describe('ArtworkListComponent', () => {
 
   it('un administrador puede registrar obras y ve las ubicaciones', () => {
     const { html } = montar(true);
-    expect(html.textContent).toContain('Registrar obra');
+    expect(html.querySelector('a[href="/nueva"]')?.textContent?.trim()).toBe('Registrar obra');
     expect(html.textContent).toContain('Bloque 6');
   });
 
