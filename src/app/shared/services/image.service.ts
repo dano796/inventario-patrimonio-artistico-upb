@@ -5,7 +5,7 @@ import {
   ImageUploadRequest,
   ImageUploadResponse,
 } from '../models/image.model';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 import { aJpeg } from '../utils/convertir-imagen';
 
 @Injectable({
