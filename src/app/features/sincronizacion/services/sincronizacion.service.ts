@@ -83,7 +83,10 @@ export class SincronizacionService {
     const base = await this.datos.aplicar(plan.peticion);
 
     const ids = ubicarIdsNuevos(
-      base.creadas.map((c) => ({ fila: c.fila, obraId: c.obra_id, campos: filas.get(c.fila)!.campos })),
+      base.creadas.map((c) => {
+        const { campos, heredados, noConvertibles } = filas.get(c.fila)!;
+        return { fila: c.fila, obraId: c.obra_id, campos, heredados, noConvertibles };
+      }),
       lectura,
       columnas
     );

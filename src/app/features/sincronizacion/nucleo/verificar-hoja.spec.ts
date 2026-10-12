@@ -82,7 +82,7 @@ describe('ubicarEscrituras', () => {
 });
 
 describe('ubicarIdsNuevos', () => {
-  const creada = { fila: 2, obraId: 700, campos: filaHoja(2, { autor: 'Ana', titulo: 'Nueva' }).campos };
+  const creada = { fila: 2, obraId: 700, campos: filaHoja(2, { autor: 'Ana', titulo: 'Nueva' }).campos, heredados: [], noConvertibles: [] };
 
   it('escribe el ID de una obra creada desde la hoja si su fila sigue siendo la misma', () => {
     const r = ubicarIdsNuevos([creada], lectura([{ AUTOR: 'Ana', TITULO: 'Nueva' }]), columnas());
@@ -92,6 +92,19 @@ describe('ubicarIdsNuevos', () => {
   it('no escribe si la fila ya no es la misma o ya tiene un ID', () => {
     expect(ubicarIdsNuevos([creada], lectura([{ AUTOR: 'Ana', TITULO: 'Otra' }]), columnas()).descartadas.length).toBe(1);
     expect(ubicarIdsNuevos([creada], lectura([{ AUTOR: 'Ana', TITULO: 'Nueva', 'ID WEB': 5 }]), columnas()).descartadas.length).toBe(1);
+  });
+
+  it('escribe el ID aunque el AUTOR de la fila sea una celda combinada que Graph devuelve vacía', () => {
+    const enBloque = { ...creada, heredados: ['autor' as const] };
+    const r = ubicarIdsNuevos([enBloque], lectura([{ AUTOR: '', TITULO: 'Nueva' }]), columnas());
+    expect(r.ubicadas.length).toBe(1);
+  });
+
+  it('no confunde dos obras sin autor ni título que difieren en otro campo', () => {
+    const anonima = { fila: 2, obraId: 701, campos: filaHoja(2, { tecnica: 'Óleo' }).campos, heredados: [], noConvertibles: [] };
+    const r = ubicarIdsNuevos([anonima], lectura([{ TECNICA: 'Acuarela' }]), columnas());
+    expect(r.ubicadas).toEqual([]);
+    expect(r.descartadas.length).toBe(1);
   });
 });
 

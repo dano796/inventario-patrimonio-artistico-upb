@@ -50,6 +50,9 @@ export interface ObraCreada {
   fila: number;
   obraId: number;
   campos: CamposObra;
+  /** Graph devuelve vacías las celdas combinadas que no son la de origen; tampoco se comparan las no convertibles. */
+  heredados: readonly Campo[];
+  noConvertibles: readonly Campo[];
 }
 
 export const MOTIVO_SIN_FILA = 'la fila ya no está en la hoja';
@@ -187,7 +190,8 @@ export function ubicarIdsNuevos(
     const escritura: EscrituraHoja = {
       obraId: c.obraId, fila: c.fila, destino: { tipo: 'id_web' }, valor: c.obraId, leido: null, foto: {},
     };
-    const mismaFila = (['autor', 'titulo'] as const).every((campo) => {
+    const comparables = CAMPOS.filter((campo) => !c.heredados.includes(campo) && !c.noConvertibles.includes(campo));
+    const mismaFila = comparables.every((campo) => {
       const actual = valorDeCelda(campo, lectura.celda(c.fila, columnas.campos[campo]));
       return actual !== undefined && normalizarCampo(campo, actual) === normalizarCampo(campo, c.campos[campo]);
     });
