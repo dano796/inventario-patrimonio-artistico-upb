@@ -15,30 +15,65 @@
     </nav>
 
     <div class="flex items-center gap-3 justify-self-end">
-      <button type="button" (click)="alternarTema()"
-        [attr.aria-label]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
-        [attr.title]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
-        class="grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 hover:border-linea-3 hover:text-tinta">
-        @if (esOscuro()) {
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
-        } @else {
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
-        }
-      </button>
-
       @if (conSesion()) {
-        <div class="hidden items-center gap-2.5 sm:flex">
-          <span class="grid h-[34px] w-[34px] place-items-center rounded-[11px] bg-acento-suave text-[14px] font-bold text-acento-tinta" aria-hidden="true">{{ iniciales() }}</span>
-          <span class="text-left">
-            <span class="block text-[14px] font-semibold">{{ nombre() }}</span>
-            <span class="block text-[12px] font-semibold text-tinta-5">{{ rol() }}</span>
-          </span>
-          <button type="button" (click)="cerrarSesion()" aria-label="Cerrar sesión" title="Cerrar sesión"
-            class="ml-2 grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 hover:border-linea-3 hover:text-rojo">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
-          </button>
+        <div #perfil class="relative">
+          <button #botonPerfil type="button" (click)="perfilAbierto.set(!perfilAbierto())" aria-haspopup="true"
+            [attr.aria-expanded]="perfilAbierto()" aria-controls="menu-perfil" [attr.aria-label]="'Perfil de ' + nombre()" [attr.title]="nombre()"
+            class="grid h-[34px] w-[34px] place-items-center rounded-[11px] bg-acento-suave text-[14px] font-bold text-acento-tinta hover:ring-2 hover:ring-acento-linea">{{ iniciales() }}</button>
+
+          @if (perfilAbierto()) {
+            <div id="menu-perfil" class="tarjeta absolute right-0 top-[calc(100%+10px)] z-50 w-[min(300px,calc(100vw-32px))] p-4">
+              <div class="flex items-center gap-3">
+                <span class="grid h-10 w-10 flex-none place-items-center rounded-xl bg-acento-suave text-[15px] font-bold text-acento-tinta" aria-hidden="true">{{ iniciales() }}</span>
+                <div class="min-w-0">
+                  <p class="truncate text-[15px] font-bold">{{ nombre() }}</p>
+                  @if (correo()) {
+                    <p class="truncate text-xs font-medium text-tinta-5">{{ correo() }}</p>
+                  }
+                </div>
+              </div>
+              <span class="mt-3 inline-flex rounded-full bg-acento-tenue px-2.5 py-0.5 text-xs font-semibold text-acento-tinta">{{ rol() }}</span>
+
+              <div class="mt-4 border-t border-linea-suave pt-3.5">
+                <p id="etiqueta-tema" class="etiqueta">Tema</p>
+                <div class="flex gap-0.5 rounded-xl bg-segmento p-[3px]" role="group" aria-labelledby="etiqueta-tema">
+                  @for (opcion of opcionesTema; track opcion.valor) {
+                    <button type="button" (click)="elegirTema(opcion.valor)" [attr.aria-pressed]="tema() === opcion.valor"
+                      [class]="tema() === opcion.valor
+                        ? 'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-segmento-activo py-[7px] text-[14px] font-semibold text-tinta shadow-sm'
+                        : 'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[10px] py-[7px] text-[14px] font-semibold text-tinta-4 hover:text-tinta-2'">
+                      @if (opcion.valor === 'oscuro') {
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
+                      } @else {
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+                      }
+                      {{ opcion.etiqueta }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="mt-3.5 border-t border-linea-suave pt-2">
+                <button type="button" (click)="cerrarSesion()"
+                  class="flex w-full items-center gap-2 rounded-lg px-1 py-2 text-[15px] font-semibold text-rojo hover:bg-rojo-tenue">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
+          }
         </div>
       } @else {
+        <button type="button" (click)="alternarTema()"
+          [attr.aria-label]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+          [attr.title]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+          class="grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 hover:border-linea-3 hover:text-tinta">
+          @if (esOscuro()) {
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+          } @else {
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
+          }
+        </button>
         <a routerLink="/autenticacion/iniciar-sesion" class="btn-secundario hidden !px-3.5 !py-2 sm:inline-flex">Iniciar sesión</a>
       }
 
@@ -56,10 +91,7 @@
       @if (esAdmin()) {
         <a routerLink="/tablero" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Tablero</a>
       }
-      @if (conSesion()) {
-        <p class="mt-2 border-t border-linea-suave pt-3 text-[14px] font-semibold">{{ nombre() }} · <span class="text-tinta-5">{{ rol() }}</span></p>
-        <button type="button" (click)="cerrarSesion()" class="py-2 text-sm font-semibold text-rojo">Cerrar sesión</button>
-      } @else {
+      @if (!conSesion()) {
         <a routerLink="/autenticacion/iniciar-sesion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-acento">Iniciar sesión</a>
       }
     </nav>

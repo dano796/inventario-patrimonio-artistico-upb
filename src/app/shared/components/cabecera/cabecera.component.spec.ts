@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { CabeceraComponent } from './cabecera.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { CLAVE_TEMA, TemaService } from '../../../core/services/tema.service';
 
 @Component({ template: '' })
 class Vacia {}
@@ -18,6 +19,7 @@ function montar(opciones: { admin: boolean; sesion: boolean; nombre?: string | n
           isAdmin: signal(opciones.admin),
           isAuthenticated: signal(opciones.sesion),
           nombre: signal(opciones.nombre ?? null),
+          correo: signal(opciones.sesion ? 'jobany.tobon@upb.edu.co' : null),
           signOut: jasmine.createSpy('signOut').and.resolveTo({ error: null }),
         },
       },
@@ -28,6 +30,15 @@ function montar(opciones: { admin: boolean; sesion: boolean; nombre?: string | n
   return fixture.nativeElement as HTMLElement;
 }
 
+const botonPerfil = (html: HTMLElement) => html.querySelector<HTMLButtonElement>('button[aria-haspopup="true"]')!;
+const botonPorTexto = (html: HTMLElement, texto: string) =>
+  [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto);
+
+function abrirPerfil(html: HTMLElement) {
+  botonPerfil(html).click();
+  TestBed.tick();
+}
+
 
 describe('CabeceraComponent', () => {
   it('sin sesión ofrece iniciar sesión y no muestra el Tablero', () => {
@@ -36,17 +47,22 @@ describe('CabeceraComponent', () => {
     expect(html.textContent).not.toContain('Tablero');
   });
 
-  it('un administrador ve el Tablero, su nombre y su rol', () => {
+  it('un administrador ve el Tablero y sus iniciales; nombre, rol y correo están en su perfil', () => {
     const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
     expect(html.textContent).toContain('Tablero');
-    expect(html.textContent).toContain('Jobany Tobón');
-    expect(html.textContent).toContain('Administrador');
-    expect(html.textContent).toContain('JT');
+    expect(botonPerfil(html).textContent?.trim()).toBe('JT');
+    expect(html.textContent).not.toContain('Administrador');
+    abrirPerfil(html);
+    const tarjeta = html.querySelector('#menu-perfil')!;
+    expect(tarjeta.textContent).toContain('Jobany Tobón');
+    expect(tarjeta.textContent).toContain('Administrador');
+    expect(tarjeta.textContent).toContain('jobany.tobon@upb.edu.co');
   });
 
   it('una sesión sin rol de administrador no ve el Tablero', () => {
     const html = montar({ admin: false, sesion: true, nombre: 'Ana Pérez' });
     expect(html.textContent).not.toContain('Tablero');
+    abrirPerfil(html);
     expect(html.textContent).toContain('Consulta');
   });
 
@@ -63,14 +79,43 @@ describe('CabeceraComponent', () => {
     expect(html.querySelector('button[aria-label^="Cambiar a tema"]')).not.toBeNull();
   });
 
-  it('cerrar sesión es un botón con icono y nombre accesible', () => {
+  it('con sesión, el tema y cerrar sesión quedan dentro del perfil', () => {
     const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
-    const boton = html.querySelector<HTMLButtonElement>('button[aria-label="Cerrar sesión"]')!;
-    expect(boton).not.toBeNull();
-    expect(boton.querySelector('svg')).not.toBeNull();
-    expect(boton.textContent?.trim()).toBe('');
-    boton.click();
+    expect(html.querySelector('button[aria-label^="Cambiar a tema"]')).toBeNull();
+    expect(botonPorTexto(html, 'Cerrar sesión')).toBeUndefined();
+    expect(botonPerfil(html).getAttribute('aria-expanded')).toBe('false');
+    abrirPerfil(html);
+    expect(botonPerfil(html).getAttribute('aria-expanded')).toBe('true');
+    expect(botonPorTexto(html, 'Claro')).toBeDefined();
+    expect(botonPorTexto(html, 'Oscuro')).toBeDefined();
+    botonPorTexto(html, 'Cerrar sesión')!.click();
     expect(TestBed.inject(AuthService).signOut).toHaveBeenCalled();
+  });
+
+  it('el perfil cambia el tema y marca el elegido', () => {
+    const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
+    abrirPerfil(html);
+    botonPorTexto(html, 'Oscuro')!.click();
+    TestBed.tick();
+    expect(TestBed.inject(TemaService).tema()).toBe('oscuro');
+    expect(botonPorTexto(html, 'Oscuro')!.getAttribute('aria-pressed')).toBe('true');
+    expect(botonPorTexto(html, 'Claro')!.getAttribute('aria-pressed')).toBe('false');
+    expect(html.querySelector('#menu-perfil')).not.toBeNull();
+    localStorage.removeItem(CLAVE_TEMA);
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('el perfil se cierra con Escape, devolviendo el foco, y con un clic fuera', () => {
+    const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
+    abrirPerfil(html);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    TestBed.tick();
+    expect(html.querySelector('#menu-perfil')).toBeNull();
+    expect(document.activeElement).toBe(botonPerfil(html));
+    abrirPerfil(html);
+    document.body.click();
+    TestBed.tick();
+    expect(html.querySelector('#menu-perfil')).toBeNull();
   });
 
   it('la galería sigue marcada en la ficha, el registro y la edición, pero no en el Tablero', async () => {
