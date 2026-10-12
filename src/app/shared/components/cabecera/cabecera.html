@@ -11,6 +11,8 @@
       @if (esAdmin()) {
         <a routerLink="/tablero" routerLinkActive="!text-acento-tinta !border-acento"
           class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Tablero</a>
+        <a routerLink="/sincronizacion" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Sincronizar</a>
       }
     </nav>
 
@@ -96,6 +98,7 @@
       <a routerLink="/" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Galería</a>
       @if (esAdmin()) {
         <a routerLink="/tablero" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Tablero</a>
+        <a routerLink="/sincronizacion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Sincronizar</a>
       }
       @if (!conSesion()) {
         <a routerLink="/autenticacion/iniciar-sesion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-acento">Iniciar sesión</a>

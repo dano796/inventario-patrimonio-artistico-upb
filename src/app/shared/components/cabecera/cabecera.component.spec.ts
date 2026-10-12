@@ -41,6 +41,12 @@ function abrirPerfil(html: HTMLElement) {
 
 
 describe('CabeceraComponent', () => {
+  it('solo un administrador ve la pestaña Sincronizar', () => {
+    expect(montar({ admin: true, sesion: true }).querySelector('a[href="/sincronizacion"]')?.textContent?.trim()).toBe('Sincronizar');
+    TestBed.resetTestingModule();
+    expect(montar({ admin: false, sesion: true }).querySelector('a[href="/sincronizacion"]')).toBeNull();
+  });
+
   it('sin sesión ofrece iniciar sesión y no muestra el Tablero', () => {
     const html = montar({ admin: false, sesion: false });
     expect(html.textContent).toContain('Iniciar sesión');

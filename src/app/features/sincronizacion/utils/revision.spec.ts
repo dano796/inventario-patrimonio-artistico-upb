@@ -1,20 +1,11 @@
 import { aDecisiones, construirRevision, elegir, estadoInicial, EstadoRevision, GrupoRevision, textoValor } from './revision';
-import { Calculo } from '../services/sincronizacion.service';
+import { calculoDePrueba } from './calculo-de-prueba';
 import { Diff, diffVacio } from '../nucleo/diff-tipos';
-import { FilaHoja } from '../nucleo/hoja-obras';
-import { ObraBase } from '../nucleo/importacion';
 import { filaHoja, obraBase } from '../nucleo/pruebas/fabricas';
 
 const URL = 'https://x.supabase.co/storage/v1/object/public/imagenes-obras/a.jpg';
 
-function calculo(diff: Partial<Diff>, opciones: { filas?: FilaHoja[]; obras?: ObraBase[] } = {}): Calculo {
-  return {
-    hoja: { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: null },
-    lectura: { columnas: {} as never, columnasImagen: [], columnaIdWeb: 17, filas: opciones.filas ?? [], avisos: [] },
-    obras: opciones.obras ?? [],
-    diff: { ...diffVacio(), ...diff },
-  };
-}
+const calculo = calculoDePrueba;
 
 const cambio = (obraId: number, campo: 'ubicacion' | 'valor', destino: 'hoja' | 'base', hoja: string | number | null, base: string | number | null) =>
   ({ obraId, fila: obraId + 1, campo, destino, hoja, base, foto: destino === 'base' ? base : hoja });

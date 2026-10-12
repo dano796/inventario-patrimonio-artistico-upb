@@ -1,0 +1,163 @@
+<main class="mx-auto flex min-w-0 max-w-[1400px] flex-col gap-[22px] px-4 pb-16 pt-[26px] md:px-8">
+  <header class="flex flex-wrap items-end justify-between gap-5">
+    <div class="min-w-0">
+      <p class="antetitulo">Hoja oficial e inventario web</p>
+      <h1 class="titulo-pantalla">Sincronización</h1>
+      @if (subtitulo()) {
+        <p class="mt-1.5 text-[15px] font-medium text-tinta-4">{{ subtitulo() }}</p>
+      }
+    </div>
+    @if (hoja()) {
+      <div class="flex items-center gap-2 rounded-full border border-linea bg-superficie py-1.5 pl-2.5 pr-3.5 text-xs font-semibold text-tinta-3">
+        <span [class]="'h-2 w-2 rounded-full ' + conexion().punto"></span>{{ conexion().texto }}
+      </div>
+    }
+  </header>
+
+  @switch (fase()) {
+    @case ('cargando') {
+      <div class="tarjeta h-[220px] animate-pulse" aria-busy="true" aria-label="Cargando la sincronización"></div>
+    }
+
+    @case ('sin-hoja') {
+      <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
+        <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Todavía no hay una hoja vinculada</h2>
+        <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+          Antes de sincronizar hay que elegir, desde el OneDrive de quien la custodia, el archivo de la hoja oficial.
+        </p>
+        <div><a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a></div>
+      </section>
+    }
+
+    @case ('conectar') {
+      <section class="grid items-start gap-[18px] md:grid-cols-2">
+        <div class="tarjeta flex flex-col gap-3.5 px-[30px] py-7">
+          <div class="grid h-11 w-11 place-items-center rounded-[13px] bg-acento-tenue-2 text-acento">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
+          </div>
+          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Conecta con OneDrive para leer la hoja</h2>
+          <p class="max-w-[54ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+            La aplicación descarga la hoja oficial y la compara con el inventario campo por campo. No se escribe nada en
+            ninguna de las dos copias hasta que revises y apruebes.
+          </p>
+          <div class="mt-1"><button type="button" class="btn-primario" (click)="conectar()">Conectar con OneDrive</button></div>
+          <p class="text-[13px] font-medium leading-normal text-tinta-5">
+            La conexión dura esta visita. La próxima vez volverás a conectar; Microsoft no repite la pantalla de permisos.
+          </p>
+        </div>
+        <div class="tarjeta px-6 py-[22px]">
+          <h3 class="mb-1.5 text-[16px] font-bold">Antes de continuar</h3>
+          @for (nota of notasConectar; track nota.titulo) {
+            <div class="flex flex-col gap-[3px] border-t border-linea-suave py-3">
+              <span class="text-[14px] font-semibold">{{ nota.titulo }}</span>
+              <span class="text-[13px] font-medium leading-normal text-tinta-4">{{ nota.texto }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    @case ('calculando') {
+      <section class="tarjeta grid items-start gap-7 px-[30px] py-7 md:grid-cols-2" aria-live="polite">
+        <div class="flex flex-col gap-2">
+          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Comparando las dos copias</h2>
+          <p class="text-[15px] font-medium leading-relaxed text-tinta-3">Solo lectura. Todavía no se ha escrito nada.</p>
+        </div>
+        <ol>
+          @for (p of pasos(); track p.paso) {
+            <li class="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-3 border-t border-linea-suave py-3">
+              <span class="grid place-items-center">
+                @if (p.estado === 'hecho') {
+                  <svg class="text-verde" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                } @else if (p.estado === 'en-curso') {
+                  <span class="block h-3.5 w-3.5 animate-spin rounded-full border-2 border-acento-linea border-t-acento"></span>
+                } @else {
+                  <span class="h-2 w-2 rounded-full bg-linea-2"></span>
+                }
+              </span>
+              <span class="text-[14px] font-semibold" [class]="p.estado === 'pendiente' ? 'text-tinta-5' : 'text-tinta'">{{ p.etiqueta }}</span>
+              <span class="text-[13px] font-medium text-tinta-5">{{ p.detalle }}</span>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+
+    @case ('error') {
+      <section class="tarjeta flex flex-col gap-4 !border-rojo-linea px-[30px] py-7" role="alert">
+        <span class="self-start rounded-full bg-rojo-tenue px-[11px] py-1 text-xs font-bold text-rojo-2">Sincronización detenida</span>
+        @if (encabezados()) {
+          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">{{ tituloEncabezados() }}</h2>
+          <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+            La comparación se detuvo antes de empezar y no se escribió nada. Si la columna se renombró en la hoja,
+            devuélvele su nombre y vuelve a intentarlo.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            @for (chip of chipsEncabezados(); track chip.texto) {
+              <span class="rounded-full px-[11px] py-[5px] text-xs font-semibold" [class]="chip.mal ? 'bg-rojo-tenue text-rojo-2' : 'bg-linea-suave text-tinta-3'">{{ chip.texto }}</span>
+            }
+          </div>
+        } @else {
+          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">No se pudo comparar</h2>
+          <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">{{ error() }} No se escribió nada.</p>
+        }
+        <div><button type="button" class="btn-secundario" (click)="comparar()">Volver a intentar</button></div>
+      </section>
+    }
+
+    @case ('vacio') {
+      <section class="tarjeta flex flex-col items-center gap-2.5 px-[30px] py-12 text-center">
+        <div class="grid h-12 w-12 place-items-center rounded-[14px] bg-verde-suave text-verde">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+        </div>
+        <h2 class="mt-1.5 text-[24px] font-extrabold tracking-[-0.01em]">La hoja y el inventario coinciden</h2>
+        <p class="text-[15px] font-medium text-tinta-4">{{ calculo()?.obras?.length }} obras comparadas campo por campo. No hay nada que aplicar.</p>
+        <button type="button" class="btn-secundario mt-2" (click)="comparar()">Volver a comparar</button>
+      </section>
+      @if (revision(); as r) {
+        @for (g of r.grupos; track g.clave) {
+          <app-grupo-revision [grupo]="g" />
+        }
+        @if (r.noSeTocan.length) {
+          <ng-container *ngTemplateOutlet="noSeTocan; context: { $implicit: r.noSeTocan }" />
+        }
+      }
+    }
+
+    @case ('revision') {
+      @if (revision(); as r) {
+        <div class="flex flex-wrap items-start gap-[22px]">
+          <div class="flex min-w-0 flex-[999_1_640px] flex-col gap-3.5">
+            @for (g of gruposVisibles(); track g.clave) {
+              <app-grupo-revision [grupo]="g" />
+            }
+            @if (r.noSeTocan.length && filtro() === 'todo') {
+              <ng-container *ngTemplateOutlet="noSeTocan; context: { $implicit: r.noSeTocan }" />
+            }
+          </div>
+          <aside class="max-w-full flex-[1_1_290px] lg:sticky lg:top-[84px]">
+            <app-resumen-ejecucion [revision]="r" />
+          </aside>
+        </div>
+      }
+    }
+  }
+</main>
+
+<ng-template #noSeTocan let-lista>
+  <section class="tarjeta px-5 py-[18px]">
+    <h3 class="mb-1 text-[16px] font-bold">No se tocarán</h3>
+    <p class="mb-2 text-[13px] font-medium leading-normal text-tinta-4">
+      Filas de la hoja que no se pueden emparejar con seguridad. Corrígelas en la hoja y vuelve a comparar.
+    </p>
+    @for (x of lista; track x.clave) {
+      <div class="grid gap-x-3.5 gap-y-1.5 border-t border-linea-suave py-[11px] sm:grid-cols-[150px_minmax(0,1fr)]">
+        <span class="inline-flex h-[22px] items-center self-start justify-self-start whitespace-nowrap rounded-full bg-ambar-suave px-2.5 text-xs font-bold text-ambar">{{ x.tipo }}</span>
+        <span class="flex min-w-0 flex-col gap-0.5">
+          <span class="text-[14px] font-semibold">{{ x.titulo }}</span>
+          <span class="text-[13px] font-medium text-tinta-4">{{ x.detalle }}</span>
+        </span>
+      </div>
+    }
+  </section>
+</ng-template>
