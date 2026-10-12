@@ -11,7 +11,7 @@ function montar(opciones: { admin: boolean; sesion: boolean; nombre?: string | n
   TestBed.configureTestingModule({
     imports: [CabeceraComponent],
     providers: [
-      provideRouter([{ path: '', component: Vacia }]),
+      provideRouter([{ path: '**', component: Vacia }]),
       {
         provide: AuthService,
         useValue: {
@@ -71,5 +71,20 @@ describe('CabeceraComponent', () => {
     expect(boton.textContent?.trim()).toBe('');
     boton.click();
     expect(TestBed.inject(AuthService).signOut).toHaveBeenCalled();
+  });
+
+  it('la galería sigue marcada en la ficha, el registro y la edición, pero no en el Tablero', async () => {
+    const html = montar({ admin: true, sesion: true });
+    const enlace = (texto: string) => [...html.querySelectorAll('nav[aria-label="Principal"] a')].find((a) => a.textContent?.trim() === texto)!;
+    const marcada = (texto: string) => enlace(texto).classList.contains('!text-acento-tinta');
+    for (const url of ['/obra/247', '/nueva', '/editar/247']) {
+      await TestBed.inject(Router).navigateByUrl(url);
+      TestBed.tick();
+      expect(marcada('Galería')).withContext(url).toBeTrue();
+    }
+    await TestBed.inject(Router).navigateByUrl('/tablero');
+    TestBed.tick();
+    expect(marcada('Galería')).toBeFalse();
+    expect(marcada('Tablero')).toBeTrue();
   });
 });

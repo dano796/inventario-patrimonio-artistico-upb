@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { TemaService } from '../../../core/services/tema.service';
 import { etiquetaRol, iniciales } from './cabecera';
@@ -22,6 +24,15 @@ export class CabeceraComponent {
   rol = computed(() => etiquetaRol(this.esAdmin()));
   esOscuro = computed(() => this.temas.tema() === 'oscuro');
   menuAbierto = signal(false);
+
+  private url = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+  enGaleria = computed(() => !/^\/(tablero|sincronizacion|autenticacion)(\/|\?|$)/.test(this.url()));
 
   alternarTema(): void {
     this.temas.alternar();
