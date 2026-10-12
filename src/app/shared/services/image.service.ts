@@ -6,6 +6,7 @@ import {
   ImageUploadResponse,
 } from '../models/image.model';
 import { environment } from '../../../environments/environment.development';
+import { aJpeg } from '../utils/convertir-imagen';
 
 @Injectable({
   providedIn: 'root',
@@ -18,7 +19,8 @@ export class ImageService {
     imageRequest: ImageUploadRequest
   ): Promise<ImageUploadResponse> {
     try {
-      const fileExt = imageRequest.filename.split('.').pop();
+      const file = await aJpeg(imageRequest.file);
+      const fileExt = file === imageRequest.file ? imageRequest.filename.split('.').pop() : 'jpg';
       const fileName = `${Date.now()}-${Math.random()
         .toString(36)
         .substring(2)}.${fileExt}`;
@@ -26,7 +28,7 @@ export class ImageService {
 
       const { data, error } = await this.supabaseClient.storage
         .from(this.BUCKET_NAME)
-        .upload(filePath, imageRequest.file, {
+        .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false,
         });
