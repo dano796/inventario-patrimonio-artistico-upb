@@ -116,3 +116,22 @@ describe('calcularDiff', () => {
     expect(hayCambios({ ...diffVacio(), avisos: [{ tipo: 'fila_borrada', obraId: 1 }] })).toBeFalse();
   });
 });
+
+describe('calcularDiff, avisos', () => {
+  it('avisa una sola vez del CARGO combinado aunque lo detecten el responsable y el cargo', () => {
+    const fila = filaHoja(2, { titulo: 'Paisaje', responsable: 'JOBANY TOBÓN', cargo: 'COORDINADOR' }, {
+      idWeb: 14, combinados: ['cargo'],
+    });
+    const obra = obraBase(14, { titulo: 'Paisaje', responsable: 'ANA PÉREZ', cargo: 'DECANA' });
+    const foto = valoresFoto({ ...fila.campos }, []);
+    const diff = calcularDiff({
+      lectura: lectura([fila]),
+      obras: [obra],
+      responsables: [{ id: 1, nombre: 'JOBANY TOBÓN', cargo: 'DIRECTOR' }, { id: 2, nombre: 'ANA PÉREZ', cargo: 'DECANA' }],
+      fotos: new Map([[14, foto]]),
+      prefijoBucket: PREFIJO,
+    });
+    const combinadas = diff.avisos.filter((a) => a.tipo === 'celda_combinada');
+    expect(combinadas).toEqual([{ tipo: 'celda_combinada', obraId: 14, fila: 2, campo: 'cargo' }]);
+  });
+});

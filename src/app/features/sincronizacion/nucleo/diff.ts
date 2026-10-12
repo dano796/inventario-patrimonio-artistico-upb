@@ -43,7 +43,20 @@ export function calcularDiff(entrada: EntradaDiff): Diff {
   diff.conflictosCargo.push(...cargos.conflictosCargo);
   diff.convergencias.push(...cargos.convergencias);
   diff.avisos.push(...cargos.avisos);
+  diff.avisos = sinCombinadasRepetidas(diff.avisos);
   return diff;
+}
+
+/** Un CARGO combinado lo detectan a la vez el cambio de responsable y el de cargo. */
+function sinCombinadasRepetidas(avisos: AvisoSincronizacion[]): AvisoSincronizacion[] {
+  const vistas = new Set<string>();
+  return avisos.filter((aviso) => {
+    if (aviso.tipo !== 'celda_combinada') return true;
+    const clave = `${aviso.obraId}|${aviso.fila}|${aviso.campo}`;
+    if (vistas.has(clave)) return false;
+    vistas.add(clave);
+    return true;
+  });
 }
 
 export function hayCambios(diff: Diff): boolean {
