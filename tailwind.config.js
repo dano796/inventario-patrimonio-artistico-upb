@@ -17,7 +17,7 @@ module.exports = {
           0: v('line-0'), '00': v('line-00'), tl: v('line-tl'),
         },
         pista: { DEFAULT: v('track'), 2: v('track-2') },
-        segmento: v('seg'),
+        segmento: { DEFAULT: v('seg'), activo: v('seg-on') },
         acento: {
           DEFAULT: v('acc'), tinta: v('acc-ink'), hover: v('acc-hover'), 'tinta-2': v('acc-ink-2'),
           linea: v('acc-line'), suave: v('acc-soft'), tenue: v('acc-tint'), 'tenue-2': v('acc-tint-2'),

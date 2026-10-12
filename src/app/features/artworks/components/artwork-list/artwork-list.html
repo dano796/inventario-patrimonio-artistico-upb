@@ -38,7 +38,7 @@
         @for (opcion of vistas; track opcion.valor) {
           <button type="button" (click)="cambiarVista(opcion.valor)" [attr.aria-pressed]="vista() === opcion.valor"
             [class]="vista() === opcion.valor
-              ? 'rounded-[10px] bg-superficie px-3.5 py-[7px] text-[13px] font-semibold text-tinta shadow-sm'
+              ? 'rounded-[10px] bg-segmento-activo px-3.5 py-[7px] text-[13px] font-semibold text-tinta shadow-sm'
               : 'rounded-[10px] px-3.5 py-[7px] text-[13px] font-semibold text-tinta-4 hover:text-tinta-2'">{{ opcion.etiqueta }}</button>
         }
       </div>
