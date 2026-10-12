@@ -3,7 +3,7 @@
 
   @if (error()) {
     <div class="tarjeta flex flex-col items-center gap-3 px-6 py-10 text-center" role="alert">
-      <p class="text-[15px] font-bold">No se pudo cargar la obra.</p>
+      <p class="text-[16px] font-bold">No se pudo cargar la obra.</p>
       <button type="button" class="btn-primario" (click)="recargar()">Reintentar</button>
     </div>
   } @else if (isLoading() && !artwork()) {
@@ -61,27 +61,27 @@
               </div>
             }
           </div>
-          <p class="mt-1.5 text-[15px] font-medium text-tinta-3">{{ subtitulo() }}</p>
+          <p class="mt-1.5 text-[16px] font-medium text-tinta-3">{{ subtitulo() }}</p>
         </div>
 
         <dl class="tarjeta px-5 py-1.5">
           @for (campo of campos(); track campo.etiqueta) {
             <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-4 border-b border-linea-0 py-3 last:border-0 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <dt class="text-[13px] font-semibold text-tinta-5">{{ campo.etiqueta }}</dt>
+              <dt class="text-[14px] font-semibold text-tinta-5">{{ campo.etiqueta }}</dt>
               <dd [class]="campo.vacio ? 'text-sm font-medium italic text-tinta-5' : 'whitespace-pre-line text-sm font-medium'">{{ campo.valor }}</dd>
             </div>
           }
         </dl>
 
         <div>
-          <h2 class="mb-1.5 text-[15px] font-bold">Observaciones</h2>
+          <h2 class="mb-1.5 text-[16px] font-bold">Observaciones</h2>
           <p class="whitespace-pre-line text-sm font-medium leading-relaxed text-tinta-3">{{ observaciones() }}</p>
         </div>
       </section>
     </div>
   } @else {
     <div class="tarjeta flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <p class="text-[15px] font-bold">No encontramos esta obra.</p>
+      <p class="text-[16px] font-bold">No encontramos esta obra.</p>
       <a routerLink="/" class="btn-secundario">Volver a la galería</a>
     </div>
   }

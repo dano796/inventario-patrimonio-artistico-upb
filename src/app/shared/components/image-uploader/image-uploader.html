@@ -20,22 +20,22 @@
       <img [src]="image.url" [alt]="image.nombre" loading="lazy" class="h-full w-full object-cover" />
       <button type="button" (click)="removeImage(i)" [attr.aria-label]="'Quitar ' + image.nombre"
         class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-white focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">×</button>
-      <span class="absolute inset-x-0 bottom-0 truncate bg-slate-900/80 px-2 py-1.5 text-[11px] font-medium text-white">{{ image.nombre }}</span>
+      <span class="absolute inset-x-0 bottom-0 truncate bg-slate-900/80 px-2 py-1.5 text-[12px] font-medium text-white">{{ image.nombre }}</span>
     </div>
   }
   @for (file of selectedFilesArray; track file.name + file.size + file.lastModified; let i = $index) {
     <div class="relative flex aspect-square flex-col justify-end gap-0.5 overflow-hidden rounded-[20px] border border-dashed border-acento-linea bg-acento-tenue-3 p-2.5">
-      <span class="text-[11px] font-semibold text-acento-tinta">Se subirá al guardar</span>
+      <span class="text-[12px] font-semibold text-acento-tinta">Se subirá al guardar</span>
       <span class="truncate text-xs font-semibold">{{ file.name }}</span>
-      <span class="text-[11px] text-tinta-5">{{ (file.size / 1024 / 1024).toFixed(2) }} MB</span>
+      <span class="text-[12px] text-tinta-5">{{ (file.size / 1024 / 1024).toFixed(2) }} MB</span>
       <button type="button" (click)="removeSelectedFile(i)" [attr.aria-label]="'Quitar ' + file.name"
         class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-white">×</button>
     </div>
   }
   <label
     [class]="isDraggingValue
-      ? 'relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-dashed border-acento bg-acento-tenue text-[13px] font-semibold text-tinta-4'
-      : 'relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-dashed border-linea-3 bg-sub-3 text-[13px] font-semibold text-tinta-4 hover:border-acento-linea'"
+      ? 'relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-dashed border-acento bg-acento-tenue text-[14px] font-semibold text-tinta-4'
+      : 'relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-dashed border-linea-3 bg-sub-3 text-[14px] font-semibold text-tinta-4 hover:border-acento-linea'"
     (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
     <span class="text-[22px] leading-none text-acento" aria-hidden="true">+</span>
     {{ isDraggingValue ? 'Suelta las imágenes' : 'Agregar o arrastrar' }}

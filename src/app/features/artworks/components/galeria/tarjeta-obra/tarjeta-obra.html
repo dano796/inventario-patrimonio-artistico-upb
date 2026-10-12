@@ -5,8 +5,8 @@
     } @else {
       <span class="marcador absolute inset-0" aria-hidden="true"></span>
     }
-    <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/90 to-slate-900/0 px-3 pb-3 pt-7 text-[11px] font-medium">
-      <span class="block text-[15px] font-bold leading-tight">{{ titulo() }}</span>
+    <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/90 to-slate-900/0 px-3 pb-3 pt-7 text-[12px] font-medium">
+      <span class="block text-[16px] font-bold leading-tight">{{ titulo() }}</span>
       <span class="opacity-75">{{ autor() }}</span>
     </span>
   </a>
@@ -20,10 +20,10 @@
       }
     </a>
     <div class="flex flex-1 flex-col gap-1.5 px-[17px] pb-[17px] pt-[15px]">
-      <h3 class="text-[17px] font-bold tracking-[-0.01em]">
+      <h3 class="text-[18px] font-bold tracking-[-0.01em]">
         <a [routerLink]="['/obra', obra().id]" class="text-tinta hover:text-acento-tinta">{{ titulo() }}</a>
       </h3>
-      <p class="text-[13px] font-medium text-tinta-4">{{ autor() }}</p>
+      <p class="text-[14px] font-medium text-tinta-4">{{ autor() }}</p>
       @if (esAdmin()) {
         <p class="mt-auto truncate border-t border-linea-suave pt-3 text-xs font-medium text-tinta-5">{{ ubicacion() }}</p>
       }

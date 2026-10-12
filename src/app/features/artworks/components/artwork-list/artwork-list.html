@@ -31,15 +31,15 @@
   />
 
   <div class="flex flex-wrap items-center justify-between gap-4">
-    <p class="text-[13px] font-medium text-tinta-4" aria-live="polite">{{ linea() }}</p>
+    <p class="text-[14px] font-medium text-tinta-4" aria-live="polite">{{ linea() }}</p>
     <div class="flex items-center gap-2.5">
-      <span id="etiqueta-vista" class="text-[11px] font-bold uppercase tracking-[0.1em] text-tinta-5">Vista</span>
+      <span id="etiqueta-vista" class="text-[12px] font-bold uppercase tracking-[0.1em] text-tinta-5">Vista</span>
       <div class="flex gap-0.5 rounded-xl bg-segmento p-[3px]" role="group" aria-labelledby="etiqueta-vista">
         @for (opcion of vistas; track opcion.valor) {
           <button type="button" (click)="cambiarVista(opcion.valor)" [attr.aria-pressed]="vista() === opcion.valor"
             [class]="vista() === opcion.valor
-              ? 'rounded-[10px] bg-segmento-activo px-3.5 py-[7px] text-[13px] font-semibold text-tinta shadow-sm'
-              : 'rounded-[10px] px-3.5 py-[7px] text-[13px] font-semibold text-tinta-4 hover:text-tinta-2'">{{ opcion.etiqueta }}</button>
+              ? 'rounded-[10px] bg-segmento-activo px-3.5 py-[7px] text-[14px] font-semibold text-tinta shadow-sm'
+              : 'rounded-[10px] px-3.5 py-[7px] text-[14px] font-semibold text-tinta-4 hover:text-tinta-2'">{{ opcion.etiqueta }}</button>
         }
       </div>
     </div>
@@ -47,7 +47,7 @@
 
   @if (error()) {
     <div class="tarjeta flex flex-col items-center gap-3 px-6 py-10 text-center" role="alert">
-      <p class="text-[15px] font-bold">No se pudieron cargar las obras.</p>
+      <p class="text-[16px] font-bold">No se pudieron cargar las obras.</p>
       <p class="text-sm font-medium text-tinta-4">Revisa la conexión e inténtalo de nuevo.</p>
       <button type="button" class="btn-primario" (click)="recargar()">Reintentar</button>
     </div>
@@ -65,7 +65,7 @@
     </div>
   } @else if (artworks().length === 0) {
     <div class="tarjeta flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <p class="text-[15px] font-bold">{{ linea() }}</p>
+      <p class="text-[16px] font-bold">{{ linea() }}</p>
       @if (chips().length) {
         <button type="button" class="btn-secundario" (click)="clearAllFilters()">Limpiar los filtros</button>
       }

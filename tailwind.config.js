@@ -5,6 +5,11 @@ module.exports = {
   content: ['./src/**/*.{html,ts}'],
   theme: {
     extend: {
+      fontSize: {
+        xs: ['0.8125rem', '1.125rem'],
+        sm: ['0.9375rem', '1.375rem'],
+        base: ['1.0625rem', '1.625rem'],
+      },
       screens: { xs: '475px' },
       fontFamily: { sans: ['Manrope', 'system-ui', 'sans-serif'] },
       colors: {

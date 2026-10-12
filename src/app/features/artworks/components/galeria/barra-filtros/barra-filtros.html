@@ -2,7 +2,7 @@
   <div class="relative flex min-w-0 flex-1 items-center">
     <svg class="pointer-events-none absolute left-3.5 h-[18px] w-[18px] text-tinta-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
     <label for="filtro-busqueda" class="sr-only">Buscar por título</label>
-    <input id="filtro-busqueda" type="search" class="campo !py-[13px] !pl-[42px] !text-[15px]" placeholder="Buscar por título"
+    <input id="filtro-busqueda" type="search" class="campo !py-[13px] !pl-[42px] !text-[16px]" placeholder="Buscar por título"
       [value]="valores().busqueda" (input)="emitir('busqueda', $event)" />
   </div>
   <button type="button" [class]="abierto() ? 'btn-secundario !py-3 !border-acento !text-acento-tinta' : 'btn-secundario !py-3'"
@@ -10,7 +10,7 @@
     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M7 12h10M10 18h4"></path></svg>
     Filtros
     @if (contador() > 0) {
-      <span data-contador-filtros class="rounded-full bg-acento px-2 py-px text-[11px] font-bold text-white">{{ contador() }}</span>
+      <span data-contador-filtros class="rounded-full bg-acento px-2 py-px text-[12px] font-bold text-white">{{ contador() }}</span>
     }
   </button>
 </div>
@@ -26,12 +26,12 @@
               [value]="valores()[campo.clave]" (input)="emitir(campo.clave, $event)"
               (keydown.enter)="alPulsarEnter(campo.clave, $event)" />
             @if (valores()[campo.clave]) {
-              <button type="button" class="absolute right-2 h-[22px] w-[22px] rounded-[7px] bg-linea-suave text-[13px] font-semibold leading-none text-tinta-4"
+              <button type="button" class="absolute right-2 h-[22px] w-[22px] rounded-[7px] bg-linea-suave text-[14px] font-semibold leading-none text-tinta-4"
                 [attr.aria-label]="'Limpiar ' + campo.etiqueta" (click)="cambio.emit({ clave: campo.clave, valor: '' })">×</button>
             }
           </div>
           @if (campo.clave === 'ubicacion') {
-            <p class="mt-1 text-[11px] font-medium text-tinta-5">Enter para añadir otra ubicación.</p>
+            <p class="mt-1 text-[12px] font-medium text-tinta-5">Enter para añadir otra ubicación.</p>
           }
         </div>
       }
@@ -48,7 +48,7 @@
         }
       </div>
       @if (chips().length) {
-        <button type="button" class="text-[13px] font-semibold text-rojo" (click)="limpiar.emit()">Limpiar todos los filtros</button>
+        <button type="button" class="text-[14px] font-semibold text-rojo" (click)="limpiar.emit()">Limpiar todos los filtros</button>
       }
     </div>
   </div>
