@@ -37,8 +37,9 @@ src/app/
 │   │   └── auth.routes.ts
 │   ├── sincronizacion/
 │   │   ├── nucleo/            # TS puro, compartido con scripts/importar-hoja.ts
-│   │   ├── services/          # graph.service (Microsoft Graph, token delegado)
-│   │   ├── components/        # vincular-hoja
+│   │   ├── services/          # graph.service (Microsoft Graph, token delegado) · sincronizacion · sincronizacion-datos
+│   │   ├── utils/             # revision (modelo de vista puro) · borrador (decisiones en sessionStorage)
+│   │   ├── components/        # sincronizar (/sincronizacion) · revision/ (grupo-revision, resumen-ejecucion) · vincular-hoja
 │   │   └── sincronizacion.routes.ts
 │   └── tablero/               # estado del inventario (solo administradores, lee obras_admin)
 │       ├── tablero.ts         # calcularTablero: función pura
@@ -83,6 +84,17 @@ await this.prepareClient();   // ensureActiveSession() + releer el cliente
 
 `ensureActiveSession()` devuelve `true` a propósito cuando no hay sesión: el
 catálogo se puede consultar de forma anónima.
+
+### El token de Microsoft vive en memoria
+
+supabase-js entrega `provider_token` una sola vez: cualquier refresco de la
+sesión (inactividad, vuelta a la pestaña, caducidad del JWT) lo quita.
+`GraphService` lo guarda en memoria la primera vez que lo ve y no lo escribe
+en ningún almacenamiento; recargar la página obliga a reconectar. Por eso
+Graph no llama a `markActivity()`: no depende de la sesión de Supabase.
+Reconectar es una redirección completa, así que las decisiones de la revisión
+se guardan en `sessionStorage` (con hash, sin valores en claro) y se
+restauran al volver si el elemento no cambió.
 
 ### Columnas públicas y columnas restringidas
 
