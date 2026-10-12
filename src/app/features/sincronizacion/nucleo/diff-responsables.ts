@@ -52,12 +52,19 @@ export function diffCargos(
     personas.set(clave, persona);
   }
 
+  const avisarCombinadas = (filas: readonly FilaPersona[]) => {
+    for (const f of filas.filter((f) => f.combinada)) {
+      r.avisos.push({ tipo: 'celda_combinada', obraId: f.obraId, fila: f.fila, campo: 'cargo' });
+    }
+  };
+
   for (const [clave, persona] of [...personas].sort(([a], [b]) => a.localeCompare(b))) {
     const nombre = persona.responsable.nombre;
     const base = persona.responsable.cargo;
     const foto = cargoEnFoto(clave, persona.filas, fotos);
     if (persona.cargos.size > 1) {
       r.conflictosCargo.push({ clave, nombre, opciones: [...persona.cargos.values()], base, foto, filas: persona.filas });
+      avisarCombinadas(persona.filas);
       continue;
     }
     const hoja = [...persona.cargos.values()][0] ?? null;
@@ -66,12 +73,11 @@ export function diffCargos(
       for (const f of persona.filas) r.convergencias.push({ obraId: f.obraId, clave: 'cargo', valor: comparacion.valor });
     } else if (comparacion.tipo === 'conflicto') {
       r.conflictosCargo.push({ clave, nombre, opciones: [hoja, base], base, foto, filas: persona.filas });
+      avisarCombinadas(persona.filas);
     } else if (comparacion.tipo === 'cambio') {
       let filas = persona.filas;
       if (comparacion.destino === 'hoja') {
-        for (const f of filas.filter((f) => f.combinada)) {
-          r.avisos.push({ tipo: 'celda_combinada', obraId: f.obraId, fila: f.fila, campo: 'cargo' });
-        }
+        avisarCombinadas(filas);
         filas = filas.filter((f) => !f.combinada);
       }
       r.cargos.push({ clave, nombre, destino: comparacion.destino, hoja, base, foto: foto ?? null, filas });

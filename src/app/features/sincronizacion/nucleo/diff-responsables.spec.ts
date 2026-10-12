@@ -50,6 +50,19 @@ describe('diffCargos', () => {
     expect(r.conflictosCargo.map((c) => c.opciones)).toEqual([['DIRECTOR', 'COORDINADOR']]);
   });
 
+  it('un conflicto de persona con un CARGO combinado avisa de esa celda, que no se podrá escribir', () => {
+    const r = diffCargos(
+      [
+        par(2, 1, { responsable: JOBANY, cargo: 'DIRECTOR' }),
+        par(3, 2, { responsable: JOBANY, cargo: 'COORDINADOR' }, { combinados: ['cargo'] }),
+      ],
+      enBase('COORDINADOR'),
+      new Map([fotoDe(1, 'COORDINADOR'), fotoDe(2, 'COORDINADOR')])
+    );
+    expect(r.conflictosCargo.length).toBe(1);
+    expect(r.avisos).toEqual([{ tipo: 'celda_combinada', obraId: 2, fila: 3, campo: 'cargo' }]);
+  });
+
   it('si los dos lados cambiaron a valores distintos es un conflicto con las dos opciones', () => {
     const r = diffCargos(
       [par(2, 1, { responsable: JOBANY, cargo: 'DIRECTOR' })],
