@@ -75,7 +75,8 @@ export interface CambioImagen {
   leida: CasillaImagen;
 }
 
-export type MotivoAvisoImagen = 'reemplazada' | 'borrada' | 'casilla_con_texto';
+/** `url_externa`: la imagen de la web no está en el bucket y no se puede escribir como =IMAGE(). */
+export type MotivoAvisoImagen = 'reemplazada' | 'borrada' | 'casilla_con_texto' | 'url_externa';
 
 export interface AvisoImagen {
   obraId: number;

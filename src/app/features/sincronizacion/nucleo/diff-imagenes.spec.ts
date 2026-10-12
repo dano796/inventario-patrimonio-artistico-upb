@@ -15,6 +15,20 @@ const diff = (casillas: CasillaImagen[], imagenes: { id: number; url: string }[]
   diffImagenes(conCasillas(...casillas), obraBase(1, { titulo: 'Paisaje' }, imagenes), foto, PREFIJO);
 
 describe('diffImagenes', () => {
+  it('si la casilla tiene otra imagen y la de la web es externa, el aviso es de URL externa', () => {
+    const externa = { id: 81, url: 'https://otro.sitio/obra.jpg' };
+    const ajena: CasillaImagen = { tipo: 'formula', url: 'https://ajeno.sitio/x.jpg' };
+    const r = diff([ajena], [externa], fotoImagenes(80));
+    expect(r.avisosImagen.map((a) => a.motivo)).toEqual(['url_externa']);
+  });
+
+  it('una imagen de la web con una URL fuera del bucket no se escribe: se avisa', () => {
+    const externa = { id: 81, url: 'https://otro.sitio/obra.jpg' };
+    const r = diff([VACIA], [externa], fotoImagenes());
+    expect(r.imagenes).toEqual([]);
+    expect(r.avisosImagen).toEqual([{ obraId: 1, fila: 2, casilla: 1, motivo: 'url_externa', imagen: externa, leida: VACIA }]);
+  });
+
   it('escribe =IMAGE() en una casilla vacía si la web tiene imagen', () => {
     const r = diff([VACIA], [img(80)], fotoImagenes());
     expect(r.imagenes).toEqual([{ obraId: 1, fila: 2, casilla: 1, accion: 'escribir', imagen: img(80), leida: VACIA }]);

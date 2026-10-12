@@ -12,7 +12,10 @@ export function valorParaHoja(valor: ValorCampo): string | number {
   return `'${valor ?? NO_REGISTRA}`;
 }
 
+/** Una comilla o un espacio romperían la fórmula =IMAGE("…"). */
+export const esUrlEscribible = (url: string, prefijo: string) => url.startsWith(prefijo) && !/["\s]/.test(url);
+
 export function formulaImagen(url: string, prefijo: string): string {
-  if (!url.startsWith(prefijo) || /["\s]/.test(url)) throw new Error('La URL de la imagen no es del bucket');
+  if (!esUrlEscribible(url, prefijo)) throw new Error('La URL de la imagen no es del bucket');
   return `=IMAGE("${url}")`;
 }

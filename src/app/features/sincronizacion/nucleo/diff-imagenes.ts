@@ -2,6 +2,7 @@ import { CasillaImagen, FilaHoja } from './hoja-obras';
 import { CASILLAS_IMAGEN, claveImagen, ValoresFoto } from './foto';
 import { ObraBase } from './importacion';
 import { AvisoImagen, CambioImagen, Convergencia, ImagenBase } from './diff-tipos';
+import { esUrlEscribible } from './celdas-hoja';
 
 export const esUrlDelBucket = (url: string | null, prefijo: string): url is string =>
   url !== null && url.startsWith(prefijo);
@@ -34,18 +35,23 @@ export function diffImagenes(
     const converger = () => {
       if (fotoId !== idBase) r.convergencias.push({ obraId: obra.id, clave, valor: idBase });
     };
+    const escribir = (imagen: ImagenBase) => {
+      if (esUrlEscribible(imagen.url, prefijoBucket)) r.imagenes.push({ ...comun, accion: 'escribir' });
+      else r.avisosImagen.push({ ...comun, motivo: 'url_externa' });
+    };
 
     if (leida.tipo === 'texto') {
       if (imagen && imagen.id !== fotoId) r.avisosImagen.push({ ...comun, motivo: 'casilla_con_texto' });
     } else if (leida.tipo === 'vacia') {
-      if (imagen) r.imagenes.push({ ...comun, accion: 'escribir' });
+      if (imagen) escribir(imagen);
       else converger();
     } else if (leida.tipo === 'formula' && esUrlDelBucket(leida.url, prefijoBucket)) {
       if (!imagen) r.imagenes.push({ ...comun, accion: 'vaciar' });
-      else if (leida.url !== imagen.url) r.imagenes.push({ ...comun, accion: 'escribir' });
+      else if (leida.url !== imagen.url) escribir(imagen);
       else converger();
     } else if (idBase !== fotoId) {
-      r.avisosImagen.push({ ...comun, motivo: imagen ? 'reemplazada' : 'borrada' });
+      const motivo = !imagen ? 'borrada' : esUrlEscribible(imagen.url, prefijoBucket) ? 'reemplazada' : 'url_externa';
+      r.avisosImagen.push({ ...comun, motivo });
     }
   }
   return r;

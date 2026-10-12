@@ -175,6 +175,18 @@ describe('planificarEjecucion', () => {
     expect(elegidas.altasHoja).toEqual([]);
   });
 
+  it('una obra nueva en la hoja con una imagen fuera del bucket se añade sin esa imagen', () => {
+    const conExterna: ContextoPlan = {
+      ...contexto(),
+      obras: new Map([[14, obraBase(14, { titulo: 'Paisaje' }, [{ id: 3, url: 'https://otro.sitio/a.jpg' }, { id: 4, url: `${PREFIJO}b.jpg` }])]]),
+    };
+    const diff = { ...diffVacio(), altasHoja: [{ obraId: 14 }] };
+    const plan = planificarEjecucion(diff, decisionesPorDefecto(diff), conExterna);
+    const imagenes = plan.altasHoja[0].celdas.filter((c) => c.destino.tipo === 'imagen');
+    expect(imagenes).toEqual([{ destino: { tipo: 'imagen', casilla: 2 }, valor: `=IMAGE("${PREFIJO}b.jpg")` }]);
+    expect([plan.altasHoja[0].foto['imagen_1'], plan.altasHoja[0].foto['imagen_2']]).toEqual([null, 4]);
+  });
+
   it('las convergencias van a la foto, agrupadas por obra', () => {
     const plan = planDe({
       convergencias: [

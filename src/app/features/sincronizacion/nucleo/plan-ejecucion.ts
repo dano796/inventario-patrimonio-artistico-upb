@@ -2,7 +2,7 @@ import { Campo, CAMPOS, CamposObra, CasillaImagen, FilaHoja } from './hoja-obras
 import { CASILLAS_IMAGEN, claveImagen, normalizarCampo, ValorCampo, ValoresFoto, valoresFoto } from './foto';
 import { ObraBase } from './importacion';
 import { normalizarTexto } from './normalizacion';
-import { formulaImagen, valorParaHoja } from './celdas-hoja';
+import { esUrlEscribible, formulaImagen, valorParaHoja } from './celdas-hoja';
 import { AvisoImagen, CambioImagen, Diff, Lado } from './diff-tipos';
 
 export type DecisionImagen = 'reemplazar' | 'dejar';
@@ -208,7 +208,9 @@ export function planificarEjecucion(diff: Diff, decisiones: Decisiones, contexto
   for (const aviso of diff.avisosImagen) {
     const decision = decisiones.avisosImagen.get(claveCampo(aviso.obraId, claveImagen(aviso.casilla)));
     if (decision === 'dejar') anotarFoto(aviso.obraId, claveImagen(aviso.casilla), aviso.imagen?.id ?? null);
-    else if (decision === 'reemplazar' && aviso.motivo !== 'casilla_con_texto') escribirImagen(aviso);
+    else if (decision === 'reemplazar' && aviso.motivo !== 'casilla_con_texto' && aviso.motivo !== 'url_externa') {
+      escribirImagen(aviso);
+    }
   }
 
   for (const alta of diff.altasBase) {
@@ -219,17 +221,19 @@ export function planificarEjecucion(diff: Diff, decisiones: Decisiones, contexto
   for (const { obraId } of diff.altasHoja) {
     const obra = contexto.obras.get(obraId);
     if (!obra || !decisiones.altasHoja.has(obraId)) continue;
-    const imagenes = [...obra.imagenes].sort((a, b) => a.id - b.id).slice(0, CASILLAS_IMAGEN);
+    const imagenes = [...obra.imagenes]
+      .sort((a, b) => a.id - b.id)
+      .slice(0, CASILLAS_IMAGEN)
+      .map((im) => (esUrlEscribible(im.url, contexto.prefijoBucket) ? im : null));
     plan.altasHoja.push({
       obraId,
       celdas: [
         ...CAMPOS.map((campo) => ({ destino: enCampo(campo), valor: valorParaHoja(obra.campos[campo]) })),
-        ...imagenes.map((im, i) => ({
-          destino: { tipo: 'imagen', casilla: i + 1 } as DestinoHoja,
-          valor: formulaImagen(im.url, contexto.prefijoBucket),
-        })),
+        ...imagenes.flatMap((im, i) =>
+          im ? [{ destino: { tipo: 'imagen', casilla: i + 1 } as DestinoHoja, valor: formulaImagen(im.url, contexto.prefijoBucket) }] : []
+        ),
       ],
-      foto: valoresFoto(obra.campos, imagenes.map((im) => im.id)),
+      foto: valoresFoto(obra.campos, imagenes.map((im) => im?.id ?? null)),
     });
   }
 
