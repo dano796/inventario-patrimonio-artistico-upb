@@ -1,17 +1,20 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { AvisoProgreso, Calculo, PasoCalculo, SincronizacionService } from '../../services/sincronizacion.service';
+import {
+  AvisoProgreso, Calculo, PasoCalculo, ResultadoAplicacion, SincronizacionService,
+} from '../../services/sincronizacion.service';
 import { ErrorGraph, GraphService } from '../../services/graph.service';
 import { HojaVinculada, SincronizacionDatosService } from '../../services/sincronizacion-datos.service';
 import { ENCABEZADO_ID_WEB, ENCABEZADOS, ENCABEZADOS_IMAGEN, ErrorEncabezados } from '../../nucleo/hoja-obras';
 import { hayCambios } from '../../nucleo/diff';
 import { decisionesPorDefecto } from '../../nucleo/plan-ejecucion';
-import { construirRevision, estadoInicial, EstadoRevision, Filtro } from '../../utils/revision';
-import { GrupoRevisionComponent } from '../revision/grupo-revision/grupo-revision.component';
+import { aDecisiones, construirRevision, elegir, estadoInicial, EstadoRevision, Filtro } from '../../utils/revision';
+import { borrarBorrador, guardarBorrador, restaurarBorrador } from '../../utils/borrador';
+import { Eleccion, GrupoRevisionComponent } from '../revision/grupo-revision/grupo-revision.component';
 import { ResumenEjecucionComponent } from '../revision/resumen-ejecucion/resumen-ejecucion.component';
 
-type Fase = 'cargando' | 'sin-hoja' | 'conectar' | 'calculando' | 'error' | 'vacio' | 'revision';
+type Fase = 'cargando' | 'sin-hoja' | 'conectar' | 'calculando' | 'error' | 'vacio' | 'revision' | 'resultado';
 
 const RUTA = '/sincronizacion';
 
@@ -54,6 +57,11 @@ export class SincronizarComponent implements OnInit {
   calculo = signal<Calculo | null>(null);
   estado = signal<EstadoRevision>(estadoInicial());
   filtro = signal<Filtro>('todo');
+  aplicando = signal(false);
+  caducado = signal(false);
+  errorAplicar = signal<string | null>(null);
+  recuperadas = signal<{ recuperadas: number; total: number } | null>(null);
+  resultado = signal<ResultadoAplicacion | null>(null);
 
   revision = computed(() => {
     const calculo = this.calculo();
@@ -68,9 +76,43 @@ export class SincronizarComponent implements OnInit {
     return `${this.archivo() ?? 'Hoja oficial'}, hoja ${hoja.nombre_hoja}. Última sincronización: ${ultima}.`;
   });
 
-  conexion = computed(() =>
-    this.conectado() ? { texto: 'OneDrive conectado', punto: 'bg-verde' } : { texto: 'OneDrive sin conectar', punto: 'bg-linea-3' }
-  );
+  conexion = computed(() => {
+    if (this.caducado()) return { texto: 'Conexión caducada', punto: 'bg-rojo' };
+    return this.conectado() ? { texto: 'OneDrive conectado', punto: 'bg-verde' } : { texto: 'OneDrive sin conectar', punto: 'bg-linea-3' };
+  });
+
+  textoRecuperadas = computed(() => {
+    const r = this.recuperadas();
+    if (!r) return null;
+    const base = `Decisiones recuperadas: ${r.recuperadas} de ${r.total}.`;
+    return r.recuperadas < r.total ? `${base} Las demás cambiaron desde que se tomaron y hay que revisarlas de nuevo.` : base;
+  });
+
+  cifrasResultado = computed(() => {
+    const r = this.resultado();
+    if (!r) return [];
+    return [
+      { etiqueta: 'Campos escritos en la base', cifra: r.base.aplicados },
+      { etiqueta: 'Celdas escritas en la hoja', cifra: r.escritasEnHoja },
+      { etiqueta: 'Filas añadidas a la hoja', cifra: r.altasEnHoja },
+      { etiqueta: 'Descartados por concurrencia', cifra: this.descartados().length },
+    ];
+  });
+
+  descartados = computed(() => {
+    const r = this.resultado();
+    if (!r) return [];
+    return [
+      ...r.base.descartados.map((d, i) => ({
+        clave: `base|${i}`, numero: d.obra_id ? `N.º ${d.obra_id}` : 'Persona', campo: d.campo ?? 'cargo', motivo: d.motivo,
+      })),
+      ...r.descartadasEnHoja.map((d, i) => ({
+        clave: `hoja|${i}`, numero: `N.º ${d.escritura.obraId}`, motivo: d.motivo,
+        campo: d.escritura.destino.tipo === 'campo' ? d.escritura.destino.campo
+          : d.escritura.destino.tipo === 'imagen' ? `imagen_${d.escritura.destino.casilla}` : 'id_web',
+      })),
+    ];
+  });
 
   pasos = computed(() => {
     const hechos = this.progreso();
@@ -126,6 +168,40 @@ export class SincronizarComponent implements OnInit {
     await this.comparar();
   }
 
+  elegido(eleccion: Eleccion): void {
+    this.estado.update((estado) => elegir(estado, eleccion.ref, eleccion.valor));
+    this.guardarDecisiones();
+  }
+
+  async aprobar(): Promise<void> {
+    const calculo = this.calculo();
+    if (!calculo || this.aplicando()) return;
+    this.aplicando.set(true);
+    this.caducado.set(false);
+    this.errorAplicar.set(null);
+    try {
+      const resultado = await this.servicio.aplicar(calculo, aDecisiones(this.estado(), calculo.diff));
+      borrarBorrador();
+      this.resultado.set(resultado);
+      if (!resultado.error) this.hoja.update((h) => (h ? { ...h, fecha_ultima: new Date().toISOString() } : h));
+      this.fase.set('resultado');
+    } catch (e) {
+      if (e instanceof ErrorGraph && e.estado === 401) {
+        this.caducado.set(true);
+        this.guardarDecisiones();
+      } else {
+        this.errorAplicar.set(e instanceof Error ? e.message : 'No se pudo aplicar.');
+      }
+    } finally {
+      this.aplicando.set(false);
+    }
+  }
+
+  async reconectar(): Promise<void> {
+    this.guardarDecisiones();
+    await this.conectar();
+  }
+
   async conectar(): Promise<void> {
     try {
       await this.graph.conectar(RUTA);
@@ -143,8 +219,14 @@ export class SincronizarComponent implements OnInit {
     try {
       const calculo = await this.servicio.calcular(avisar);
       this.calculo.set(calculo);
-      this.estado.set(estadoInicial());
       this.filtro.set('todo');
+      this.resultado.set(null);
+      this.caducado.set(false);
+      this.errorAplicar.set(null);
+      const restaurado = restaurarBorrador(calculo.hoja.item_id, calculo.diff);
+      this.estado.set(restaurado?.estado ?? estadoInicial());
+      this.recuperadas.set(restaurado && restaurado.total ? { recuperadas: restaurado.recuperadas, total: restaurado.total } : null);
+      if (restaurado) this.guardarDecisiones();
       if (!hayCambios(calculo.diff)) {
         this.fase.set('vacio');
         await this.registrarSinCambios(calculo);
@@ -169,6 +251,11 @@ export class SincronizarComponent implements OnInit {
     } catch (e) {
       console.warn('No se pudo registrar la sincronización sin cambios:', e);
     }
+  }
+
+  private guardarDecisiones(): void {
+    const calculo = this.calculo();
+    if (calculo) guardarBorrador(calculo.hoja.item_id, calculo.diff, this.estado());
   }
 
   private mostrarError(e: unknown): void {

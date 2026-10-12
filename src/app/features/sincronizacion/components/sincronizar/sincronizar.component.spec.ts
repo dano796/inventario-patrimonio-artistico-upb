@@ -126,3 +126,102 @@ describe('SincronizarComponent: entrada y comparación', () => {
     expect(graph.tieneAccesoArchivos).not.toHaveBeenCalled();
   });
 });
+
+describe('SincronizarComponent: revisar y aplicar', () => {
+  afterEach(() => borrarBorrador());
+
+  it('no deja aplicar con un conflicto sin decidir y aplica el lado elegido', async () => {
+    const { servicio, boton, actualizar } = await montarPagina({});
+
+    expect(boton('Aprobar y aplicar').disabled).toBeTrue();
+    boton('Dejar la hoja').click();
+    await actualizar();
+    expect(boton('Aprobar y aplicar').disabled).toBeFalse();
+    boton('Aprobar y aplicar').click();
+    await actualizar();
+
+    const decisiones = servicio.aplicar.calls.mostRecent().args[1];
+    expect([...decisiones.conflictos]).toEqual([['31|ubicacion', 'hoja']]);
+  });
+
+  it('desmarcar un cambio lo deja fuera de lo que se aplica', async () => {
+    const { html, servicio, boton, actualizar } = await montarPagina({});
+    (html.querySelector('input[type="checkbox"]') as HTMLInputElement).click();
+    boton('Dejar la base').click();
+    await actualizar();
+    boton('Aprobar y aplicar').click();
+    await actualizar();
+
+    expect([...servicio.aplicar.calls.mostRecent().args[1].descartados]).toEqual(['14|ubicacion']);
+  });
+
+  it('el filtro Conflictos deja solo las tarjetas con conflicto', async () => {
+    const { html, boton, actualizar } = await montarPagina({});
+
+    boton('Conflictos · 1').click();
+    await actualizar();
+
+    expect(html.textContent).not.toContain('Retrato del Fundador');
+    expect(html.textContent).toContain('Paisaje sin título');
+  });
+
+  it('si la conexión caduca al aplicar, avisa, conserva las decisiones y reconecta', async () => {
+    const { html, servicio, graph, boton, actualizar } = await montarPagina({});
+    servicio.aplicar.and.rejectWith(new ErrorGraph(401, 'caducado'));
+    boton('Dejar la hoja').click();
+    await actualizar();
+    boton('Aprobar y aplicar').click();
+    await actualizar();
+
+    expect(html.textContent).toContain('La conexión con OneDrive caducó al aplicar.');
+    expect(html.textContent).toContain('Conexión caducada');
+    boton('Reconectar y reintentar').click();
+    await actualizar();
+
+    expect(graph.conectar).toHaveBeenCalledOnceWith('/sincronizacion');
+    expect(sessionStorage.getItem('sincronizacion-borrador')).not.toBeNull();
+  });
+
+  it('al volver con un borrador recupera las decisiones y lo anuncia', async () => {
+    const primera = await montarPagina({});
+    primera.boton('Dejar la hoja').click();
+    await primera.actualizar();
+    TestBed.resetTestingModule();
+
+    const { html, boton } = await montarPagina({});
+
+    expect(html.textContent).toContain('Decisiones recuperadas: 1 de 1.');
+    expect(boton('Dejar la hoja').getAttribute('aria-pressed')).toBe('true');
+    expect(boton('Aprobar y aplicar').disabled).toBeFalse();
+  });
+
+  it('tras aplicar muestra lo escrito y lo descartado, y olvida el borrador', async () => {
+    const { html, servicio, boton, actualizar } = await montarPagina({});
+    servicio.aplicar.and.resolveTo({
+      base: { aplicados: 3, descartados: [{ obra_id: 14, campo: 'valor', motivo: 'cambió en la web desde el diff' }], creadas: [] },
+      escritasEnHoja: 2, altasEnHoja: 1, descartadasEnHoja: [], error: null,
+    });
+    boton('Dejar la hoja').click();
+    await actualizar();
+    boton('Aprobar y aplicar').click();
+    await actualizar();
+
+    expect(html.textContent).toContain('Campos escritos en la base');
+    expect(html.textContent).toContain('Descartados por concurrencia');
+    expect(html.textContent).toContain('N.º 14');
+    expect(html.textContent).toContain('cambió en la web desde el diff');
+    expect(sessionStorage.getItem('sincronizacion-borrador')).toBeNull();
+  });
+
+  it('si la hoja no se terminó de escribir lo dice en el resultado', async () => {
+    const { html, servicio, boton, actualizar } = await montarPagina({});
+    servicio.aplicar.and.resolveTo({ ...SIN_RESULTADO, error: 'La conexión con OneDrive caducó.' });
+    boton('Dejar la hoja').click();
+    await actualizar();
+    boton('Aprobar y aplicar').click();
+    await actualizar();
+
+    expect(html.textContent).toContain('No se terminó de escribir en la hoja.');
+    expect(html.textContent).toContain('La conexión con OneDrive caducó.');
+  });
+});
