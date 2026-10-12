@@ -56,10 +56,10 @@ describe('CabeceraComponent', () => {
     expect(boton).toContain('Administrador');
     expect(html.textContent).not.toContain('jobany.tobon@upb.edu.co');
     abrirPerfil(html);
-    const tarjeta = html.querySelector('#menu-perfil')!;
-    expect(tarjeta.textContent).toContain('Jobany Tobón');
-    expect(tarjeta.textContent).toContain('Administrador');
-    expect(tarjeta.textContent).toContain('jobany.tobon@upb.edu.co');
+    const texto = html.querySelector('#menu-perfil')!.textContent!;
+    const orden = ['Jobany Tobón', 'Administrador', 'jobany.tobon@upb.edu.co'].map((t) => texto.indexOf(t));
+    expect(orden.every((posicion) => posicion >= 0)).toBeTrue();
+    expect(orden).toEqual([...orden].sort((a, b) => a - b));
   });
 
   it('una sesión sin rol de administrador no ve el Tablero', () => {
