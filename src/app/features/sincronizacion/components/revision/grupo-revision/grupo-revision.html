@@ -54,7 +54,9 @@
           <span class="col-start-2 flex min-w-0 items-center gap-2.5 text-[15px] font-medium leading-[1.4] [overflow-wrap:anywhere] md:col-start-auto">
             <span class="w-10 flex-none text-xs font-semibold text-tinta-5 md:hidden">{{ lado === 'hoja' ? 'Hoja' : 'Base' }}</span>
             @if (celda.miniatura) {
-              <img [src]="celda.miniatura" alt="" loading="lazy" class="h-12 w-12 flex-none rounded-lg bg-sub object-cover" />
+              <span class="marcador h-12 w-12 flex-none overflow-hidden rounded-lg">
+                <img [src]="celda.miniatura" alt="" loading="lazy" class="h-full w-full object-cover" (error)="ocultar($event)" />
+              </span>
             } @else {
               <span [class]="claseValor(fila, lado)" [attr.data-gana]="fila.gana === lado ? '' : null"
                 [attr.data-pierde]="fila.gana && fila.gana !== lado ? '' : null">{{ celda.texto }}</span>

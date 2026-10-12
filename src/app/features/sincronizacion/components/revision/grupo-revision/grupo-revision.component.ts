@@ -29,6 +29,10 @@ export class GrupoRevisionComponent {
     this.elegido.emit({ ref, valor });
   }
 
+  ocultar(evento: Event): void {
+    (evento.target as HTMLElement).style.visibility = 'hidden';
+  }
+
   claseValor(fila: FilaRevision, lado: 'hoja' | 'base'): string {
     if (fila.accion.tipo === 'fuera') return 'text-tinta-4';
     if (fila.gana === lado) return 'font-bold text-tinta';

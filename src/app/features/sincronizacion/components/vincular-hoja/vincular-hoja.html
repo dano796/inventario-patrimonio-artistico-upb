@@ -60,7 +60,8 @@
             Carga <code class="font-mono text-[13px]">importacion/id-web.json</code>, generado por el script de importación. Antes de
             escribir se comprueba que cada fila sigue teniendo el mismo autor y título que la copia importada.
           </p>
-          <input type="file" accept=".json,application/json" (change)="cargarAsignaciones($event)" class="text-sm text-tinta-3" />
+          <input type="file" accept=".json,application/json" (change)="cargarAsignaciones($event)"
+            class="text-sm font-medium text-tinta-4 file:mr-3 file:cursor-pointer file:rounded-xl file:border file:border-solid file:border-linea-2 file:bg-superficie file:px-[18px] file:py-2.5 file:text-sm file:font-semibold file:text-tinta-2 hover:file:bg-sub" />
           @if (asignaciones(); as lista) {
             <p class="text-sm font-medium text-tinta-3">{{ lista.length }} filas por escribir.</p>
             <div><button type="button" class="btn-primario" (click)="escribir()" [disabled]="ocupado()">Escribir ID WEB en la hoja</button></div>
