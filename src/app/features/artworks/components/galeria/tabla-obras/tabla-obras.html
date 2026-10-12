@@ -2,13 +2,13 @@
   <table class="w-full min-w-[720px] border-collapse text-left text-[13px] font-medium">
     <thead>
       <tr class="border-b border-linea text-[11px] uppercase tracking-[0.08em] text-tinta-5">
-        <th scope="col" class="py-3 pr-4 font-semibold">Obra</th>
-        <th scope="col" class="py-3 pr-4 font-semibold">Autor</th>
-        <th scope="col" class="w-40 py-3 pr-4 font-semibold">Técnica</th>
+        <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="esAdmin() ? 28 : 36">Obra</th>
+        <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="esAdmin() ? 22 : 30">Autor</th>
+        <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="esAdmin() ? 18 : 24">Técnica</th>
         @if (esAdmin()) {
-          <th scope="col" class="w-44 py-3 pr-4 font-semibold">Ubicación</th>
+          <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="24">Ubicación</th>
         }
-        <th scope="col" class="w-24 py-3 font-semibold">Año</th>
+        <th scope="col" class="py-3 font-semibold" [style.width.%]="esAdmin() ? 8 : 10">Año</th>
       </tr>
     </thead>
     <tbody>
@@ -17,7 +17,7 @@
           <td class="py-[11px] pr-4">
             <a [routerLink]="['/obra', obra.id]" class="font-semibold text-tinta hover:text-acento-tinta">{{ titulo(obra) }}</a>
           </td>
-          <td class="max-w-[16rem] truncate py-[11px] pr-4 text-tinta-4">{{ texto(obra.autor) }}</td>
+          <td class="py-[11px] pr-4 text-tinta-4">{{ texto(obra.autor) }}</td>
           <td class="py-[11px] pr-4 text-tinta-4">{{ texto(obra.tecnica) }}</td>
           @if (esAdmin()) {
             <td class="py-[11px] pr-4 text-tinta-4">{{ texto(obra.ubicacion) }}</td>
