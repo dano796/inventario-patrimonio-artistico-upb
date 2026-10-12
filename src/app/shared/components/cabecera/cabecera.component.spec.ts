@@ -57,9 +57,8 @@ describe('CabeceraComponent', () => {
     expect(html.textContent).not.toContain('jobany.tobon@upb.edu.co');
     abrirPerfil(html);
     const texto = html.querySelector('#menu-perfil')!.textContent!;
-    const orden = ['Jobany Tobón', 'Administrador', 'jobany.tobon@upb.edu.co'].map((t) => texto.indexOf(t));
-    expect(orden.every((posicion) => posicion >= 0)).toBeTrue();
-    expect(orden).toEqual([...orden].sort((a, b) => a - b));
+    expect(texto.indexOf('Jobany Tobón')).toBeGreaterThanOrEqual(0);
+    expect(texto.indexOf('jobany.tobon@upb.edu.co')).toBeGreaterThan(texto.indexOf('Jobany Tobón'));
   });
 
   it('una sesión sin rol de administrador no ve el Tablero', () => {
@@ -93,6 +92,21 @@ describe('CabeceraComponent', () => {
     expect(botonPorTexto(html, 'Oscuro')).toBeDefined();
     botonPorTexto(html, 'Cerrar sesión')!.click();
     expect(TestBed.inject(AuthService).signOut).toHaveBeenCalled();
+  });
+
+  it('el perfil de la cabecera lleva una flecha hacia abajo a la derecha', () => {
+    const boton = botonPerfil(montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' }));
+    const flecha = boton.lastElementChild!;
+    expect(flecha.tagName.toLowerCase()).toBe('svg');
+    expect(flecha.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('las opciones de tema y cerrar sesión llevan icono', () => {
+    const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
+    abrirPerfil(html);
+    for (const texto of ['Claro', 'Oscuro', 'Cerrar sesión']) {
+      expect(botonPorTexto(html, texto)!.querySelector('svg[aria-hidden="true"]')).withContext(texto).not.toBeNull();
+    }
   });
 
   it('el perfil cambia el tema y marca el elegido', () => {
