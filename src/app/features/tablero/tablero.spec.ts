@@ -40,6 +40,18 @@ describe('calcularTablero', () => {
     ]);
   });
 
+  it('cuenta como una sola las ubicaciones que solo difieren en mayúsculas y las nombra con la grafía más usada', () => {
+    const r = calcularTablero(
+      [
+        obra(1, { ubicacion: 'Biblioteca Central' }), obra(2, { ubicacion: 'BIBLIOTECA CENTRAL' }),
+        obra(3, { ubicacion: 'Biblioteca Central' }), obra(4, { ubicacion: 'Auditorio' }),
+      ],
+      HOY,
+    );
+    expect(r.ubicaciones).toBe(2);
+    expect(r.porUbicacion.map((u) => [u.nombre, u.obras])).toEqual([['Biblioteca Central', 3], ['Auditorio', 1]]);
+  });
+
   it('muestra como mucho las siete ubicaciones con más obras', () => {
     const obras = Array.from({ length: 9 }, (_, i) => obra(i + 1, { ubicacion: `Sede ${i + 1}` }));
     const r = calcularTablero(obras, HOY);

@@ -40,7 +40,7 @@ const vacio = (valor: string | null) => valor === null || valor.trim() === '';
 
 export function calcularTablero(obras: readonly ObraTablero[], hoy: Date): ResumenTablero {
   const pendientes: Record<Pendiente, ObraTablero[]> = { autor: [], tecnica: [], responsable: [], imagen: [] };
-  const porUbicacion = new Map<string, number>();
+  const porUbicacion = new Map<string, Map<string, number>>();
   let nuevasEsteMes = 0;
   let incompletas = 0;
 
@@ -55,7 +55,10 @@ export function calcularTablero(obras: readonly ObraTablero[], hoy: Date): Resum
 
     if (!vacio(obra.ubicacion)) {
       const nombre = obra.ubicacion!.trim().replace(/\s+/g, ' ');
-      porUbicacion.set(nombre, (porUbicacion.get(nombre) ?? 0) + 1);
+      const clave = nombre.toLocaleLowerCase('es');
+      const grafias = porUbicacion.get(clave) ?? new Map<string, number>();
+      grafias.set(nombre, (grafias.get(nombre) ?? 0) + 1);
+      porUbicacion.set(clave, grafias);
     }
 
     if (obra.fechaCreacion) {
@@ -64,7 +67,12 @@ export function calcularTablero(obras: readonly ObraTablero[], hoy: Date): Resum
     }
   }
 
-  const ordenadas = [...porUbicacion].sort(([a, na], [b, nb]) => nb - na || a.localeCompare(b, 'es'));
+  const ordenadas = [...porUbicacion.values()]
+    .map((grafias): [string, number] => {
+      const [nombre] = [...grafias].reduce((masUsada, actual) => (actual[1] > masUsada[1] ? actual : masUsada));
+      return [nombre, [...grafias.values()].reduce((suma, n) => suma + n, 0)];
+    })
+    .sort(([a, na], [b, nb]) => nb - na || a.localeCompare(b, 'es'));
   const maximo = ordenadas[0]?.[1] ?? 0;
   return {
     total: obras.length,
