@@ -16,6 +16,7 @@ export class AuthService {
     return this.supabaseService.supabaseClient;
   }
   private userProfile = signal<UserProfile | null>(null);
+  private correoSesion = signal<string | null>(null);
   private loadingProfile = signal<boolean>(false);
   private initializationPromise: Promise<void> | null = null;
   private reinitializePromise: Promise<void> | null = null;
@@ -84,6 +85,7 @@ export class AuthService {
   });
 
   nombre = computed(() => this.userProfile()?.nombre ?? null);
+  correo = this.correoSesion.asReadonly();
 
   constructor() {
     this.readyPromise = this.initializeAuth();
@@ -138,9 +140,11 @@ export class AuthService {
           }
 
           if (event === 'SIGNED_IN' && session?.user) {
+            this.correoSesion.set(session.user.email ?? null);
             await this.loadUserProfile(session.user.id);
           } else if (event === 'SIGNED_OUT') {
             this.generacionPerfil++;
+            this.correoSesion.set(null);
             this.userProfile.set(null);
             this.loadingProfile.set(false);
             this.clearCache();
@@ -160,8 +164,10 @@ export class AuthService {
     const { data } = await this.session();
 
     if (data.session?.user) {
+      this.correoSesion.set(data.session.user.email ?? null);
       await this.loadUserProfile(data.session.user.id, true);
     } else {
+      this.correoSesion.set(null);
       this.userProfile.set(null);
       this.loadingProfile.set(false);
     }

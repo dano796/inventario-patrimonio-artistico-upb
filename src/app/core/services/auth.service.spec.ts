@@ -49,7 +49,7 @@ function crearClienteQueNuncaResponde() {
 }
 
 function crearClienteControlable() {
-  let sesion: { user: { id: string } } | null = null;
+  let sesion: { user: { id: string; email?: string } } | null = null;
   let oyente: (evento: string, sesion: unknown) => void = () => {};
   const pendientes = new Map<string, () => void>();
   const cliente = {
@@ -73,8 +73,8 @@ function crearClienteControlable() {
   };
   return {
     cliente,
-    iniciarSesion: (id: string) => {
-      sesion = { user: { id } };
+    iniciarSesion: (id: string, email?: string) => {
+      sesion = { user: { id, email } };
     },
     emitir: (evento: string) => oyente(evento, sesion),
     responderPerfil: (id: string) => pendientes.get(id)?.(),
@@ -143,6 +143,26 @@ describe('AuthService', () => {
     await esperarMacrotarea();
 
     expect(authService.isAuthenticated()).toBe(false);
+  });
+
+  it('expone el correo de la sesión y lo olvida al cerrarla', async () => {
+    const c = crearClienteControlable();
+    TestBed.configureTestingModule({
+      providers: [{ provide: SupabaseService, useValue: { supabaseClient: c.cliente } }],
+    });
+    const authService = TestBed.inject(AuthService);
+    await authService.listo();
+    expect(authService.correo()).toBeNull();
+
+    c.iniciarSesion('admin-1', 'jobany.tobon@upb.edu.co');
+    c.emitir('SIGNED_IN');
+    c.responderPerfil('admin-1');
+    await esperarMacrotarea();
+    expect(authService.correo()).toBe('jobany.tobon@upb.edu.co');
+
+    c.emitir('SIGNED_OUT');
+    await esperarMacrotarea();
+    expect(authService.correo()).toBeNull();
   });
 
   it('refreshUserProfile() no reutiliza la carga en curso de otro usuario', async () => {
