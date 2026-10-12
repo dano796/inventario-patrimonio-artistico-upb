@@ -34,6 +34,18 @@ describe('TemaService', () => {
     expect(localStorage.getItem(CLAVE_TEMA)).toBe('oscuro');
   });
 
+  it('establecer fija el tema elegido, lo aplica y lo guarda', () => {
+    preferirOscuro(false);
+    const tema = crear();
+    tema.establecer('oscuro');
+    tema.establecer('oscuro');
+    expect(tema.tema()).toBe('oscuro');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('oscuro');
+    expect(localStorage.getItem(CLAVE_TEMA)).toBe('oscuro');
+    tema.establecer('claro');
+    expect(tema.tema()).toBe('claro');
+  });
+
   it('funciona aunque el almacenamiento lance', () => {
     spyOn(Storage.prototype, 'getItem').and.throwError('bloqueado');
     spyOn(Storage.prototype, 'setItem').and.throwError('bloqueado');

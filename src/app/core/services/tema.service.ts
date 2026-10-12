@@ -16,10 +16,13 @@ export class TemaService {
   }
 
   alternar(): void {
-    const siguiente: Tema = this.actual() === 'oscuro' ? 'claro' : 'oscuro';
-    this.actual.set(siguiente);
-    this.aplicar(siguiente);
-    guardarAlmacen(CLAVE_TEMA, siguiente);
+    this.establecer(this.actual() === 'oscuro' ? 'claro' : 'oscuro');
+  }
+
+  establecer(tema: Tema): void {
+    this.actual.set(tema);
+    this.aplicar(tema);
+    guardarAlmacen(CLAVE_TEMA, tema);
   }
 
   private inicial(): Tema {
