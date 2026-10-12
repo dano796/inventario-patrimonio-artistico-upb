@@ -12,8 +12,14 @@ import { aJpeg } from '../utils/convertir-imagen';
   providedIn: 'root',
 })
 export class ImageService {
-  private supabaseClient = inject(SupabaseService).supabaseClient;
+  private supabaseService = inject(SupabaseService);
   private readonly BUCKET_NAME = 'imagenes-obras';
+
+  /** SupabaseService puede sustituir el cliente con reinitializeClient(): se relee en cada operación. */
+  private async cubo() {
+    await this.supabaseService.ensureActiveSession();
+    return this.supabaseService.supabaseClient.storage.from(this.BUCKET_NAME);
+  }
 
   async uploadImage(
     imageRequest: ImageUploadRequest
@@ -26,21 +32,18 @@ export class ImageService {
         .substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { data, error } = await this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      const cubo = await this.cubo();
+      const { error } = await cubo.upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
 
       if (error) {
         throw error;
       }
 
       // Obtener la URL pública
-      const { data: urlData } = this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .getPublicUrl(filePath);
+      const { data: urlData } = cubo.getPublicUrl(filePath);
 
       return {
         url: urlData.publicUrl,
@@ -67,9 +70,7 @@ export class ImageService {
 
   async deleteImage(filePath: string): Promise<void> {
     try {
-      const { error } = await this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .remove([filePath]);
+      const { error } = await (await this.cubo()).remove([filePath]);
 
       if (error) {
         throw error;
@@ -82,9 +83,7 @@ export class ImageService {
 
   async deleteMultipleImages(filePaths: string[]): Promise<void> {
     try {
-      const { error } = await this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .remove(filePaths);
+      const { error } = await (await this.cubo()).remove(filePaths);
 
       if (error) {
         throw error;
