@@ -71,6 +71,8 @@ describe('SincronizarComponent: entrada y comparación', () => {
 
     expect(html.textContent).toContain('Conecta con OneDrive para leer la hoja');
     expect(html.textContent).toContain('OneDrive sin conectar');
+    expect(html.textContent).not.toContain('Antes de continuar');
+    expect(html.textContent).not.toContain('La conexión dura esta visita');
     expect(servicio.calcular).not.toHaveBeenCalled();
     boton('Conectar con OneDrive').click();
 

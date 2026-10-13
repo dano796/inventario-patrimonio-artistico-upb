@@ -45,31 +45,19 @@
     }
 
     @case ('conectar') {
-      <section class="grid items-start gap-[18px] md:grid-cols-2">
-        <div class="tarjeta flex flex-col gap-3.5 px-[30px] py-7">
-          <div class="grid h-11 w-11 place-items-center rounded-[13px] bg-acento-tenue-2 text-acento">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
-          </div>
-          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Conecta con OneDrive para leer la hoja</h2>
-          <p class="max-w-[54ch] text-[15px] font-medium leading-relaxed text-tinta-3">
-            La aplicación descarga la hoja oficial y la compara con el inventario campo por campo. No se escribe nada en
-            ninguna de las dos copias hasta que revises y apruebes.
-          </p>
-          <div class="mt-1"><button type="button" class="btn-primario" (click)="conectar()" [disabled]="conectando()">
-            @if (conectando()) { <span class="indicador-carga"></span> Conectando… } @else { Conectar con OneDrive }
-          </button></div>
-          <p class="text-[13px] font-medium leading-normal text-tinta-5">
-            La conexión dura esta visita. La próxima vez volverás a conectar; Microsoft no repite la pantalla de permisos.
-          </p>
+      <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
+        <div class="grid h-11 w-11 place-items-center rounded-[13px] bg-acento-tenue-2 text-acento">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
         </div>
-        <div class="tarjeta px-6 py-[22px]">
-          <h3 class="mb-1.5 text-[16px] font-bold">Antes de continuar</h3>
-          @for (nota of notasConectar; track nota.titulo) {
-            <div class="flex flex-col gap-[3px] border-t border-linea-suave py-3">
-              <span class="text-[14px] font-semibold">{{ nota.titulo }}</span>
-              <span class="text-[13px] font-medium leading-normal text-tinta-4">{{ nota.texto }}</span>
-            </div>
-          }
+        <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Conecta con OneDrive para leer la hoja</h2>
+        <p class="max-w-[54ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+          La aplicación descarga la hoja oficial y la compara con el inventario campo por campo. No se escribe nada en
+          ninguna de las dos copias hasta que revises y apruebes.
+        </p>
+        <div class="mt-1">
+          <button type="button" class="btn-primario" (click)="conectar()" [disabled]="conectando()">
+            @if (conectando()) { <span class="indicador-carga"></span> Conectando… } @else { Conectar con OneDrive }
+          </button>
         </div>
       </section>
     }

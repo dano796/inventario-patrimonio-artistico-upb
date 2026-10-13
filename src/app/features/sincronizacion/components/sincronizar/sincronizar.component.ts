@@ -41,12 +41,6 @@ export class SincronizarComponent implements OnInit {
   private graph = inject(GraphService);
   private datos = inject(SincronizacionDatosService);
 
-  readonly notasConectar = [
-    { titulo: 'Microsoft pedirá «acceso completo a tus archivos»', texto: 'Es el permiso mínimo que permite editar celdas. Solo se usa sobre la hoja oficial.' },
-    { titulo: 'Debes ser la dueña o el dueño del archivo', texto: 'La hoja vive en un OneDrive personal. Desde otra cuenta no se puede escribir en ella.' },
-    { titulo: 'El acceso no sale de este navegador', texto: 'No se guarda en la base de datos ni en ningún otro sitio.' },
-  ];
-
   fase = signal<Fase>('cargando');
   hoja = signal<HojaVinculada | null>(null);
   archivo = signal<string | null>(null);
