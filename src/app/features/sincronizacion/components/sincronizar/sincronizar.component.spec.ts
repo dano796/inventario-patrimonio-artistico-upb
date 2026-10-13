@@ -77,6 +77,16 @@ describe('SincronizarComponent: entrada y comparación', () => {
     expect(graph.conectar).toHaveBeenCalledOnceWith('/sincronizacion');
   });
 
+  it('mientras redirige a Microsoft lo dice en el botón', async () => {
+    const { graph, boton, actualizar } = await montarPagina({ conectado: false });
+    graph.conectar.and.returnValue(new Promise(() => undefined));
+
+    boton('Conectar con OneDrive').click();
+    await actualizar();
+
+    expect(boton('Conectando…').disabled).toBeTrue();
+  });
+
   it('con conexión compara sola y muestra la revisión', async () => {
     const { html, servicio } = await montarPagina({});
 

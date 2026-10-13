@@ -40,7 +40,9 @@
             La aplicación descarga la hoja oficial y la compara con el inventario campo por campo. No se escribe nada en
             ninguna de las dos copias hasta que revises y apruebes.
           </p>
-          <div class="mt-1"><button type="button" class="btn-primario" (click)="conectar()">Conectar con OneDrive</button></div>
+          <div class="mt-1"><button type="button" class="btn-primario" (click)="conectar()" [disabled]="conectando()">
+            @if (conectando()) { <span class="indicador-carga"></span> Conectando… } @else { Conectar con OneDrive }
+          </button></div>
           <p class="text-[13px] font-medium leading-normal text-tinta-5">
             La conexión dura esta visita. La próxima vez volverás a conectar; Microsoft no repite la pantalla de permisos.
           </p>
@@ -135,7 +137,9 @@
           <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-rojo-linea bg-rojo-tenue px-[18px] py-3.5" role="alert">
             <span class="text-[14px] font-medium leading-normal text-rojo-3"><strong class="font-bold">La conexión con OneDrive caducó al aplicar.</strong>
               No se escribió nada en la hoja y tus decisiones siguen aquí.</span>
-            <button type="button" class="btn-primario" (click)="reconectar()">Reconectar y reintentar</button>
+            <button type="button" class="btn-primario" (click)="reconectar()" [disabled]="conectando()">
+              @if (conectando()) { <span class="indicador-carga"></span> Conectando… } @else { Reconectar y reintentar }
+            </button>
           </div>
         }
         @if (textoRecuperadas(); as texto) {

@@ -22,6 +22,7 @@ const TOPE_MS = 15000;
 const TOPE_DESCARGA_MS = 5 * 60 * 1000;
 
 const VIDA_TOKEN_MS = 60 * 60 * 1000;
+const MAX_PAGINAS_BUSQUEDA = 10;
 
 export interface RangoLeido {
   address: string;
@@ -88,12 +89,17 @@ export class GraphService {
     throw new ErrorGraph(respuesta.status, await respuesta.text());
   }
 
+  /** La búsqueda de OneDrive devuelve por páginas y mezcla todo tipo de archivos. */
   async buscarArchivos(texto: string): Promise<ArchivoOneDrive[]> {
     const q = encodeURIComponent(texto.replace(/'/g, "''"));
-    const r = await this.pedir<{ value: ArchivoOneDrive[] }>(
-      `/me/drive/root/search(q='${q}')?$select=id,name,eTag,parentReference`
-    );
-    return r.value.filter((a) => a.name.toLowerCase().endsWith('.xlsx'));
+    type Pagina = { value: ArchivoOneDrive[]; '@odata.nextLink'?: string };
+    let pagina = await this.pedir<Pagina>(`/me/drive/root/search(q='${q}')?$select=id,name,eTag,parentReference&$top=200`);
+    const encontrados = [...pagina.value];
+    for (let vueltas = 0; pagina['@odata.nextLink'] && vueltas < MAX_PAGINAS_BUSQUEDA; vueltas++) {
+      pagina = await this.pedirUrl<Pagina>(pagina['@odata.nextLink']);
+      encontrados.push(...pagina.value);
+    }
+    return encontrados.filter((a) => a.name.toLowerCase().endsWith('.xlsx'));
   }
 
   archivo(driveId: string, itemId: string): Promise<ArchivoOneDrive> {
@@ -132,10 +138,14 @@ export class GraphService {
     return `/drives/${driveId}/items/${itemId}/workbook/worksheets/${encodeURIComponent(hoja)}/range(address='${direccion}')`;
   }
 
-  private async pedir<T>(ruta: string, init: RequestInit = {}): Promise<T> {
+  private pedir<T>(ruta: string, init: RequestInit = {}): Promise<T> {
+    return this.pedirUrl<T>(`${GRAPH}${ruta}`, init);
+  }
+
+  private async pedirUrl<T>(url: string, init: RequestInit = {}): Promise<T> {
     const token = await this.token();
     if (!token) throw new ErrorGraph(401, 'No hay conexión con OneDrive.');
-    const respuesta = await this.fetchConTope(`${GRAPH}${ruta}`, {
+    const respuesta = await this.fetchConTope(url, {
       ...init,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     });

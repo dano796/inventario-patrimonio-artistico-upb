@@ -176,3 +176,20 @@ describe('GraphService: token de Microsoft en memoria', () => {
     expect(await graph.minutosRestantes()).toBe(0);
   });
 });
+
+describe('GraphService.buscarArchivos', () => {
+  it('sigue las páginas de resultados y se queda con los .xlsx', async () => {
+    const respuesta = (cuerpo: unknown) => new Response(JSON.stringify(cuerpo), { status: 200 });
+    const archivo = (name: string) => ({ id: name, name, eTag: 'e', parentReference: { driveId: 'd' } });
+    spyOn(window, 'fetch').and.returnValues(
+      Promise.resolve(respuesta({ value: [archivo('Hoja de vida.pdf')], '@odata.nextLink': 'https://graph.microsoft.com/v1.0/siguiente' })),
+      Promise.resolve(respuesta({ value: [archivo('Inventario PRUEBA completo.xlsx')] }))
+    );
+    const graph = crearGraphService('token');
+
+    const encontrados = await graph.buscarArchivos('Inventario');
+
+    expect(encontrados.map((a) => a.name)).toEqual(['Inventario PRUEBA completo.xlsx']);
+    expect((window.fetch as jasmine.Spy).calls.argsFor(1)[0]).toBe('https://graph.microsoft.com/v1.0/siguiente');
+  });
+});

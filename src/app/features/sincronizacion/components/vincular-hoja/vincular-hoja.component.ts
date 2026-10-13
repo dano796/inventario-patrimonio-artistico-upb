@@ -7,6 +7,8 @@ import { AsignacionIdWeb, Discrepancia, esListaDeAsignaciones } from '../../nucl
 
 const HOJA = 'Inventario Obras';
 
+type Accion = 'conectar' | 'buscar' | 'vincular' | 'escribir';
+
 @Component({
   selector: 'app-vincular-hoja',
   standalone: true,
@@ -29,6 +31,8 @@ export class VincularHojaComponent implements OnInit {
   mensaje = signal<string | null>(null);
   error = signal<string | null>(null);
   ocupado = signal(false);
+  enCurso = signal<Accion | null>(null);
+  buscado = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.ejecutar(async () => this.hoja.set(await this.datos.hojaVinculada()));
@@ -45,11 +49,16 @@ export class VincularHojaComponent implements OnInit {
   }
 
   async conectar(): Promise<void> {
-    await this.ejecutar(() => this.graph.conectar('/sincronizacion/vincular'));
+    await this.ejecutar(() => this.graph.conectar('/sincronizacion/vincular'), 'conectar');
   }
 
   async buscar(texto: string): Promise<void> {
-    await this.ejecutar(async () => this.resultados.set(await this.graph.buscarArchivos(texto.trim() || 'Inventario')));
+    const buscado = texto.trim() || 'Inventario';
+    this.buscado.set(null);
+    await this.ejecutar(async () => {
+      this.resultados.set(await this.graph.buscarArchivos(buscado));
+      this.buscado.set(buscado);
+    }, 'buscar');
   }
 
   async elegir(archivo: ArchivoOneDrive): Promise<void> {
@@ -59,7 +68,7 @@ export class VincularHojaComponent implements OnInit {
       this.hoja.set({ ...hoja, fecha_ultima: null });
       this.resultados.set([]);
       this.mensaje.set(`Hoja vinculada: ${archivo.name}`);
-    });
+    }, 'vincular');
   }
 
   async cargarAsignaciones(evento: Event): Promise<void> {
@@ -88,11 +97,12 @@ export class VincularHojaComponent implements OnInit {
       const archivo = await this.graph.archivo(hoja.drive_id, hoja.item_id);
       await this.datos.vincular({ drive_id: hoja.drive_id, item_id: hoja.item_id, nombre_hoja: hoja.nombre_hoja, etag: archivo.eTag });
       this.mensaje.set(`ID WEB escrito en ${resultado.escritas} filas (${resultado.yaEscritas} ya lo tenían).`);
-    });
+    }, 'escribir');
   }
 
-  private async ejecutar(accion: () => Promise<void>): Promise<void> {
+  private async ejecutar(accion: () => Promise<void>, nombre: Accion | null = null): Promise<void> {
     this.ocupado.set(true);
+    this.enCurso.set(nombre);
     this.error.set(null);
     this.mensaje.set(null);
     this.progreso.set(null);
@@ -107,6 +117,7 @@ export class VincularHojaComponent implements OnInit {
       }
     } finally {
       this.ocupado.set(false);
+      this.enCurso.set(null);
     }
   }
 }

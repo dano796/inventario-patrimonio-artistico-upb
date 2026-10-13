@@ -72,6 +72,9 @@
   .eleccion {
     @apply cursor-pointer whitespace-nowrap rounded-[10px] border border-linea-2 bg-superficie px-[11px] py-1.5 text-[13px] font-semibold text-tinta-3 aria-pressed:border-acento aria-pressed:bg-acento-tenue-2 aria-pressed:text-acento-tinta aria-[pressed=false]:hover:border-acento-linea aria-[pressed=false]:hover:text-acento-tinta;
   }
+  .indicador-carga {
+    @apply inline-block h-3.5 w-3.5 flex-none animate-spin rounded-full border-2 border-current border-r-transparent;
+  }
   .marcador {
     background: linear-gradient(135deg, var(--ph-1), var(--ph-2) 60%, var(--ph-3));
   }

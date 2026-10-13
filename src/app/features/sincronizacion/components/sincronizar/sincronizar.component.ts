@@ -55,6 +55,7 @@ export class SincronizarComponent implements OnInit {
   encabezados = signal<ErrorEncabezados | null>(null);
   error = signal<string | null>(null);
   hojaPerdida = signal(false);
+  conectando = signal(false);
   calculo = signal<Calculo | null>(null);
   estado = signal<EstadoRevision>(estadoInicial());
   filtro = signal<Filtro>('todo');
@@ -204,9 +205,11 @@ export class SincronizarComponent implements OnInit {
   }
 
   async conectar(): Promise<void> {
+    this.conectando.set(true);
     try {
       await this.graph.conectar(RUTA);
     } catch (e) {
+      this.conectando.set(false);
       this.mostrarError(e);
     }
   }
