@@ -122,8 +122,10 @@ describe('SincronizarComponent: entrada y comparación', () => {
       calcular: () => Promise.reject(new ErrorGraph(404, '{"error":{"code":"itemNotFound","message":"The resource could not be found."}}')),
     });
 
-    expect(html.textContent).toContain('No se encontró la hoja vinculada en tu OneDrive');
+    expect(html.textContent).toContain('No encontramos la hoja vinculada');
     expect(html.textContent).not.toContain('itemNotFound');
+    expect(html.textContent).not.toContain('Sincronización detenida');
+    expect(html.querySelector('[role="alert"]')).toBeNull();
     expect(html.querySelector('a[href="/sincronizacion/vincular"]')?.textContent?.trim()).toBe('Vincular la hoja');
   });
 

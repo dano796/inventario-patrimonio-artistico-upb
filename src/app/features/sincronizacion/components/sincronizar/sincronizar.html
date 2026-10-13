@@ -29,6 +29,21 @@
       </section>
     }
 
+    @case ('hoja-perdida') {
+      <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
+        <span class="self-start rounded-full bg-ambar-suave px-[11px] py-1 text-xs font-bold text-ambar">Hoja no encontrada</span>
+        <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">No encontramos la hoja vinculada</h2>
+        <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+          El archivo vinculado no está en el OneDrive de la cuenta con la que conectaste: puede que se haya borrado o
+          movido a otra cuenta. Vincúlalo de nuevo para poder sincronizar.
+        </p>
+        <div class="flex flex-wrap gap-2.5">
+          <a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a>
+          <button type="button" class="btn-secundario" (click)="comparar()">Volver a comparar</button>
+        </div>
+      </section>
+    }
+
     @case ('conectar') {
       <section class="grid items-start gap-[18px] md:grid-cols-2">
         <div class="tarjeta flex flex-col gap-3.5 px-[30px] py-7">
@@ -103,12 +118,7 @@
           <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">No se pudo comparar</h2>
           <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">{{ error() }} No se escribió nada.</p>
         }
-        <div class="flex flex-wrap gap-2.5">
-          @if (hojaPerdida()) {
-            <a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a>
-          }
-          <button type="button" class="btn-secundario" (click)="comparar()">Volver a intentar</button>
-        </div>
+        <div><button type="button" class="btn-secundario" (click)="comparar()">Volver a intentar</button></div>
       </section>
     }
 
