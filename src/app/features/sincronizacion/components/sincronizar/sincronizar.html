@@ -101,7 +101,12 @@
           <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">No se pudo comparar</h2>
           <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">{{ error() }} No se escribió nada.</p>
         }
-        <div><button type="button" class="btn-secundario" (click)="comparar()">Volver a intentar</button></div>
+        <div class="flex flex-wrap gap-2.5">
+          @if (hojaPerdida()) {
+            <a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a>
+          }
+          <button type="button" class="btn-secundario" (click)="comparar()">Volver a intentar</button>
+        </div>
       </section>
     }
 

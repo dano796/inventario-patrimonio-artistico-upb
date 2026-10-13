@@ -107,6 +107,16 @@ describe('SincronizarComponent: entrada y comparación', () => {
     expect(html.textContent).toContain('Retrato del Fundador');
   });
 
+  it('si la hoja vinculada ya no está en OneDrive lo explica y ofrece vincularla de nuevo', async () => {
+    const { html } = await montarPagina({
+      calcular: () => Promise.reject(new ErrorGraph(404, '{"error":{"code":"itemNotFound","message":"The resource could not be found."}}')),
+    });
+
+    expect(html.textContent).toContain('No se encontró la hoja vinculada en tu OneDrive');
+    expect(html.textContent).not.toContain('itemNotFound');
+    expect(html.querySelector('a[href="/sincronizacion/vincular"]')?.textContent?.trim()).toBe('Vincular la hoja');
+  });
+
   it('si el token caducó al comparar vuelve a ofrecer conectar', async () => {
     const { html } = await montarPagina({ calcular: () => Promise.reject(new ErrorGraph(401, 'caducado')) });
     expect(html.textContent).toContain('Conecta con OneDrive para leer la hoja');

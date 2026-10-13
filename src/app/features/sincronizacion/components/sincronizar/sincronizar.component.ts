@@ -54,6 +54,7 @@ export class SincronizarComponent implements OnInit {
   progreso = signal<Partial<Record<PasoCalculo, string>>>({});
   encabezados = signal<ErrorEncabezados | null>(null);
   error = signal<string | null>(null);
+  hojaPerdida = signal(false);
   calculo = signal<Calculo | null>(null);
   estado = signal<EstadoRevision>(estadoInicial());
   filtro = signal<Filtro>('todo');
@@ -215,6 +216,7 @@ export class SincronizarComponent implements OnInit {
     this.progreso.set({});
     this.encabezados.set(null);
     this.error.set(null);
+    this.hojaPerdida.set(false);
     const avisar: AvisoProgreso = (paso, detalle) => this.progreso.update((p) => ({ ...p, [paso]: detalle }));
     try {
       const calculo = await this.servicio.calcular(avisar);
@@ -260,7 +262,12 @@ export class SincronizarComponent implements OnInit {
 
   private mostrarError(e: unknown): void {
     if (e instanceof ErrorEncabezados) this.encabezados.set(e);
-    else this.error.set(e instanceof Error ? e.message : 'Ha ocurrido un error inesperado.');
+    else if (e instanceof ErrorGraph && e.estado === 404) {
+      this.hojaPerdida.set(true);
+      this.error.set(
+        'No se encontró la hoja vinculada en tu OneDrive. Puede que se haya borrado o movido a otra cuenta, o que hayas entrado con otra cuenta de Microsoft.'
+      );
+    } else this.error.set(e instanceof Error ? e.message : 'Ha ocurrido un error inesperado.');
     this.fase.set('error');
   }
 }
