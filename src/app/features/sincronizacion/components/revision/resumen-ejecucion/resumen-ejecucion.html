@@ -18,6 +18,7 @@
   <button type="button" class="btn-primario w-full !py-3" [disabled]="!!faltan() || aplicando()" (click)="aprobar.emit()">
     {{ aplicando() ? 'Aplicando…' : 'Aprobar y aplicar' }}
   </button>
+  <button type="button" class="btn-secundario w-full" [disabled]="aplicando()" (click)="comparar.emit()">Volver a comparar</button>
   <p class="text-[13px] font-medium leading-normal text-tinta-5">
     Todavía no se ha escrito nada. Primero se actualiza la base y después las celdas de la hoja.
   </p>

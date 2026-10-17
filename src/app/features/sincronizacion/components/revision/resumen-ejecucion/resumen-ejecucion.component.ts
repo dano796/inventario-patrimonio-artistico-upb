@@ -12,6 +12,7 @@ export class ResumenEjecucionComponent {
   revision = input.required<Revision>();
   aplicando = input(false);
   aprobar = output<void>();
+  comparar = output<void>();
 
   lineas = computed(() => {
     const r = this.revision().resumen;

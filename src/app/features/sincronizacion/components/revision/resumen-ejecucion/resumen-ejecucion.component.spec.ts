@@ -14,10 +14,13 @@ function montar(r: Revision, aplicando = false) {
   fixture.componentRef.setInput('revision', r);
   fixture.componentRef.setInput('aplicando', aplicando);
   let aprobado = 0;
+  let comparado = 0;
   fixture.componentInstance.aprobar.subscribe(() => aprobado++);
+  fixture.componentInstance.comparar.subscribe(() => comparado++);
   fixture.detectChanges();
   const html = fixture.nativeElement as HTMLElement;
-  return { html, boton: html.querySelector('button') as HTMLButtonElement, aprobados: () => aprobado };
+  const volver = Array.from(html.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Volver a comparar') as HTMLButtonElement;
+  return { html, boton: html.querySelector('button') as HTMLButtonElement, volver, aprobados: () => aprobado, comparados: () => comparado };
 }
 
 describe('ResumenEjecucionComponent', () => {
@@ -43,5 +46,19 @@ describe('ResumenEjecucionComponent', () => {
 
     expect(boton.textContent?.trim()).toBe('Aplicando…');
     expect(boton.disabled).toBeTrue();
+  });
+
+  it('deja volver a comparar sin recargar la página', () => {
+    const { volver, comparados } = montar(revision({ conflictos: 1, altas: 0 }));
+
+    volver.click();
+
+    expect(comparados()).toBe(1);
+  });
+
+  it('mientras aplica no deja volver a comparar', () => {
+    const { volver } = montar(revision({ conflictos: 0, altas: 0 }), true);
+
+    expect(volver.disabled).toBeTrue();
   });
 });
