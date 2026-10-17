@@ -16,7 +16,9 @@
     <section class="tarjeta flex flex-col gap-3 px-[22px] py-5">
       <h2 class="text-[18px] font-bold">1. Conectar con OneDrive</h2>
       @if (comprobando()) {
-        <p class="text-sm font-medium text-tinta-4">Comprobando conexión…</p>
+        <p class="flex items-center gap-2 text-sm font-medium text-tinta-4" role="status">
+          <span class="indicador-carga text-acento"></span> Comprobando conexión…
+        </p>
       } @else if (conectado()) {
         <p class="text-sm font-semibold text-verde">Conectado. La conexión dura alrededor de una hora.</p>
       } @else {
