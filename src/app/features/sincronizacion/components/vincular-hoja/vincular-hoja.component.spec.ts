@@ -11,7 +11,7 @@ async function montar(conectado: boolean, buscarArchivos: (texto: string) => Pro
     providers: [
       provideRouter([]),
       { provide: GraphService, useValue: { tieneAccesoArchivos: async () => conectado, conectar: jasmine.createSpy('conectar'), buscarArchivos } },
-      { provide: SincronizacionDatosService, useValue: { hojaVinculada: async () => ({ drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: null }) } },
+      { provide: SincronizacionDatosService, useValue: { hojaVinculada: async () => ({ drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: null }), vincular: async () => undefined } },
       { provide: IdWebService, useValue: {} },
     ],
   });
@@ -53,5 +53,18 @@ describe('VincularHojaComponent', () => {
     await buscar(html);
 
     expect(html.textContent).toContain('Ningún archivo .xlsx de tu OneDrive coincide con «Inventario».');
+  });
+
+  it('al vincular no dice que no encontró el archivo', async () => {
+    const archivo = { id: 'x', name: 'Inventario.xlsx', eTag: 'e', parentReference: { driveId: 'd', path: '/drive/root:' } };
+    const html = await montar(true, async () => [archivo]);
+    await buscar(html);
+
+    (Array.from(html.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Vincular') as HTMLButtonElement).click();
+    await new Promise((ok) => setTimeout(ok));
+    TestBed.tick();
+
+    expect(html.textContent).toContain('Hoja vinculada: Inventario.xlsx');
+    expect(html.textContent).not.toContain('Ningún archivo .xlsx');
   });
 });

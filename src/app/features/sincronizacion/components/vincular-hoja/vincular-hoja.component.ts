@@ -67,6 +67,7 @@ export class VincularHojaComponent implements OnInit {
       await this.datos.vincular(hoja);
       this.hoja.set({ ...hoja, fecha_ultima: null });
       this.resultados.set([]);
+      this.buscado.set(null);
       this.mensaje.set(`Hoja vinculada: ${archivo.name}`);
     }, 'vincular');
   }
