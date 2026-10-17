@@ -46,7 +46,7 @@ describe('planificarImportacion', () => {
     expect(plan.altas).toEqual([{ fila: 300, valores: { ...vacios(), titulo: 'Nueva' } }]);
   });
 
-  it('deja el valor en otra moneda vacío y lo anota en observaciones', () => {
+  it('deja vacío el valor en otra moneda sin copiarlo a observaciones, que es pública', () => {
     const f = fila(212, { titulo: 'Obra', observaciones: 'Donación' }, { noConvertibles: ['valor'] });
     const plan = planDe({
       filas: [f],
@@ -54,7 +54,7 @@ describe('planificarImportacion', () => {
       emparejamientos: [par(212, null)],
     });
     expect(plan.altas[0].valores.valor).toBeNull();
-    expect(plan.altas[0].valores.observaciones).toBe('Donación\nValor original: USD 5,000');
+    expect(plan.altas[0].valores.observaciones).toBe('Donación');
   });
 
   it('no toca en la base un campo que no se pudo convertir', () => {
@@ -113,7 +113,7 @@ describe('planificarImportacion', () => {
       filas: [f],
       avisos: [{ fila: 2, campo: 'valor', motivo: MOTIVO_OTRA_MONEDA, original: 'USD 5,000' }],
       emparejamientos: [par(2, 5)],
-      obras: [obra(5, { titulo: 'Obra', valor: 1200000, observaciones: 'Valor original: USD 5,000' })],
+      obras: [obra(5, { titulo: 'Obra', valor: 1200000 })],
     });
     expect(plan.actualizaciones).toEqual([
       { fila: 2, obraId: 5, valores: { valor: null }, cambios: [{ campo: 'valor', base: 1200000, hoja: null }] },

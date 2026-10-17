@@ -2,7 +2,7 @@ import { calcularDiff, hayCambios } from './diff';
 import { Diff, diffVacio, ResponsableBase } from './diff-tipos';
 import { ValoresFoto, valoresFoto } from './foto';
 import { AvisoFila, FilaHoja, ResultadoHoja } from './hoja-obras';
-import { notaOtraMoneda, ObraBase, planificarImportacion } from './importacion';
+import { ObraBase, planificarImportacion } from './importacion';
 import { claveNombre, MOTIVO_OTRA_MONEDA } from './normalizacion';
 import { filaHoja, obraBase } from './pruebas/fabricas';
 
@@ -73,10 +73,7 @@ describe('calcularDiff', () => {
       lectura: lectura(base.filas, avisos), obras: base.obras, responsables: base.responsables, fotos: base.fotos, prefijoBucket: PREFIJO,
     });
 
-    expect(diff.cambios).toEqual([
-      { obraId: 103, fila: 135, campo: 'observaciones', destino: 'hoja', hoja: null, base: notaOtraMoneda('USD 5,000'), foto: null },
-    ]);
-    expect<Diff>({ ...diff, cambios: [], avisos: [] }).toEqual(diffVacio());
+    expect<Diff>({ ...diff, avisos: [] }).toEqual(diffVacio());
     expect(diff.avisos.map((a) => a.tipo)).toEqual(['fila', 'fila']);
   });
 

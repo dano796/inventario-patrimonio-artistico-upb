@@ -77,8 +77,6 @@ export interface EntradaImportacion {
 export const LIMITE_IMAGEN = 5 * 1024 * 1024;
 const FORMATOS_BUCKET = /\.(jpe?g|png|webp)$/i;
 
-export const notaOtraMoneda = (original: string) => `Valor original: ${original}`;
-
 interface Persona {
   nombre: string;
   cargos: Map<string, string>;
@@ -97,13 +95,10 @@ export function planificarImportacion(entrada: EntradaImportacion): PlanImportac
   };
 
   for (const fila of entrada.filas) {
-    const moneda = entrada.avisos.find(
+    const moneda = entrada.avisos.some(
       (a) => a.fila === fila.fila && a.campo === 'valor' && a.motivo === MOTIVO_OTRA_MONEDA
     );
     const valores: CamposObra = { ...fila.campos };
-    if (moneda) {
-      valores.observaciones = [valores.observaciones, notaOtraMoneda(moneda.original)].filter(Boolean).join('\n');
-    }
     registrarPersona(personas, fila.fila, valores);
 
     const obraId = destino.get(fila.fila) ?? null;
@@ -119,7 +114,7 @@ export function planificarImportacion(entrada: EntradaImportacion): PlanImportac
     for (const campo of CAMPOS) {
       const noConvertible = fila.noConvertibles.includes(campo) && !(campo === 'valor' && moneda);
       if (noConvertible || excepciones.has(`${obra.id}|${campo}`)) continue;
-      const esOtraMoneda = campo === 'valor' && !!moneda;
+      const esOtraMoneda = campo === 'valor' && moneda;
       if (valores[campo] === null && obra.campos[campo] !== null && !esOtraMoneda) {
         plan.conservados.push({ fila: fila.fila, obraId: obra.id, campo });
         continue;
