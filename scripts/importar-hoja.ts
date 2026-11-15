@@ -4,6 +4,8 @@
  *   npx tsx scripts/importar-hoja.ts respaldar
  *   npx tsx scripts/importar-hoja.ts vaciar    <importacion/respaldo-…> --confirmar
  *   npx tsx scripts/importar-hoja.ts emparejar <copia.xlsx>
+ *   npx tsx scripts/importar-hoja.ts generar-id-web <copia.xlsx>
+ *   npx tsx scripts/importar-hoja.ts crear-nuevas <copia.xlsx> --desde-fila=N [--confirmar]
  *   npx tsx scripts/importar-hoja.ts simular   <copia.xlsx>
  *   npx tsx scripts/importar-hoja.ts aplicar   <copia.xlsx> --confirmar
  *   npx tsx scripts/importar-hoja.ts revertir  <importacion/registro-….json> --confirmar
@@ -239,6 +241,190 @@ async function comandoEmparejar(ruta: string, db: SupabaseClient) {
   );
   console.log('Revisa importacion/emparejamiento.json: en cada entrada con "revisado": false, pon "obraId" (o null si es nueva) y "revisado": true.');
   console.log('Comprueba también "obrasSinFila": una obra de ahí que esté en la hoja como «nueva» se duplicaría.');
+}
+
+/**
+ * Igual que «emparejar», pero en vez de dejar el emparejamiento para revisión
+ * manual, escribe directamente importacion/id-web.json con las filas que ya
+ * quedaron resueltas sin ambigüedad. No toca la base: sirve para refrescar el
+ * ID WEB cuando la hoja oficial cambió desde la importación inicial.
+ */
+async function comandoGenerarIdWeb(ruta: string, db: SupabaseClient) {
+  const { resultado } = leerCopia(ruta, false);
+  const obras = await obrasDeLaBase(db);
+  const existentes = obras.map((o) => ({ id: o.id, autor: o.campos.autor, titulo: o.campos.titulo }));
+  const { emparejamientos } = emparejar(resultado.filas, existentes);
+  const obraDeFila = new Map(
+    emparejamientos.filter((e): e is Emparejamiento & { obraId: number } => e.obraId !== null && e.metodo !== 'ambiguo')
+      .map((e) => [e.fila, e.obraId])
+  );
+  guardar(
+    'id-web.json',
+    resultado.filas
+      .filter((f) => obraDeFila.has(f.fila))
+      .map((f) => {
+        const comoEnGraph = (campo: 'autor' | 'titulo' | 'tecnica' | 'dimension') =>
+          f.heredados.includes(campo) ? null : f.campos[campo];
+        return {
+          fila: f.fila,
+          obraId: obraDeFila.get(f.fila)!,
+          autor: comoEnGraph('autor'),
+          titulo: comoEnGraph('titulo'),
+          tecnica: comoEnGraph('tecnica'),
+          dimension: comoEnGraph('dimension'),
+        };
+      })
+  );
+  const cuenta = (m: string) => emparejamientos.filter((e) => e.metodo === m).length;
+  const pendientes = emparejamientos.filter((e) => e.metodo === 'ambiguo' || e.metodo === 'nueva');
+  console.log(
+    `Filas ${resultado.filas.length} · listas para ID WEB: ${obraDeFila.size} (exactas ${cuenta('exacto')}, por ID WEB ${cuenta('id-web')}, por título ${cuenta('titulo')}) · ambiguas ${cuenta('ambiguo')} · nuevas ${cuenta('nueva')}.`
+  );
+  if (pendientes.length) {
+    guardar('id-web-pendientes.json', pendientes);
+    console.log(
+      `${pendientes.length} fila(s) se quedan sin ID WEB por ahora (ambiguas, o nuevas sin obra todavía en la base): detalle en importacion/id-web-pendientes.json.`
+    );
+  }
+  console.log('No se tocó la base, solo se leyó. importacion/id-web.json queda listo para /sincronizacion/vincular.');
+}
+
+/**
+ * Crea como obras nuevas solo las filas con número >= `desdeFila`: el límite
+ * lo decide quien corre el comando (ya revisó a mano que esas filas son
+ * piezas nuevas), no el emparejamiento automático — así nunca se arriesga a
+ * tratar como «nueva» una fila preexistente sin título que el emparejador no
+ * supo reconocer.
+ */
+async function comandoCrearNuevas(ruta: string, desdeFila: number, db: SupabaseClient, confirmado: boolean) {
+  const pendientes = registrosSinRevertir();
+  if (pendientes.length) {
+    const comandos = pendientes
+      .map((nombre) => `  npx tsx scripts/importar-hoja.ts revertir importacion/${nombre} --confirmar`)
+      .join('\n');
+    throw new Error(
+      `Hay ${pendientes.length} registro(s) sin revertir en importacion/; ejecuta primero:\n${comandos}`
+    );
+  }
+
+  const { archivos, resultado, tamanos } = leerCopia(ruta, true);
+  const filas = resultado.filas.filter((f) => f.fila >= desdeFila);
+  if (!filas.length) throw new Error(`Ninguna fila con número >= ${desdeFila} en la copia.`);
+
+  const plan = planificarImportacion({
+    filas,
+    avisos: resultado.avisos.filter((a) => a.fila >= desdeFila),
+    emparejamientos: [],
+    obras: [],
+    obrasSinFila: [],
+    tamanos,
+  });
+
+  console.log(`Filas ${filas.map((f) => f.fila).join(', ')}: se crearán ${plan.altas.length} obra(s) nueva(s).`);
+  console.log(`Responsables en estas filas: ${plan.responsables.length} · con cargos distintos: ${plan.cargosEnConflicto.length}`);
+  console.log(`Imágenes: ${plan.imagenes.length} · rechazadas: ${plan.imagenesRechazadas.length}`);
+  for (const r of plan.imagenesRechazadas) console.log(`  Fila ${r.fila} casilla ${r.casilla}: ${r.motivo}`);
+  if (plan.cargosEnConflicto.length) {
+    throw new Error(`Responsable(s) con cargos distintos en estas filas, corrígelo en la hoja:\n${JSON.stringify(plan.cargosEnConflicto, null, 2)}`);
+  }
+  if (!confirmado) {
+    console.log('Nada escrito. Repite el comando con --confirmar para crear estas obras.');
+    return;
+  }
+
+  const registro: Registro = {
+    inicio: new Date().toISOString(), copia: basename(ruta), responsablesCreados: [], cargosAnteriores: [],
+    actualizaciones: [], obrasCreadas: [], imagenes: [], fotos: [], revertido: false,
+  };
+  const nombreRegistro = `registro-${registro.inicio.replace(/[:.]/g, '-')}.json`;
+  const anotar = () => guardar(nombreRegistro, registro);
+  anotar();
+  console.log(`Registro en importacion/${nombreRegistro}`);
+
+  const existentes = await todas<{ id: number; nombre: string; cargo: string | null }>((d, h) =>
+    db.from('responsables').select('id, nombre, cargo').order('id').range(d, h)
+  );
+  const responsables = new Map(existentes.map((r) => [claveNombre(r.nombre)!, r]));
+  for (const r of plan.responsables) {
+    const actual = responsables.get(r.clave);
+    if (!actual) {
+      const creado = comprobar(await db.from('responsables').insert({ nombre: r.nombre, cargo: r.cargo }).select('id, nombre, cargo').single()) as { id: number; nombre: string; cargo: string | null };
+      responsables.set(r.clave, creado);
+      registro.responsablesCreados.push(creado.id);
+      anotar();
+    } else if (r.cargo !== null && actual.cargo !== r.cargo) {
+      registro.cargosAnteriores.push({ id: actual.id, cargo: actual.cargo });
+      anotar();
+      comprobar(await db.from('responsables').update({ cargo: r.cargo }).eq('id', actual.id));
+      actual.cargo = r.cargo;
+    }
+  }
+  const aColumnas = (valores: Partial<CamposObra>): Record<string, unknown> => {
+    const { responsable, cargo, ...resto } = valores;
+    const columnas: Record<string, unknown> = { ...resto };
+    if ('responsable' in valores) {
+      columnas['responsable_id'] = responsable ? responsables.get(claveNombre(responsable)!)!.id : null;
+    }
+    return columnas;
+  };
+
+  const obraDeFila = new Map<number, number>();
+  for (const alta of plan.altas) {
+    const creada = comprobar(await db.from('obras').insert(aColumnas(alta.valores)).select('id').single()) as { id: number };
+    obraDeFila.set(alta.fila, creada.id);
+    registro.obrasCreadas.push(creada.id);
+    anotar();
+  }
+  console.log(`Obras creadas: ${plan.altas.length}.`);
+
+  const imagenes = [...plan.imagenes].sort((a, b) => a.fila - b.fila || a.casilla - b.casilla);
+  for (const img of imagenes) {
+    const obraId = obraDeFila.get(img.fila)!;
+    const extension = img.archivo.split('.').pop()!.toLowerCase();
+    const destino = `importacion/${obraId}-${img.casilla}.${extension}`;
+    const datos = archivos[img.archivo];
+    registro.imagenes.push({ ruta: destino, imagenId: null });
+    anotar();
+    comprobar(await db.storage.from(BUCKET).upload(destino, datos, { contentType: TIPOS[extension], upsert: false }));
+    const url = db.storage.from(BUCKET).getPublicUrl(destino).data.publicUrl;
+    const fila = comprobar(await db.from('imagenes').insert({ id_obra: obraId, url, nombre: basename(img.archivo), tamano: datos.length }).select('id').single()) as { id: number };
+    registro.imagenes[registro.imagenes.length - 1].imagenId = fila.id;
+    anotar();
+  }
+  console.log(`Imágenes subidas: ${imagenes.length}.`);
+
+  const idsNuevos = [...obraDeFila.values()];
+  const imagenesBase = idsNuevos.length
+    ? (comprobar(await db.from('imagenes').select('id, id_obra').in('id_obra', idsNuevos)) as { id: number; id_obra: number }[])
+    : [];
+  const fotos = filas
+    .filter((f) => obraDeFila.has(f.fila))
+    .map((f) => {
+      const obraId = obraDeFila.get(f.fila)!;
+      const ids = imagenesBase.filter((i) => i.id_obra === obraId).map((i) => i.id);
+      return { obra_id: obraId, valores: valoresFoto(f.campos, ids), fecha: new Date().toISOString() };
+    });
+  registro.fotos = fotos.map((f) => f.obra_id);
+  anotar();
+  if (fotos.length) comprobar(await db.from('sincronizacion_estado').upsert(fotos));
+
+  const existenteIdWeb = existsSync(join(SALIDA, 'id-web.json')) ? leerJson<unknown[]>('id-web.json') : [];
+  const nuevasAsignaciones = filas
+    .filter((f) => obraDeFila.has(f.fila))
+    .map((f) => {
+      const comoEnGraph = (campo: 'autor' | 'titulo' | 'tecnica' | 'dimension') =>
+        f.heredados.includes(campo) ? null : f.campos[campo];
+      return {
+        fila: f.fila,
+        obraId: obraDeFila.get(f.fila)!,
+        autor: comoEnGraph('autor'),
+        titulo: comoEnGraph('titulo'),
+        tecnica: comoEnGraph('tecnica'),
+        dimension: comoEnGraph('dimension'),
+      };
+    });
+  guardar('id-web.json', [...existenteIdWeb, ...nuevasAsignaciones]);
+  console.log(`importacion/id-web.json actualizado con ${nuevasAsignaciones.length} fila(s) nueva(s) (obras ${idsNuevos.join(', ')}).`);
 }
 
 async function prepararPlan(ruta: string, db: SupabaseClient, incluirMedios: boolean) {
@@ -478,7 +664,7 @@ async function main() {
   const [comando, ruta] = process.argv.slice(2);
   const confirmado = process.argv.includes('--confirmar');
   if (!comando || (!ruta && comando !== 'respaldar')) {
-    throw new Error('Uso: npx tsx scripts/importar-hoja.ts <respaldar|vaciar|emparejar|simular|aplicar|revertir> <archivo> [--confirmar]');
+    throw new Error('Uso: npx tsx scripts/importar-hoja.ts <respaldar|vaciar|emparejar|generar-id-web|crear-nuevas|simular|aplicar|revertir> <archivo> [--confirmar]');
   }
   mkdirSync(SALIDA, { recursive: true });
   const { url, clave } = cargarEntorno();
@@ -489,6 +675,15 @@ async function main() {
   if (comando === 'respaldar') return comandoRespaldar(db);
   if (comando === 'vaciar') return comandoVaciar(ruta, db);
   if (comando === 'emparejar') return comandoEmparejar(ruta, db);
+  if (comando === 'generar-id-web') return comandoGenerarIdWeb(ruta, db);
+  if (comando === 'crear-nuevas') {
+    const argDesde = process.argv.find((a) => a.startsWith('--desde-fila='));
+    const desdeFila = argDesde ? Number(argDesde.split('=')[1]) : NaN;
+    if (!Number.isInteger(desdeFila) || desdeFila < 2) {
+      throw new Error('«crear-nuevas» exige --desde-fila=N (el número de fila, no el de la columna «No.» de la hoja).');
+    }
+    return comandoCrearNuevas(ruta, desdeFila, db, confirmado);
+  }
   if (comando === 'simular') return comandoSimular(ruta, db);
   if (comando === 'aplicar') return comandoAplicar(ruta, db);
   if (comando === 'revertir') return comandoRevertir(ruta, db);
