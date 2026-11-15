@@ -1,7 +1,7 @@
 import { Emparejamiento } from './emparejamiento';
 import { valoresFoto } from './foto';
 import { CAMPOS, CamposObra, CasillaImagen, FilaHoja } from './hoja-obras';
-import { EntradaImportacion, LIMITE_IMAGEN, ObraBase, planificarImportacion } from './importacion';
+import { clasificarImagenes, EntradaImportacion, LIMITE_IMAGEN, ObraBase, planificarImportacion } from './importacion';
 import { MOTIVO_OTRA_MONEDA } from './normalizacion';
 
 const vacios = () => Object.fromEntries(CAMPOS.map((c) => [c, null])) as unknown as CamposObra;
@@ -146,5 +146,37 @@ describe('valoresFoto', () => {
     expect(foto['responsable']).toBe('LINA MARÍA');
     expect(foto['valor']).toBe(1200000);
     expect([foto['imagen_1'], foto['imagen_2'], foto['imagen_3']]).toEqual([80, null, null]);
+  });
+});
+
+describe('clasificarImagenes', () => {
+  it('acepta solo las pegadas que admite el bucket y explica cada rechazo', () => {
+    const f = fila(536, { titulo: 'Nueva' }, {
+      imagenes: [
+        { tipo: 'pegada', archivo: null },
+        { tipo: 'pegada', archivo: 'xl/media/image9.webp' },
+        { tipo: 'pegada', archivo: 'xl/media/image4.gif' },
+      ],
+    });
+    const otra = fila(537, {}, {
+      imagenes: [
+        { tipo: 'formula', url: 'https://x/a.jpg' },
+        { tipo: 'pegada', archivo: 'xl/media/image5.JPG' },
+        { tipo: 'pegada', archivo: 'xl/media/image6.png' },
+      ],
+    });
+    const tamanos = { 'xl/media/image9.webp': LIMITE_IMAGEN, 'xl/media/image6.png': LIMITE_IMAGEN + 1 };
+
+    expect(clasificarImagenes(f, tamanos)).toEqual({
+      aceptadas: [{ casilla: 2, archivo: 'xl/media/image9.webp' }],
+      rechazadas: [
+        { fila: 536, casilla: 1, archivo: null, motivo: 'no se encontró el archivo de la imagen' },
+        { fila: 536, casilla: 3, archivo: 'xl/media/image4.gif', motivo: 'formato no admitido por el bucket' },
+      ],
+    });
+    expect(clasificarImagenes(otra, tamanos)).toEqual({
+      aceptadas: [{ casilla: 2, archivo: 'xl/media/image5.JPG' }],
+      rechazadas: [{ fila: 537, casilla: 3, archivo: 'xl/media/image6.png', motivo: 'supera los 5 MB del bucket' }],
+    });
   });
 });

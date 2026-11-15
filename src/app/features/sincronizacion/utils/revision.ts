@@ -1,5 +1,5 @@
 import { Calculo } from '../services/sincronizacion.service';
-import { AvisoImagen, CambioCargo, CambioImagen, Conflicto, ConflictoCargo, Diff, Lado } from '../nucleo/diff-tipos';
+import { AltaBase, AvisoImagen, CambioCargo, CambioImagen, Conflicto, ConflictoCargo, Diff, Lado } from '../nucleo/diff-tipos';
 import { AvisoFila, Campo, CAMPOS, CasillaImagen, ENCABEZADO_ID_WEB, ENCABEZADOS, FilaHoja } from '../nucleo/hoja-obras';
 import { claveImagen, ValorCampo } from '../nucleo/foto';
 import { ObraBase } from '../nucleo/importacion';
@@ -221,7 +221,7 @@ export function construirRevision(calculo: Calculo, estado: EstadoRevision): Rev
     grupos.push(grupoPresencia({
       clave: `alta-base|${alta.fila}`, numero: `Fila ${alta.fila}`, titulo: alta.campos.titulo?.trim() || 'Sin título',
       etiqueta: 'Solo está en la hoja',
-      resumen: 'Puede ser un alta real o una fila copiada a la que alguien borró el ID WEB. Requiere una elección.',
+      resumen: ['Puede ser un alta real o una fila copiada a la que alguien borró el ID WEB. Requiere una elección.', ...textoImagenesAlta(alta)].join(' '),
       ref: { tipo: 'altaBase', fila: alta.fila }, pendiente: decidida === undefined,
       opciones: [
         { valor: 'crear', etiqueta: 'Crear en la base', elegida: decidida === true },
@@ -393,6 +393,14 @@ function grupoPersona(c: CambioCargo | ConflictoCargo, filas: FilaRevision[]): G
     etiqueta: `Afecta a ${plural(c.filas.length, 'obra')}`, tono: conflicto ? 'ambar' : 'acento',
     pendiente, filas, resumen: null, opciones: [], ref: null, filtros,
   };
+}
+
+function textoImagenesAlta(alta: AltaBase): string[] {
+  const n = alta.imagenes.length;
+  return [
+    ...(n ? [n === 1 ? 'Se subirá 1 imagen pegada.' : `Se subirán ${n} imágenes pegadas.`] : []),
+    ...alta.imagenesRechazadas.map((r) => `La imagen ${r.casilla} no se subirá: ${r.motivo}.`),
+  ];
 }
 
 function grupoPresencia(g: Omit<GrupoRevision, 'tipo' | 'tono' | 'filtros'>): GrupoRevision {

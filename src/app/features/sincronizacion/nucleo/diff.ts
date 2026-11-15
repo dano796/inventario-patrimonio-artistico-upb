@@ -1,6 +1,6 @@
 import { ResultadoHoja } from './hoja-obras';
 import { ValoresFoto } from './foto';
-import { ObraBase } from './importacion';
+import { clasificarImagenes, ObraBase } from './importacion';
 import { AvisoSincronizacion, Diff, diffVacio, ResponsableBase } from './diff-tipos';
 import { indexarPorIdWeb } from './diff-filas';
 import { diffCamposObra } from './diff-campos';
@@ -13,13 +13,18 @@ export interface EntradaDiff {
   responsables: ResponsableBase[];
   fotos: ReadonlyMap<number, ValoresFoto>;
   prefijoBucket: string;
+  tamanos: Record<string, number>;
 }
 
 export function calcularDiff(entrada: EntradaDiff): Diff {
   const idsIlegibles = new Set(entrada.lectura.avisos.filter((a) => a.campo === 'id_web').map((a) => a.fila));
   const indice = indexarPorIdWeb(entrada.lectura.filas, entrada.obras, entrada.fotos, idsIlegibles);
   const diff = diffVacio();
-  diff.altasBase.push(...indice.altasBase);
+  const filas = new Map(entrada.lectura.filas.map((f) => [f.fila, f]));
+  for (const alta of indice.altasBase) {
+    const { aceptadas, rechazadas } = clasificarImagenes(filas.get(alta.fila)!, entrada.tamanos);
+    diff.altasBase.push({ ...alta, imagenes: aceptadas, imagenesRechazadas: rechazadas });
+  }
   diff.altasHoja.push(...indice.altasHoja);
   diff.avisos.push(
     ...entrada.lectura.avisos.map((aviso): AvisoSincronizacion => ({ tipo: 'fila', aviso })),

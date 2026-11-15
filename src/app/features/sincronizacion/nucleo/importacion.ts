@@ -156,13 +156,30 @@ function planificarImagenes(
   obraId: number | null,
   tamanos: Record<string, number>
 ): void {
+  const { aceptadas, rechazadas } = clasificarImagenes(fila, tamanos);
+  plan.imagenes.push(...aceptadas.map((a) => ({ fila: fila.fila, obraId, ...a })));
+  plan.imagenesRechazadas.push(...rechazadas);
+}
+
+export interface ImagenPegada {
+  casilla: number;
+  archivo: string;
+}
+
+export function clasificarImagenes(
+  fila: FilaHoja,
+  tamanos: Record<string, number>
+): { aceptadas: ImagenPegada[]; rechazadas: ImagenRechazada[] } {
+  const aceptadas: ImagenPegada[] = [];
+  const rechazadas: ImagenRechazada[] = [];
   fila.imagenes.forEach((casilla, indice) => {
     if (casilla.tipo !== 'pegada') return;
     const rechazar = (motivo: string) =>
-      plan.imagenesRechazadas.push({ fila: fila.fila, casilla: indice + 1, archivo: casilla.archivo, motivo });
+      rechazadas.push({ fila: fila.fila, casilla: indice + 1, archivo: casilla.archivo, motivo });
     if (!casilla.archivo) return void rechazar('no se encontró el archivo de la imagen');
     if (!FORMATOS_BUCKET.test(casilla.archivo)) return void rechazar('formato no admitido por el bucket');
     if ((tamanos[casilla.archivo] ?? 0) > LIMITE_IMAGEN) return void rechazar('supera los 5 MB del bucket');
-    plan.imagenes.push({ fila: fila.fila, obraId, casilla: indice + 1, archivo: casilla.archivo });
+    aceptadas.push({ casilla: indice + 1, archivo: casilla.archivo });
   });
+  return { aceptadas, rechazadas };
 }

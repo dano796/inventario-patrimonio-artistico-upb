@@ -2,12 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { ErrorGraph, GraphService } from './graph.service';
 import { HojaVinculada, ResultadoRpc, SincronizacionDatosService } from './sincronizacion-datos.service';
-import { descomprimirXlsx, leerHoja } from '../nucleo/leer-xlsx';
+import { abrirXlsx, extraerMedios, leerHoja } from '../nucleo/leer-xlsx';
 import {
   CAMPOS, ENCABEZADO_ID_WEB, ENCABEZADOS_IMAGEN, ErrorEncabezados, leerFilasObras, mensajeEncabezados, ResultadoHoja,
 } from '../nucleo/hoja-obras';
 import { ObraBase } from '../nucleo/importacion';
-import { ValoresFoto } from '../nucleo/foto';
+import { CASILLAS_IMAGEN, claveImagen, ValoresFoto } from '../nucleo/foto';
 import { Diff } from '../nucleo/diff-tipos';
 import { calcularDiff } from '../nucleo/diff';
 import { Decisiones, planificarEjecucion } from '../nucleo/plan-ejecucion';
@@ -32,6 +32,14 @@ export interface Calculo {
   lectura: ResultadoHoja;
   obras: ObraBase[];
   diff: Diff;
+  medios: ReadonlyMap<string, Uint8Array>;
+}
+
+export interface ImagenFallida {
+  obraId: number;
+  fila: number;
+  casilla: number;
+  motivo: string;
 }
 
 export interface ResultadoAplicacion {
@@ -39,6 +47,8 @@ export interface ResultadoAplicacion {
   escritasEnHoja: number;
   altasEnHoja: number;
   descartadasEnHoja: Descartada[];
+  imagenesSubidas: number;
+  imagenesFallidas: ImagenFallida[];
   error: string | null;
 }
 
@@ -55,7 +65,8 @@ export class SincronizacionService {
     if (!hoja) throw new Error('No hay ninguna hoja vinculada. Vincúlala antes de sincronizar.');
     const contenido = await this.graph.descargar(hoja.drive_id, hoja.item_id);
     progreso('descargar', `${(contenido.byteLength / 1024 / 1024).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`);
-    const lectura = leerFilasObras(leerHoja(descomprimirXlsx(contenido), hoja.nombre_hoja, new DOMParser()));
+    const { archivos, tamanos } = abrirXlsx(contenido);
+    const lectura = leerFilasObras(leerHoja(archivos, hoja.nombre_hoja, new DOMParser()));
     if (lectura.columnaIdWeb === null) throw new ErrorEncabezados([ENCABEZADO_ID_WEB]);
     progreso('encabezados', `${TOTAL_ENCABEZADOS} de ${TOTAL_ENCABEZADOS}`);
     const [obras, responsables, fotos] = await Promise.all([
@@ -65,9 +76,10 @@ export class SincronizacionService {
     ]);
     progreso('inventario', plural(obras.length, 'obra'));
     progreso('foto', plural(fotos.size, 'foto'));
-    const diff = calcularDiff({ lectura, obras, responsables, fotos, prefijoBucket: PREFIJO_BUCKET });
+    const diff = calcularDiff({ lectura, obras, responsables, fotos, prefijoBucket: PREFIJO_BUCKET, tamanos });
+    const medios = extraerMedios(contenido, new Set(diff.altasBase.flatMap((a) => a.imagenes.map((i) => i.archivo))));
     progreso('comparar', plural(lectura.filas.length, 'fila'));
-    return { hoja, lectura, obras, diff };
+    return { hoja, lectura, obras, diff, medios };
   }
 
   /**
@@ -76,6 +88,8 @@ export class SincronizacionService {
    * hoja, rango a rango, empezando por el ID WEB de las obras nuevas. La foto de
    * lo escrito en la hoja se registra al final y solo de lo que se escribió: si
    * Graph falla a medias, lo que falta reaparece en la siguiente ejecución.
+   * Las imágenes pegadas de las altas se suben después del ID WEB, que es lo
+   * que impide que la siguiente ejecución vuelva a proponer el alta.
    */
   async aplicar(calculo: Calculo, decisiones: Decisiones): Promise<ResultadoAplicacion> {
     if ((await this.graph.minutosRestantes()) < MARGEN_TOKEN_MIN) {
@@ -111,7 +125,8 @@ export class SincronizacionService {
     );
     const campos = ubicarEscrituras(plan.escrituras, lectura, columnas);
     const resultado: ResultadoAplicacion = {
-      base, escritasEnHoja: 0, altasEnHoja: 0, descartadasEnHoja: [...ids.descartadas, ...campos.descartadas], error: null,
+      base, escritasEnHoja: 0, altasEnHoja: 0, descartadasEnHoja: [...ids.descartadas, ...campos.descartadas],
+      imagenesSubidas: 0, imagenesFallidas: [], error: null,
     };
 
     const fotos = new Map<number, ValoresFoto>();
@@ -134,6 +149,15 @@ export class SincronizacionService {
       resultado.error = mensajeDeError(e);
     }
 
+    for (const creada of base.creadas) {
+      const ids = await this.subirImagenesDeAlta(calculo, creada.fila, creada.obra_id, resultado);
+      if (ids.length) {
+        const foto: ValoresFoto = {};
+        for (let i = 0; i < CASILLAS_IMAGEN; i++) foto[claveImagen(i + 1)] = ids[i] ?? null;
+        anotar(creada.obra_id, foto);
+      }
+    }
+
     let etag: string | null = null;
     if (resultado.error === null) {
       try {
@@ -150,6 +174,27 @@ export class SincronizacionService {
       });
     }
     return resultado;
+  }
+
+  /** En orden de casilla: la casilla de cada imagen en la base sale del orden de sus ids. */
+  private async subirImagenesDeAlta(calculo: Calculo, fila: number, obraId: number, resultado: ResultadoAplicacion): Promise<number[]> {
+    const alta = calculo.diff.altasBase.find((a) => a.fila === fila);
+    const ids: number[] = [];
+    for (const { casilla, archivo } of [...(alta?.imagenes ?? [])].sort((a, b) => a.casilla - b.casilla)) {
+      const fallar = (motivo: string) => resultado.imagenesFallidas.push({ obraId, fila, casilla, motivo });
+      const datos = calculo.medios.get(archivo);
+      if (!datos) {
+        fallar('no se encontró la imagen en el archivo descargado');
+        continue;
+      }
+      try {
+        ids.push(await this.datos.subirImagen(obraId, casilla, archivo, datos));
+        resultado.imagenesSubidas++;
+      } catch (e) {
+        fallar((e as { message?: string } | null)?.message || 'no se pudo subir la imagen');
+      }
+    }
+    return ids;
   }
 }
 

@@ -1,5 +1,6 @@
 import { AvisoFila, Campo, CamposObra, CasillaImagen } from './hoja-obras';
 import { ValorCampo } from './foto';
+import type { ImagenPegada, ImagenRechazada } from './importacion';
 
 export type Lado = 'hoja' | 'base';
 
@@ -90,6 +91,8 @@ export interface AvisoImagen {
 export interface AltaBase {
   fila: number;
   campos: CamposObra;
+  imagenes: ImagenPegada[];
+  imagenesRechazadas: ImagenRechazada[];
 }
 
 export interface AltaHoja {

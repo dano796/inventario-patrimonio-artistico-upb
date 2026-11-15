@@ -196,7 +196,7 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
   it('una fila sin ID WEB pide elegir entre crearla o ignorarla, y lleva sus avisos', () => {
     const filas = [filaHoja(212, { titulo: 'Naturaleza muerta' })];
     const diff: Partial<Diff> = {
-      altasBase: [{ fila: 212, campos: filas[0].campos }],
+      altasBase: [{ fila: 212, campos: filas[0].campos, imagenes: [], imagenesRechazadas: [] }],
       avisos: [{ tipo: 'fila', aviso: { fila: 212, campo: 'ano', motivo: 'tiene más de un año', original: '1950-1955' } }],
     };
     const r = construirRevision(calculo(diff, { filas }), estadoInicial());
@@ -211,6 +211,24 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
     const creada = construirRevision(calculo(diff, { filas }), elegir(estadoInicial(), { tipo: 'altaBase', fila: 212 }, 'crear'));
     expect(creada.pendientes.altas).toBe(0);
     expect(creada.resumen.haciaBase).toBe(1);
+  });
+
+  it('el alta dice qué imágenes pegadas se subirán y cuáles no', () => {
+    const filas = [filaHoja(536, { titulo: 'Nueva' })];
+    const alta = (imagenes: number, rechazadas: { casilla: number; motivo: string }[]): Partial<Diff> => ({
+      altasBase: [{
+        fila: 536, campos: filas[0].campos,
+        imagenes: Array.from({ length: imagenes }, (_, i) => ({ casilla: i + 1, archivo: `xl/media/image${i}.jpeg` })),
+        imagenesRechazadas: rechazadas.map((r) => ({ fila: 536, archivo: null, ...r })),
+      }],
+    });
+    const resumen = (d: Partial<Diff>) => grupo(construirRevision(calculo(d, { filas }), estadoInicial()), 'alta-base|536').resumen;
+
+    expect(resumen(alta(0, []))).not.toContain('imagen');
+    expect(resumen(alta(1, []))).toContain('Se subirá 1 imagen pegada.');
+    expect(resumen(alta(2, [{ casilla: 3, motivo: 'supera los 5 MB del bucket' }]))).toContain(
+      'Se subirán 2 imágenes pegadas. La imagen 3 no se subirá: supera los 5 MB del bucket.'
+    );
   });
 
   it('una obra sin fila se añade a la hoja salvo que se ignore', () => {

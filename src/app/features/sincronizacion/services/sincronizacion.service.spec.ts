@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { MARGEN_TOKEN_MIN, PasoCalculo, SincronizacionService } from './sincronizacion.service';
+import { MARGEN_TOKEN_MIN, PasoCalculo, PREFIJO_BUCKET, SincronizacionService } from './sincronizacion.service';
 import { ErrorGraph, GraphService } from './graph.service';
 import { SincronizacionDatosService } from './sincronizacion-datos.service';
-import { crearXlsxDePrueba } from '../nucleo/pruebas/xlsx-de-prueba';
+import { CeldaDePrueba, crearXlsxDePrueba } from '../nucleo/pruebas/xlsx-de-prueba';
 import { ENCABEZADOS_HOJA, FilaDePrueba, rangoDePrueba } from '../nucleo/pruebas/rango-de-prueba';
 import { camposVacios, obraBase } from '../nucleo/pruebas/fabricas';
 import { columnaALetra } from '../nucleo/rangos';
-import { camposFoto, ValoresFoto } from '../nucleo/foto';
+import { camposFoto, ValoresFoto, valoresFoto } from '../nucleo/foto';
 import { CamposObra } from '../nucleo/hoja-obras';
 import { ObraBase } from '../nucleo/importacion';
 import { decisionesPorDefecto } from '../nucleo/plan-ejecucion';
@@ -16,9 +16,11 @@ import { ErrorEncabezados } from '../nucleo/hoja-obras';
 const HOJA = { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: 'etag-1' };
 const SIN_RESULTADO = { aplicados: 0, descartados: [], creadas: [] };
 
-function xlsx(filas: FilaDePrueba[]): Uint8Array {
-  const columna = (encabezado: string) => columnaALetra(ENCABEZADOS_HOJA.indexOf(encabezado as never) + 1);
+const columna = (encabezado: string) => columnaALetra(ENCABEZADOS_HOJA.indexOf(encabezado as never) + 1);
+
+function xlsx(filas: FilaDePrueba[], imagenes: CeldaDePrueba[] = [], medios: Record<string, Uint8Array> = {}): Uint8Array {
   return crearXlsxDePrueba({
+    medios,
     celdas: [
       ...ENCABEZADOS_HOJA.map((texto) => ({ ref: `${columna(texto)}1`, texto })),
       ...filas.flatMap((fila, i) =>
@@ -27,15 +29,19 @@ function xlsx(filas: FilaDePrueba[]): Uint8Array {
           return typeof valor === 'number' ? { ref, numero: valor } : { ref, texto: String(valor) };
         })
       ),
+      ...imagenes,
     ],
   });
 }
 
 const foto = (campos: Partial<CamposObra>) => camposFoto({ ...camposVacios(), ...campos });
 
-function montar(opciones: { hoja: FilaDePrueba[]; segundaLectura?: FilaDePrueba[]; obras: ObraBase[]; fotos: [number, ValoresFoto][] }) {
+function montar(opciones: {
+  hoja: FilaDePrueba[]; segundaLectura?: FilaDePrueba[]; obras: ObraBase[]; fotos: [number, ValoresFoto][];
+  imagenes?: CeldaDePrueba[]; medios?: Record<string, Uint8Array>;
+}) {
   const graph = {
-    descargar: jasmine.createSpy('descargar').and.resolveTo(xlsx(opciones.hoja)),
+    descargar: jasmine.createSpy('descargar').and.resolveTo(xlsx(opciones.hoja, opciones.imagenes, opciones.medios)),
     leerRangoUsado: jasmine.createSpy('leerRangoUsado').and.resolveTo(rangoDePrueba(opciones.segundaLectura ?? opciones.hoja)),
     escribirValores: jasmine.createSpy('escribirValores').and.resolveTo(undefined),
     archivo: jasmine.createSpy('archivo').and.resolveTo({ eTag: 'etag-2' }),
@@ -47,7 +53,10 @@ function montar(opciones: { hoja: FilaDePrueba[]; segundaLectura?: FilaDePrueba[
     responsables: jasmine.createSpy('responsables').and.resolveTo([]),
     fotos: jasmine.createSpy('fotos').and.resolveTo(new Map(opciones.fotos)),
     aplicar: jasmine.createSpy('aplicar').and.resolveTo(SIN_RESULTADO),
+    subirImagen: jasmine.createSpy('subirImagen'),
   };
+  let siguienteId = 901;
+  datos.subirImagen.and.callFake(async () => siguienteId++);
   TestBed.configureTestingModule({
     providers: [
       { provide: GraphService, useValue: graph },
@@ -248,5 +257,126 @@ describe('SincronizacionService, protecciones al aplicar', () => {
 
     graph.minutosRestantes.and.resolveTo(60);
     await expectAsync(servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff))).toBeResolved();
+  });
+});
+
+describe('SincronizacionService, imágenes de las altas', () => {
+  const MEDIOS = {
+    'image1.jpeg': new Uint8Array([1]),
+    'image2.png': new Uint8Array([2]),
+    'image3.gif': new Uint8Array([3]),
+    'image4.jpeg': new Uint8Array([4]),
+  };
+  const celdasImagen = (fila: number, archivos: string[]): CeldaDePrueba[] =>
+    archivos.map((imagen, i) => ({ ref: `${columna(`IMAGEN ${i + 1}`)}${fila}`, imagen }));
+
+  function montarAlta() {
+    const montaje = montar({
+      hoja: [{ AUTOR: 'Ana', TITULO: 'Nueva' }, { TITULO: 'Paisaje', 'ID WEB': 14 }],
+      obras: [obraBase(14, { titulo: 'Paisaje' }, [{ id: 80, url: 'https://x/a.jpg' }])],
+      fotos: [[14, foto({ titulo: 'Paisaje' })]],
+      imagenes: [...celdasImagen(2, ['image2.png', 'image3.gif', 'image1.jpeg']), ...celdasImagen(3, ['image4.jpeg'])],
+      medios: MEDIOS,
+    });
+    montaje.datos.aplicar.and.returnValues(
+      Promise.resolve({ aplicados: 0, descartados: [], creadas: [{ fila: 2, obra_id: 700 }] }),
+      Promise.resolve(SIN_RESULTADO)
+    );
+    return montaje;
+  }
+
+  it('calcular guarda solo los archivos de las imágenes que se subirán con las altas', async () => {
+    const { servicio } = montarAlta();
+
+    const calculo = await servicio.calcular();
+
+    expect(calculo.diff.altasBase[0].imagenes).toEqual([
+      { casilla: 1, archivo: 'xl/media/image2.png' },
+      { casilla: 3, archivo: 'xl/media/image1.jpeg' },
+    ]);
+    expect(calculo.diff.altasBase[0].imagenesRechazadas.map((r) => r.casilla)).toEqual([2]);
+    expect([...calculo.medios.keys()].sort()).toEqual(['xl/media/image1.jpeg', 'xl/media/image2.png']);
+  });
+
+  it('sube las imágenes de cada obra creada en orden de casilla y las registra en su foto', async () => {
+    const { servicio, datos } = montarAlta();
+    const calculo = await servicio.calcular();
+
+    const resultado = await servicio.aplicar(calculo, { ...decisionesPorDefecto(calculo.diff), altasBase: new Set([2]) });
+
+    expect(datos.subirImagen.calls.allArgs()).toEqual([
+      [700, 1, 'xl/media/image2.png', MEDIOS['image2.png']],
+      [700, 3, 'xl/media/image1.jpeg', MEDIOS['image1.jpeg']],
+    ]);
+    expect(datos.aplicar.calls.mostRecent().args[0].fotos).toEqual([
+      { obra_id: 700, valores: { imagen_1: 901, imagen_2: 902, imagen_3: null } },
+    ]);
+    expect(resultado.imagenesSubidas).toBe(2);
+    expect(resultado.imagenesFallidas).toEqual([]);
+  });
+
+  it('no sube imágenes de un alta que no se eligió crear', async () => {
+    const { servicio, datos } = montarAlta();
+    datos.aplicar.and.resolveTo(SIN_RESULTADO);
+    const calculo = await servicio.calcular();
+
+    await servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff));
+
+    expect(datos.subirImagen).not.toHaveBeenCalled();
+  });
+
+  it('si una subida falla sigue con las demás, informa y no impide escribir el ID WEB', async () => {
+    const { servicio, datos, graph } = montarAlta();
+    datos.subirImagen.and.callFake(async (_obra: number, casilla: number) => {
+      if (casilla === 1) throw new Error('Payload too large');
+      return 950;
+    });
+    const calculo = await servicio.calcular();
+
+    const resultado = await servicio.aplicar(calculo, { ...decisionesPorDefecto(calculo.diff), altasBase: new Set([2]) });
+
+    expect(graph.escribirValores).toHaveBeenCalledWith('d', 'i', 'Inventario Obras', 'R2:R2', [[700]]);
+    expect(resultado.imagenesSubidas).toBe(1);
+    expect(resultado.imagenesFallidas).toEqual([{ obraId: 700, fila: 2, casilla: 1, motivo: 'Payload too large' }]);
+    expect(datos.aplicar.calls.mostRecent().args[0].fotos).toEqual([
+      { obra_id: 700, valores: { imagen_1: 950, imagen_2: null, imagen_3: null } },
+    ]);
+  });
+
+  it('sube las imágenes aunque Graph falle a mitad de escribir en la hoja', async () => {
+    const { servicio, datos, graph } = montarAlta();
+    graph.escribirValores.and.rejectWith(new ErrorGraph(401, 'caducado'));
+    const calculo = await servicio.calcular();
+
+    const resultado = await servicio.aplicar(calculo, { ...decisionesPorDefecto(calculo.diff), altasBase: new Set([2]) });
+
+    expect(resultado.error).toMatch(/caducó/);
+    expect(datos.subirImagen).toHaveBeenCalledTimes(2);
+  });
+
+  it('con la foto resultante, la siguiente comparación no propone nada sobre esas imágenes', async () => {
+    const primera = montarAlta();
+    const calculo = await primera.servicio.calcular();
+    await primera.servicio.aplicar(calculo, { ...decisionesPorDefecto(calculo.diff), altasBase: new Set([2]) });
+    const fotoAlta = primera.datos.aplicar.calls.argsFor(0)[0].altas[0].foto as ValoresFoto;
+    const fotoImagenes = primera.datos.aplicar.calls.mostRecent().args[0].fotos[0].valores as ValoresFoto;
+    TestBed.resetTestingModule();
+
+    const segunda = montar({
+      hoja: [{ AUTOR: 'Ana', TITULO: 'Nueva', 'ID WEB': 700 }],
+      obras: [obraBase(700, { autor: 'Ana', titulo: 'Nueva' }, [
+        { id: 901, url: `${PREFIJO_BUCKET}sincronizacion/700-1.png` },
+        { id: 902, url: `${PREFIJO_BUCKET}sincronizacion/700-3.jpeg` },
+      ])],
+      fotos: [[700, { ...fotoAlta, ...fotoImagenes }]],
+      imagenes: celdasImagen(2, ['image2.png', 'image3.gif', 'image1.jpeg']),
+      medios: MEDIOS,
+    });
+    const siguiente = await segunda.servicio.calcular();
+
+    expect(siguiente.diff.imagenes).toEqual([]);
+    expect(siguiente.diff.avisosImagen).toEqual([]);
+    expect(siguiente.diff.convergencias).toEqual([]);
+    expect(fotoAlta).toEqual(valoresFoto({ ...camposVacios(), autor: 'Ana', titulo: 'Nueva' }, []));
   });
 });

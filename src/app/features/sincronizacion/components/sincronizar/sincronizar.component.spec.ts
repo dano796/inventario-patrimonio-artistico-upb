@@ -14,7 +14,7 @@ import { borrarBorrador } from '../../utils/borrador';
 class Vacia {}
 
 const HOJA: HojaVinculada = { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: '2026-09-19T15:12:00Z', etag: 'e' };
-const SIN_RESULTADO = { base: { aplicados: 0, descartados: [], creadas: [] }, escritasEnHoja: 0, altasEnHoja: 0, descartadasEnHoja: [], error: null };
+const SIN_RESULTADO = { base: { aplicados: 0, descartados: [], creadas: [] }, escritasEnHoja: 0, altasEnHoja: 0, descartadasEnHoja: [], imagenesSubidas: 0, imagenesFallidas: [], error: null };
 
 const conConflicto = (): Calculo =>
   calculoDePrueba(
@@ -223,7 +223,7 @@ describe('SincronizarComponent: revisar y aplicar', () => {
     const { html, servicio, boton, actualizar } = await montarPagina({});
     servicio.aplicar.and.resolveTo({
       base: { aplicados: 3, descartados: [{ obra_id: 14, campo: 'valor', motivo: 'cambió en la web desde el diff' }], creadas: [] },
-      escritasEnHoja: 2, altasEnHoja: 1, descartadasEnHoja: [], error: null,
+      escritasEnHoja: 2, altasEnHoja: 1, descartadasEnHoja: [], imagenesSubidas: 0, imagenesFallidas: [], error: null,
     });
     boton('Dejar la hoja').click();
     await actualizar();
@@ -235,6 +235,28 @@ describe('SincronizarComponent: revisar y aplicar', () => {
     expect(html.textContent).toContain('N.º 14');
     expect(html.textContent).toContain('cambió en la web desde el diff');
     expect(sessionStorage.getItem('sincronizacion-borrador')).toBeNull();
+    expect(html.textContent).not.toContain('Imágenes subidas');
+    expect(html.textContent).not.toContain('Imágenes sin subir');
+  });
+
+  it('tras aplicar dice cuántas imágenes de las altas se subieron y cuáles no', async () => {
+    const { html, servicio, boton, actualizar } = await montarPagina({});
+    servicio.aplicar.and.resolveTo({
+      ...SIN_RESULTADO,
+      imagenesSubidas: 2,
+      imagenesFallidas: [{ obraId: 721, fila: 536, casilla: 3, motivo: 'Payload too large' }],
+    });
+    boton('Dejar la hoja').click();
+    await actualizar();
+    boton('Aprobar y aplicar').click();
+    await actualizar();
+
+    expect(html.textContent).toContain('Imágenes subidas');
+    expect(html.textContent).toContain('Imágenes sin subir');
+    expect(html.textContent).toContain('N.º 721');
+    expect(html.textContent).toContain('imagen_3');
+    expect(html.textContent).toContain('Payload too large');
+    expect(html.textContent).toContain('Súbelas desde la ficha de la obra');
   });
 
   it('si la hoja no se terminó de escribir lo dice en el resultado', async () => {

@@ -1,5 +1,5 @@
 import { strToU8 } from 'fflate';
-import { descomprimirXlsx, ErrorXlsx, leerHoja, tamanosDeMedios } from './leer-xlsx';
+import { abrirXlsx, descomprimirXlsx, ErrorXlsx, extraerMedios, leerHoja, tamanosDeMedios } from './leer-xlsx';
 import { crearXlsxDePrueba, OpcionesXlsx } from './pruebas/xlsx-de-prueba';
 import {
   agruparFilasContiguas,
@@ -79,6 +79,26 @@ describe('descomprimirXlsx', () => {
     expect(descomprimirXlsx(datos)['xl/media/image1.jpeg']).toBeUndefined();
     expect(descomprimirXlsx(datos, true)['xl/media/image1.jpeg']).toBeDefined();
     expect(tamanosDeMedios(datos)).toEqual({ 'xl/media/image1.jpeg': 5 });
+  });
+});
+
+describe('abrirXlsx', () => {
+  it('en una sola pasada omite xl/media y da sus tamaños', () => {
+    const datos = crearXlsxDePrueba({ celdas: [], medios: { 'image1.jpeg': strToU8('12345'), 'image2.png': strToU8('1') } });
+    const { archivos, tamanos } = abrirXlsx(datos);
+    expect(archivos['xl/workbook.xml']).toBeDefined();
+    expect(archivos['xl/media/image1.jpeg']).toBeUndefined();
+    expect(tamanos).toEqual({ 'xl/media/image1.jpeg': 5, 'xl/media/image2.png': 1 });
+  });
+});
+
+describe('extraerMedios', () => {
+  it('descomprime solo los archivos pedidos', () => {
+    const datos = crearXlsxDePrueba({ celdas: [], medios: { 'image1.jpeg': strToU8('12345'), 'image2.png': strToU8('1') } });
+    const medios = extraerMedios(datos, new Set(['xl/media/image2.png']));
+    expect([...medios.keys()]).toEqual(['xl/media/image2.png']);
+    expect(medios.get('xl/media/image2.png')).toEqual(strToU8('1'));
+    expect(extraerMedios(datos, new Set()).size).toBe(0);
   });
 });
 

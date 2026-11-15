@@ -41,7 +41,7 @@ function elementos(diff: Diff): Map<string, Elemento> {
   for (const c of diff.conflictos) anadir('c', claveCampo(c.obraId, c.campo), [c.hoja, c.base]);
   for (const c of diff.conflictosCargo) anadir('g', c.clave, [c.opciones, c.base], c.opciones);
   for (const a of diff.avisosImagen) anadir('i', claveCampo(a.obraId, claveImagen(a.casilla)), [a.motivo, a.imagen?.id ?? null, a.leida]);
-  for (const a of diff.altasBase) anadir('ab', String(a.fila), a.campos);
+  for (const a of diff.altasBase) anadir('ab', String(a.fila), [a.campos, a.imagenes, a.imagenesRechazadas]);
   for (const a of diff.altasHoja) anadir('ah', String(a.obraId), a.obraId);
   return mapa;
 }

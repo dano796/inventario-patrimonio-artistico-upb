@@ -163,7 +163,7 @@ describe('planificarEjecucion', () => {
   });
 
   it('las altas en la base solo entran si se eligen; las de la hoja, salvo que se desmarquen', () => {
-    const diff = { altasBase: [{ fila: 9, campos: filaHoja(9, { titulo: 'Nueva' }).campos }], altasHoja: [{ obraId: 14 }] };
+    const diff = { altasBase: [{ fila: 9, campos: filaHoja(9, { titulo: 'Nueva' }).campos, imagenes: [], imagenesRechazadas: [] }], altasHoja: [{ obraId: 14 }] };
     const porDefecto = planDe(diff);
     expect(porDefecto.peticion.altas).toEqual([]);
     expect(porDefecto.altasHoja.length).toBe(1);

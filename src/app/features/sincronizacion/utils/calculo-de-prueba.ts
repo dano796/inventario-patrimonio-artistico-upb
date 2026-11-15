@@ -9,5 +9,6 @@ export function calculoDePrueba(diff: Partial<Diff>, opciones: { filas?: FilaHoj
     lectura: { columnas: {} as never, columnasImagen: [], columnaIdWeb: 17, filas: opciones.filas ?? [], avisos: [] },
     obras: opciones.obras ?? [],
     diff: { ...diffVacio(), ...diff },
+    medios: new Map(),
   };
 }

@@ -91,8 +91,15 @@ export class SincronizarComponent implements OnInit {
       { etiqueta: 'Celdas escritas en la hoja', cifra: r.escritasEnHoja },
       { etiqueta: 'Filas añadidas a la hoja', cifra: r.altasEnHoja },
       { etiqueta: 'Descartados por concurrencia', cifra: this.descartados().length },
+      ...(r.imagenesSubidas || r.imagenesFallidas.length ? [{ etiqueta: 'Imágenes subidas', cifra: r.imagenesSubidas }] : []),
     ];
   });
+
+  imagenesFallidas = computed(() =>
+    (this.resultado()?.imagenesFallidas ?? []).map((f) => ({
+      clave: `${f.obraId}|${f.casilla}`, numero: `N.º ${f.obraId}`, campo: `imagen_${f.casilla}`, motivo: f.motivo,
+    }))
+  );
 
   descartados = computed(() => {
     const r = this.resultado();

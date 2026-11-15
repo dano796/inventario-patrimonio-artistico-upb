@@ -2,7 +2,7 @@ import { calcularDiff, hayCambios } from './diff';
 import { Diff, diffVacio, ResponsableBase } from './diff-tipos';
 import { ValoresFoto, valoresFoto } from './foto';
 import { AvisoFila, FilaHoja, ResultadoHoja } from './hoja-obras';
-import { ObraBase, planificarImportacion } from './importacion';
+import { LIMITE_IMAGEN, ObraBase, planificarImportacion } from './importacion';
 import { claveNombre, MOTIVO_OTRA_MONEDA } from './normalizacion';
 import { filaHoja, obraBase } from './pruebas/fabricas';
 
@@ -70,7 +70,7 @@ describe('calcularDiff', () => {
     const base = importar(filas, avisos);
 
     const diff = calcularDiff({
-      lectura: lectura(base.filas, avisos), obras: base.obras, responsables: base.responsables, fotos: base.fotos, prefijoBucket: PREFIJO,
+      lectura: lectura(base.filas, avisos), obras: base.obras, responsables: base.responsables, fotos: base.fotos, prefijoBucket: PREFIJO, tamanos: {},
     });
 
     expect<Diff>({ ...diff, avisos: [] }).toEqual(diffVacio());
@@ -80,7 +80,7 @@ describe('calcularDiff', () => {
   it('no propone como alta una fila cuyo ID WEB no se pudo leer', () => {
     const diff = calcularDiff({
       lectura: lectura([filaHoja(9, { titulo: 'Con ID roto' })], [{ fila: 9, campo: 'id_web', motivo: 'la celda tiene un error de Excel', original: '#REF!' }]),
-      obras: [], responsables: [], fotos: new Map(), prefijoBucket: PREFIJO,
+      obras: [], responsables: [], fotos: new Map(), prefijoBucket: PREFIJO, tamanos: {},
     });
     expect(diff.altasBase).toEqual([]);
   });
@@ -101,12 +101,34 @@ describe('calcularDiff', () => {
         [10, valoresFoto({ ...obraBase(10, { titulo: 'Uno', ubicacion: 'Bloque 6', responsable: 'ANA PÉREZ', cargo: 'DECANA' }).campos }, [])],
         [11, valoresFoto(obraBase(11, { titulo: 'Dos' }).campos, [])],
       ]),
-      prefijoBucket: PREFIJO,
+      prefijoBucket: PREFIJO, tamanos: {},
     });
     expect(diff.cambios.map((c) => [c.obraId, c.campo, c.destino])).toEqual([[10, 'ubicacion', 'base']]);
     expect(diff.cargos.map((c) => [c.clave, c.destino])).toEqual([['ANA PÉREZ', 'base']]);
     expect(diff.imagenes.map((i) => [i.obraId, i.casilla, i.accion])).toEqual([[11, 1, 'escribir']]);
     expect(hayCambios(diff)).toBeTrue();
+  });
+
+  it('un alta trae las imágenes pegadas que se subirán y las que el bucket rechaza', () => {
+    const diff = calcularDiff({
+      lectura: lectura([
+        filaHoja(536, { titulo: 'Nueva' }, {
+          imagenes: [
+            { tipo: 'pegada', archivo: 'xl/media/image1.jpeg' },
+            { tipo: 'pegada', archivo: 'xl/media/image2.png' },
+            { tipo: 'vacia' },
+          ],
+        }),
+      ]),
+      obras: [], responsables: [], fotos: new Map(), prefijoBucket: PREFIJO,
+      tamanos: { 'xl/media/image1.jpeg': 1000, 'xl/media/image2.png': LIMITE_IMAGEN + 1 },
+    });
+    expect(diff.altasBase).toEqual([{
+      fila: 536,
+      campos: filaHoja(536, { titulo: 'Nueva' }).campos,
+      imagenes: [{ casilla: 1, archivo: 'xl/media/image1.jpeg' }],
+      imagenesRechazadas: [{ fila: 536, casilla: 2, archivo: 'xl/media/image2.png', motivo: 'supera los 5 MB del bucket' }],
+    }]);
   });
 
   it('un diff sin propuestas no tiene cambios aunque tenga avisos', () => {
@@ -126,7 +148,7 @@ describe('calcularDiff, avisos', () => {
       obras: [obra],
       responsables: [{ id: 1, nombre: 'JOBANY TOBÓN', cargo: 'DIRECTOR' }, { id: 2, nombre: 'ANA PÉREZ', cargo: 'DECANA' }],
       fotos: new Map([[14, foto]]),
-      prefijoBucket: PREFIJO,
+      prefijoBucket: PREFIJO, tamanos: {},
     });
     const combinadas = diff.avisos.filter((a) => a.tipo === 'celda_combinada');
     expect(combinadas).toEqual([{ tipo: 'celda_combinada', obraId: 14, fila: 2, campo: 'cargo' }]);

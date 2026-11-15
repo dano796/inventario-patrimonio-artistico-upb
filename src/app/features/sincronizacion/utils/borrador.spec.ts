@@ -9,7 +9,7 @@ const diff = (): Diff => ({
   conflictos: [{ obraId: 31, fila: 32, campo: 'ubicacion', hoja: 'Bloque 11', base: 'Bloque 3', foto: 'Bloque 6' }],
   conflictosCargo: [{ clave: 'JOBANY ALONSO', nombre: 'JOBANY ALONSO', opciones: ['RECTOR', 'DECANO'], base: 'RECTOR', foto: undefined, filas: [] }],
   avisosImagen: [{ obraId: 14, fila: 15, casilla: 1, motivo: 'reemplazada', imagen: { id: 80, url: 'u' }, leida: { tipo: 'pegada', archivo: null } }],
-  altasBase: [{ fila: 212, campos: { ...camposVacios(), titulo: 'Naturaleza muerta' } }],
+  altasBase: [{ fila: 212, campos: { ...camposVacios(), titulo: 'Naturaleza muerta' }, imagenes: [], imagenesRechazadas: [] }],
   altasHoja: [{ obraId: 118 }],
 });
 
@@ -44,6 +44,17 @@ describe('borrador de decisiones', () => {
 
     expect([restaurado.recuperadas, restaurado.total]).toEqual([5, 6]);
     expect(restaurado.estado.conflictos.size).toBe(0);
+  });
+
+  it('no recupera la decisión de un alta si cambiaron sus imágenes', () => {
+    guardarBorrador('item', diff(), decidido());
+    const cambiado = diff();
+    cambiado.altasBase[0] = { ...cambiado.altasBase[0], imagenes: [{ casilla: 1, archivo: 'xl/media/image1.jpeg' }] };
+
+    const restaurado = restaurarBorrador('item', cambiado)!;
+
+    expect([restaurado.recuperadas, restaurado.total]).toEqual([5, 6]);
+    expect(restaurado.estado.altasBase.size).toBe(0);
   });
 
   it('no recupera decisiones de otra hoja', () => {

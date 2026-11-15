@@ -10,7 +10,7 @@ export interface Par {
 
 export interface Indice {
   pares: Par[];
-  altasBase: AltaBase[];
+  altasBase: Pick<AltaBase, 'fila' | 'campos'>[];
   altasHoja: AltaHoja[];
   avisos: AvisoSincronizacion[];
 }

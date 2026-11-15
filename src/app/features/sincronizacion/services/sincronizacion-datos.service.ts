@@ -20,6 +20,9 @@ export interface ResultadoRpc {
   creadas: { fila: number; obra_id: number }[];
 }
 
+const BUCKET = 'imagenes-obras';
+const TIPOS: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+
 const COLUMNAS_OBRA =
   'id, autor, titulo, tecnica, dimension, ano, ubicacion, bloque_asignado, valor, descripcion, responsable, cargo, observaciones, imagenes(id, url)';
 export function obraDesdeFila(fila: Record<string, unknown>): ObraBase {
@@ -90,6 +93,25 @@ export class SincronizacionDatosService {
     const { data, error } = await this.supabaseClient.rpc('aplicar_sincronizacion', { peticion });
     if (error) throw error;
     return data as ResultadoRpc;
+  }
+
+  async subirImagen(obraId: number, casilla: number, archivo: string, datos: Uint8Array): Promise<number> {
+    await this.prepareClient();
+    const extension = archivo.split('.').pop()!.toLowerCase();
+    const ruta = `sincronizacion/${obraId}-${casilla}.${extension}`;
+    const cubo = this.supabaseClient.storage.from(BUCKET);
+    const subida = await cubo.upload(ruta, datos, { contentType: TIPOS[extension], upsert: false });
+    if (subida.error) throw subida.error;
+    const { data, error } = await this.supabaseClient
+      .from('imagenes')
+      .insert({ id_obra: obraId, url: cubo.getPublicUrl(ruta).data.publicUrl, nombre: archivo.split('/').pop(), tamano: datos.length })
+      .select('id')
+      .single();
+    if (error) {
+      await cubo.remove([ruta]);
+      throw error;
+    }
+    return Number(data.id);
   }
 
   /**

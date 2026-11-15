@@ -40,6 +40,23 @@ export function tamanosDeMedios(datos: Uint8Array): Record<string, number> {
   return tamanos;
 }
 
+export function abrirXlsx(datos: Uint8Array): { archivos: Record<string, Uint8Array>; tamanos: Record<string, number> } {
+  const tamanos: Record<string, number> = {};
+  const archivos = unzipSync(datos, {
+    filter: (archivo) => {
+      if (!archivo.name.startsWith(MEDIOS)) return true;
+      tamanos[archivo.name] = archivo.originalSize;
+      return false;
+    },
+  });
+  return { archivos, tamanos };
+}
+
+export function extraerMedios(datos: Uint8Array, rutas: ReadonlySet<string>): Map<string, Uint8Array> {
+  if (!rutas.size) return new Map();
+  return new Map(Object.entries(unzipSync(datos, { filter: (archivo) => rutas.has(archivo.name) })));
+}
+
 export function leerHoja(
   archivos: Record<string, Uint8Array>,
   nombreHoja: string,
