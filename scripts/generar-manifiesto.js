@@ -40,7 +40,7 @@ const iconos = `<Icon>
                 </Icon>`;
 
 const manifiesto = `<?xml version="1.0" encoding="UTF-8"?>
-<!-- ARCHIVO GENERADO por scripts/generar-manifiesto.js para ${escapar(base)} -->
+<!-- ARCHIVO GENERADO por scripts/generar-manifiesto.js -->
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"

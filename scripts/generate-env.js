@@ -99,6 +99,7 @@ export const environment = {
 
 // environment.ts es el archivo de produccion; angular.json lo reemplaza
 // por environment.development.ts en la configuracion de desarrollo.
+fs.mkdirSync(path.join(rootDir, "src/environments"), { recursive: true });
 fs.writeFileSync(
   path.join(rootDir, "src/environments/environment.ts"),
   render(true)
