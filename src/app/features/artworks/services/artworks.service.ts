@@ -5,12 +5,33 @@ import {
   ImageUploadRequest,
 } from '../../../shared/models/image.model';
 import { ImageService } from '../../../shared/services/image.service';
+import { patronSinTildes } from '../../../shared/utils/busqueda';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   Artwork,
   ArtworkCreateData,
   ArtworkState,
   PaginationParams,
 } from '../../../shared/models/artwork.model';
+
+/**
+ * Columnas visibles para cualquier visitante.
+ * Se excluyen a proposito `ubicacion`, `valor`, `bloque_asignado` y
+ * `responsable_id`: juntas forman un mapa de que obra vale cuanto, donde esta
+ * y quien la custodia.
+ */
+const COLUMNAS_PUBLICAS =
+  'id, titulo, autor, tecnica, dimension, ano, observaciones, descripcion, fecha_creacion, fecha_actualizacion';
+
+/** Los administradores ven la ficha completa. */
+const COLUMNAS_ADMIN = '*';
+
+/**
+ * Columnas por las que puede filtrar un visitante anonimo.
+ * Debe ser un subconjunto de COLUMNAS_PUBLICAS: filtrar por una columna oculta
+ * permitiria deducir su valor por ensayo y error.
+ */
+const FILTROS_PUBLICOS = ['search', 'autor', 'tecnica'] as const;
 
 @Injectable({
   providedIn: 'root',
@@ -23,14 +44,16 @@ export class ArtworksService {
     await this.supabaseService.ensureActiveSession();
     this.supabaseClient = this.supabaseService.supabaseClient;
     const { data, error } = await this.supabaseClient
-      .from('obras')
-      .select('*, imagenes(*)');
+      .from(this.tablaLectura())
+      .select(`${this.selectColumns()}, imagenes(*)`)
+      .returns<Artwork[]>();
     if (error) throw error;
     return data || [];
   }
   private supabaseService = inject(SupabaseService);
   private supabaseClient = this.supabaseService.supabaseClient;
   private imageService = inject(ImageService);
+  private authService = inject(AuthService);
 
   private state = signal<ArtworkState>({
     artworks: [],
@@ -39,13 +62,13 @@ export class ArtworksService {
     error: false,
     currentPage: 1,
     totalItems: 0,
-    itemsPerPage: 12,
+    itemsPerPage: 24,
     totalPages: 0,
   });
 
   // Variable para evitar llamadas concurrentes
   private loadingPromise: Promise<any> | null = null;
-  private loadingTimeout: NodeJS.Timeout | null = null;
+  private loadingTimeout: ReturnType<typeof setTimeout> | null = null;
   private abortController: AbortController | null = null;
 
   // Selectores
@@ -70,10 +93,67 @@ export class ArtworksService {
   hasPreviousPage = computed(() => this.currentPage() > 1);
   hasNextPage = computed(() => this.currentPage() < this.totalPages());
 
+  /**
+   * Columnas a pedir segun el rol. La defensa real son los GRANT por columna
+   * en Postgres; esto evita ademas que los datos sensibles viajen al
+   * navegador de un visitante.
+   */
+  private selectColumns(): string {
+    return this.authService.isAdmin() ? COLUMNAS_ADMIN : COLUMNAS_PUBLICAS;
+  }
+
+  /**
+   * Relacion de la que leer. `authenticated` no tiene concedidas ubicacion,
+   * valor, bloque_asignado ni responsable_id sobre la tabla `obras`, porque
+   * los permisos por columna son por rol y un administrador tambien es
+   * `authenticated`. Esas columnas solo las sirve la vista `obras_admin`, que
+   * comprueba el rol dentro. Las escrituras siguen yendo contra `obras`.
+   */
+  private tablaLectura(): 'obras' | 'obras_admin' {
+    return this.authService.isAdmin() ? 'obras_admin' : 'obras';
+  }
+
+  /** Descarta los filtros que un visitante anonimo no puede usar. */
+  private sanitizeParams(params: PaginationParams): PaginationParams {
+    if (this.authService.isAdmin()) return params;
+
+    const permitido: PaginationParams = {
+      page: params.page,
+      limit: params.limit,
+    };
+    for (const clave of FILTROS_PUBLICOS) {
+      if (params[clave] !== undefined) {
+        permitido[clave] = params[clave] as any;
+      }
+    }
+    return permitido;
+  }
+
+  /**
+   * PostgREST interpreta `,`, `(` y `)` como estructura dentro de or=(...),
+   * asi que un valor sin escapar permite inyectar condiciones arbitrarias.
+   * Entrecomillar y escapar `\` y `"` deja el valor como dato literal.
+   */
+  private quoteFilterValue(value: string): string {
+    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  }
+
+  /**
+   * Garantiza sesion activa y refresca la referencia al cliente, que
+   * SupabaseService puede haber sustituido con reinitializeClient().
+   * Toda operacion de escritura debe llamarlo antes de tocar la base.
+   */
+  private async prepareClient(): Promise<void> {
+    await this.supabaseService.ensureActiveSession();
+    this.supabaseClient = this.supabaseService.supabaseClient;
+  }
+
   async getAllArtworks(params: PaginationParams = {}) {
-    // Evitar llamadas concurrentes
-    if (this.loadingPromise) {
-      return this.loadingPromise;
+    // Una peticion en vuelo no puede descartar parametros nuevos: si cambian
+    // la pagina o los filtros mientras carga, se cancela la anterior y se
+    // lanza la nueva. Antes se devolvia la promesa antigua y el clic se perdia.
+    if (this.loadingPromise && this.abortController) {
+      this.abortController.abort();
     }
 
     // Si hay filtros activos y no se pasan filtros explícitos, usarlos
@@ -89,7 +169,7 @@ export class ArtworksService {
       finalParams = { ...this.activeFilters, ...params };
     }
 
-    this.loadingPromise = this.doGetAllArtworks(finalParams);
+    this.loadingPromise = this.doGetAllArtworks(this.sanitizeParams(finalParams));
     return this.loadingPromise;
   }
 
@@ -99,12 +179,13 @@ export class ArtworksService {
       this.abortController.abort();
     }
 
-    // Crear nuevo AbortController para este request
-    this.abortController = new AbortController();
+    const controlador = new AbortController();
+    this.abortController = controlador;
 
     // Pausar heartbeat durante el request para evitar interferencias
     this.supabaseService.pauseHeartbeat();
 
+    let paginaFueraDeRango = false;
     try {
       // CRÍTICO: Verificar y garantizar que la sesión está activa antes de hacer el request
       const sessionActive = await this.supabaseService.ensureActiveSession();
@@ -143,19 +224,17 @@ export class ArtworksService {
       const endIndex = startIndex + limit - 1;
 
       // Construir la consulta base con count estimado para mejor performance
-      let query = this.supabaseClient.from('obras').select(
-        `
-          *,
-          imagenes(*)
-        `,
-        { count: 'estimated' } // Cambio de 'exact' a 'estimated' para mejor performance
-      );
+      // `estimated` devolvia un conteo del planificador, asi que totalPages
+      // podia ofrecer paginas vacias en consultas filtradas.
+      let query = this.supabaseClient
+        .from(this.tablaLectura())
+        .select(`${this.selectColumns()}, imagenes(*)`, { count: 'exact' });
 
       // Aplicar filtros de búsqueda si existen (optimización: solo aplicar filtros no vacíos)
       const activeFilters = [];
 
       if (search?.trim()) {
-        query = query.ilike('titulo', `%${search.trim()}%`);
+        query = query.filter('titulo', 'imatch', patronSinTildes(search));
         activeFilters.push('titulo');
       }
 
@@ -166,30 +245,31 @@ export class ArtworksService {
           const ubicacionesValidas = ubicacion.filter((u) => u?.trim());
           if (ubicacionesValidas.length > 0) {
             const ubicacionConditions = ubicacionesValidas.map(
-              (u) => `ubicacion.ilike.%${u.trim()}%`
+              (u) =>
+                `ubicacion.imatch.${this.quoteFilterValue(patronSinTildes(u))}`
             );
             query = query.or(ubicacionConditions.join(','));
             activeFilters.push('ubicacion');
           }
         } else if (ubicacion.trim()) {
           // Una sola ubicación: usar ILIKE normal
-          query = query.ilike('ubicacion', `%${ubicacion.trim()}%`);
+          query = query.filter('ubicacion', 'imatch', patronSinTildes(ubicacion));
           activeFilters.push('ubicacion');
         }
       }
 
       if (responsable?.trim()) {
-        query = query.ilike('responsable', `%${responsable.trim()}%`);
+        query = query.filter('responsable', 'imatch', patronSinTildes(responsable));
         activeFilters.push('responsable');
       }
 
       if (autor?.trim()) {
-        query = query.ilike('autor', `%${autor.trim()}%`);
+        query = query.filter('autor', 'imatch', patronSinTildes(autor));
         activeFilters.push('autor');
       }
 
       if (tecnica?.trim()) {
-        query = query.ilike('tecnica', `%${tecnica.trim()}%`);
+        query = query.filter('tecnica', 'imatch', patronSinTildes(tecnica));
         activeFilters.push('tecnica');
       }
 
@@ -197,7 +277,8 @@ export class ArtworksService {
       const queryPromise = query
         .order('fecha_creacion', { ascending: false })
         .range(startIndex, endIndex)
-        .abortSignal(this.abortController.signal); // Agregar signal para cancelación
+        .abortSignal(controlador.signal)
+        .returns<Artwork[]>();
 
       // Ejecutar la consulta con reintentos automáticos
       let retries = 0;
@@ -215,6 +296,13 @@ export class ArtworksService {
               error.name === 'AbortError'
             ) {
               return;
+            }
+
+            // PostgREST responde 416 a un offset mayor que el total (una pagina guardada
+            // cuando habia mas obras o paginas mas cortas). No es un fallo de red: no se reintenta.
+            if (error.code === 'PGRST103' && page > 1) {
+              paginaFueraDeRango = true;
+              break;
             }
 
             // Si es un error de autenticación/sesión, intentar refrescar
@@ -307,8 +395,7 @@ export class ArtworksService {
         artworks: [], // Limpiar datos en caso de error
       }));
     } finally {
-      // Limpiar abort controller
-      this.abortController = null;
+      if (this.abortController === controlador) this.abortController = null;
 
       // Reanudar heartbeat
       this.supabaseService.resumeHeartbeat();
@@ -319,6 +406,10 @@ export class ArtworksService {
       }));
 
       this.loadingPromise = null;
+    }
+
+    if (paginaFueraDeRango) {
+      await this.doGetAllArtworks({ ...params, page: 1 });
     }
   }
 
@@ -360,6 +451,18 @@ export class ArtworksService {
   }
 
   // Métodos de navegación de páginas
+  /** Para antes de la primera carga: no pide nada. */
+  fijarTamanoPagina(tamano: number) {
+    this.state.update((state) => ({ ...state, itemsPerPage: tamano }));
+  }
+
+  /** Vuelve a cargar en la página que contiene la primera obra que se mostraba. */
+  async cambiarTamanoPagina(tamano: number) {
+    if (tamano === this.itemsPerPage()) return;
+    const primera = (this.currentPage() - 1) * this.itemsPerPage();
+    await this.getAllArtworks({ page: Math.floor(primera / tamano) + 1, limit: tamano });
+  }
+
   async goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages()) {
       await this.getAllArtworks({ page });
@@ -517,15 +620,11 @@ export class ArtworksService {
       while (retries <= maxRetries) {
         try {
           const { data, error } = await this.supabaseClient
-            .from('obras')
-            .select(
-              `
-              *,
-              imagenes(*)
-            `
-            )
+            .from(this.tablaLectura())
+            .select(`${this.selectColumns()}, imagenes(*)`)
             .eq('id', id)
-            .single();
+            .single()
+            .returns<Artwork>();
 
           if (error) {
             // Si es un error de autenticación/sesión, intentar refrescar
@@ -610,6 +709,10 @@ export class ArtworksService {
 
   async createArtwork(artworkData: ArtworkCreateData, imageFiles: File[] = []) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -621,7 +724,7 @@ export class ArtworksService {
         await this.supabaseClient
           .from('obras')
           .insert(artworkData)
-          .select()
+          .select('id')
           .single();
 
       if (artworkError) {
@@ -689,6 +792,10 @@ export class ArtworksService {
     existingImages: ArtworkImage[] = []
   ) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -706,7 +813,7 @@ export class ArtworksService {
           .from('obras')
           .update(updateData)
           .eq('id', id)
-          .select()
+          .select('id')
           .single();
 
       if (artworkError) {
@@ -809,6 +916,10 @@ export class ArtworksService {
 
   async deleteArtwork(id: number) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -873,6 +984,10 @@ export class ArtworksService {
   // Método para eliminar una imagen específica
   async deleteSpecificImage(imageId: number, artworkId: number) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,
@@ -926,6 +1041,10 @@ export class ArtworksService {
   // Método para agregar imágenes a una obra existente
   async addImagesToArtwork(artworkId: number, imageFiles: File[]) {
     try {
+      // Sesion viva y cliente al dia antes de escribir: reinitializeClient()
+      // puede haber sustituido la instancia mientras la pestana estaba oculta.
+      await this.prepareClient();
+
       this.state.update((state) => ({
         ...state,
         loading: true,

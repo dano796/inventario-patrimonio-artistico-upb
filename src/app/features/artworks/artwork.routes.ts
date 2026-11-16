@@ -1,27 +1,44 @@
 import { Routes } from '@angular/router';
-import { ArtworkListComponent } from './components/artwork-list/artwork-list.component';
-import { ArtworkDetailComponent } from './components/artwork-detail/artwork-detail.component';
-import { ArtworkFormComponent } from './components/artwork-form/artwork-form.component';
 import { adminGuard } from '../../core/guards/admin.guard';
 
+/**
+ * Rutas cargadas de forma diferida: un visitante anonimo solo descarga el
+ * listado, no el formulario de administracion ni sus dependencias.
+ */
 export const routes: Routes = [
   {
     path: '',
-    component: ArtworkListComponent,
+    title: 'Inventario Patrimonio Artístico UPB',
+    loadComponent: () =>
+      import('./components/artwork-list/artwork-list.component').then(
+        (m) => m.ArtworkListComponent
+      ),
   },
   {
     path: 'nueva',
-    component: ArtworkFormComponent,
+    title: 'Nueva obra | Inventario Patrimonio Artístico UPB',
     canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./components/artwork-form/artwork-form.component').then(
+        (m) => m.ArtworkFormComponent
+      ),
   },
   {
     path: 'editar/:id',
-    component: ArtworkFormComponent,
+    title: 'Editar obra | Inventario Patrimonio Artístico UPB',
     canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./components/artwork-form/artwork-form.component').then(
+        (m) => m.ArtworkFormComponent
+      ),
   },
   {
     path: 'obra/:id',
-    component: ArtworkDetailComponent,
+    title: 'Detalle de obra | Inventario Patrimonio Artístico UPB',
+    loadComponent: () =>
+      import('./components/artwork-detail/artwork-detail.component').then(
+        (m) => m.ArtworkDetailComponent
+      ),
   },
   {
     path: '**',

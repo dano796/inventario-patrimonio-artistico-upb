@@ -1,5 +1,5 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
+
 import {
   FormBuilder,
   FormControl,
@@ -9,7 +9,9 @@ import {
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ValidationService } from '../../../../shared/utils/validation.service';
-import { environment } from '../../../../../environments/environment';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroArrowLeftOnRectangle, heroArrowPath, heroCheck, heroCheckCircle, heroChevronLeft, heroInformationCircle, heroKey, heroLockClosed } from '@ng-icons/heroicons/outline';
+import { heroInformationCircleSolid } from '@ng-icons/heroicons/solid';
 
 interface UpdatePasswordForm {
   contrasena: FormControl<string>;
@@ -18,8 +20,10 @@ interface UpdatePasswordForm {
 
 @Component({
   selector: 'app-update-password',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [RouterLink, ReactiveFormsModule, NgIcon],
   templateUrl: './update-password.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ heroArrowLeftOnRectangle, heroArrowPath, heroCheck, heroCheckCircle, heroChevronLeft, heroInformationCircle, heroInformationCircleSolid, heroKey, heroLockClosed })],
 })
 export class UpdatePasswordComponent implements OnInit {
   private validationService = inject(ValidationService);
@@ -28,7 +32,7 @@ export class UpdatePasswordComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  globalErrorMessage: string | null = null;
+  globalErrorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
   isLoading = signal<boolean>(false);
   isValidSession = signal<boolean>(false);
@@ -50,28 +54,28 @@ export class UpdatePasswordComponent implements OnInit {
 
   private async checkSession() {
     try {
+      // Solo se acepta una sesion recien creada por el enlace de recuperacion.
+      // Antes bastaba con cualquier sesion abierta, asi que quien llegara a un
+      // navegador con sesion iniciada podia cambiar la contrasena sin conocer
+      // la actual y quedarse con la cuenta.
       const result = await this.authService.processRecoveryUrl();
 
       if (result.success) {
         this.isValidSession.set(true);
-        this.globalErrorMessage = null;
+        this.globalErrorMessage.set(null);
         return;
       }
 
-      const { data } = await this.authService.session();
-      if (data.session) {
-        this.isValidSession.set(true);
-        return;
-      }
-
-      this.globalErrorMessage =
-        'El enlace de recuperación ha expirado o no es válido. Por favor, solicita uno nuevo.';
+      this.globalErrorMessage.set(
+        'El enlace de recuperación ha expirado o no es válido. Por favor, solicita uno nuevo.'
+      );
       setTimeout(() => {
         this.router.navigate(['/autenticacion/recuperar-contrasena']);
       }, 10000);
     } catch (error) {
-      this.globalErrorMessage =
-        'Error al verificar la sesión. Por favor, solicita un nuevo enlace de recuperación.';
+      this.globalErrorMessage.set(
+        'Error al verificar la sesión. Por favor, solicita un nuevo enlace de recuperación.'
+      );
     }
   }
 
@@ -127,7 +131,7 @@ export class UpdatePasswordComponent implements OnInit {
     if (this.form.invalid || !this.isValidSession()) return;
 
     this.isLoading.set(true);
-    this.globalErrorMessage = null;
+    this.globalErrorMessage.set(null);
     this.successMessage.set(null);
 
     try {
@@ -135,7 +139,7 @@ export class UpdatePasswordComponent implements OnInit {
       const { error } = await this.authService.updatePassword(newPassword);
 
       if (error) {
-        this.globalErrorMessage = this.getSupabaseErrorMessage(error);
+        this.globalErrorMessage.set(this.getSupabaseErrorMessage(error));
         return;
       }
 
@@ -147,8 +151,9 @@ export class UpdatePasswordComponent implements OnInit {
         this.router.navigate(['/autenticacion/iniciar-sesion']);
       }, 3000);
     } catch (error: any) {
-      this.globalErrorMessage =
-        'Ocurrió un error inesperado. Por favor, intenta de nuevo.';
+      this.globalErrorMessage.set(
+        'Ocurrió un error inesperado. Por favor, intenta de nuevo.'
+      );
     } finally {
       this.isLoading.set(false);
     }

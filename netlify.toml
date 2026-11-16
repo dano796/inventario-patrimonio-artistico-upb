@@ -1,0 +1,20 @@
+# Configuracion de despliegue
+
+[build]
+  # `npm run build` dispara `prebuild` -> scripts/generate-env.js,
+  # que falla de forma explícita si faltan SUPABASE_URL o SUPABASE_KEY.
+  command = "npm ci && npm run build"
+  publish = "dist/front/browser"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NPM_FLAGS = "--no-audit --no-fund"
+
+# definir SUPABASE_URL y SUPABASE_KEY en:
+# Site configuration -> Environment variables
+
+# El fallback SPA tambien esta en public/_redirects; se deja aqui por claridad.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

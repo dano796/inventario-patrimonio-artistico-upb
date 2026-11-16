@@ -12,15 +12,60 @@ import { environment } from '../../../environments/environment';
 })
 export class AuthService {
   supabaseService = inject(SupabaseService);
-  private supabaseClient = this.supabaseService.supabaseClient;
+  private get supabaseClient() {
+    return this.supabaseService.supabaseClient;
+  }
   private userProfile = signal<UserProfile | null>(null);
+  private correoSesion = signal<string | null>(null);
   private loadingProfile = signal<boolean>(false);
   private initializationPromise: Promise<void> | null = null;
   private reinitializePromise: Promise<void> | null = null;
+  private profileLoadPromise: Promise<void> | null = null;
+  private profileLoadUserId: string | null = null;
+  private generacionPerfil = 0;
   private profileCache = new Map<
     string,
     { profile: UserProfile; timestamp: number }
   >();
+  /**
+   * Vive aparte de initializationPromise porque este se pone en null al terminar
+   * doInitializeAuth(): un guard que llegue justo despues no debe perder la senal.
+   */
+  private readyPromise: Promise<void>;
+  private static readonly TIEMPO_MAXIMO_INICIALIZACION_MS = 5000;
+
+  /**
+   * Se lee de forma sincrona al construir el servicio porque supabase-js
+   * (detectSessionInUrl) consume y limpia el fragmento de la URL enseguida.
+   * Sin esta foto no quedaria rastro de que la visita venia de un enlace
+   * de recuperacion.
+   */
+  private readonly recoveryLinkDetected = ((): boolean => {
+    if (typeof window === 'undefined') return false;
+    const hash = window.location.hash.replace(/^#/, '');
+    const search = window.location.search.replace(/^\?/, '');
+    const params = new URLSearchParams(
+      [hash, search].filter(Boolean).join('&')
+    );
+    if (params.get('type') === 'recovery') return true;
+    // Flujo PKCE: ?code=... sobre la ruta de actualizar contrasena
+    return (
+      params.has('code') &&
+      window.location.pathname.includes('actualizar-contrasena')
+    );
+  })();
+
+  /** Supabase emite PASSWORD_RECOVERY al procesar un enlace de recuperacion. */
+  private passwordRecoveryEvent = signal(false);
+
+  /**
+   * True solo si esta carga de pagina proviene de un enlace de recuperacion.
+   * Tener una sesion abierta NO basta: si bastara, cualquiera que encontrara
+   * un navegador con sesion iniciada podria cambiar la contrasena.
+   */
+  isRecoveryFlow = computed(
+    () => this.recoveryLinkDetected || this.passwordRecoveryEvent()
+  );
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
   // Computed para verificar si el usuario es admin
@@ -39,8 +84,15 @@ export class AuthService {
     return this.loadingProfile();
   });
 
+  nombre = computed(() => this.userProfile()?.nombre ?? null);
+  correo = this.correoSesion.asReadonly();
+
   constructor() {
-    this.initializeAuth();
+    this.readyPromise = this.initializeAuth();
+  }
+
+  listo(): Promise<void> {
+    return this.readyPromise;
   }
 
   private async initializeAuth() {
@@ -54,52 +106,97 @@ export class AuthService {
   }
 
   private async doInitializeAuth() {
-    try {
-      // Obtener sesión sin timeout artificial
-      const { data } = await this.session();
-
-      if (data.session?.user) {
-        await this.loadUserProfile(data.session.user.id, true);
-      } else {
+    // Si getSession() o la consulta a `usuarios` se cuelgan (lock de
+    // supabase-js, cliente viejo tras reinitializeClient), este tope resuelve
+    // -no rechaza- en vez de dejar listo() esperando para siempre: si no,
+    // los guards ni siquiera podrian llegar a la pantalla de iniciar sesion.
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    const tope = new Promise<void>((resolve) => {
+      temporizador = setTimeout(() => {
+        console.warn('Auth initialization timed out, asumiendo sin sesión');
         this.userProfile.set(null);
         this.loadingProfile.set(false);
-      }
-    } catch (error) {
+        resolve();
+      }, AuthService.TIEMPO_MAXIMO_INICIALIZACION_MS);
+    });
+
+    // Si pierde la carrera contra el tope y rechaza mas tarde, el .catch va
+    // enganchado aqui mismo: si no, quedaria como un rechazo sin capturar.
+    const cargaSesionYPerfil = this.cargarSesionYPerfil().catch((error) => {
       console.warn('Error initializing auth:', error);
-      // En caso de error de inicialización, establecer estado por defecto
       this.userProfile.set(null);
       this.loadingProfile.set(false);
-    } finally {
-      this.initializationPromise = null;
-    }
+    });
 
-    // Escuchar cambios de autenticación
-    this.onAuthStateChange(async (event, session) => {
-      try {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await this.loadUserProfile(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
+    await Promise.race([cargaSesionYPerfil, tope]);
+    clearTimeout(temporizador);
+    this.initializationPromise = null;
+
+    try {
+      this.onAuthStateChange(async (event, session) => {
+        try {
+          if (event === 'PASSWORD_RECOVERY') {
+            this.passwordRecoveryEvent.set(true);
+          }
+
+          if (event === 'SIGNED_IN' && session?.user) {
+            this.correoSesion.set(session.user.email ?? null);
+            await this.loadUserProfile(session.user.id);
+          } else if (event === 'SIGNED_OUT') {
+            this.generacionPerfil++;
+            this.correoSesion.set(null);
+            this.userProfile.set(null);
+            this.loadingProfile.set(false);
+            this.clearCache();
+          }
+        } catch (error) {
+          console.error('Error in auth state change:', error);
           this.userProfile.set(null);
           this.loadingProfile.set(false);
-          this.clearCache();
         }
-      } catch (error) {
-        console.error('Error in auth state change:', error);
-        this.userProfile.set(null);
-        this.loadingProfile.set(false);
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error subscribing to auth state changes:', error);
+    }
+  }
+
+  private async cargarSesionYPerfil(): Promise<void> {
+    const { data } = await this.session();
+
+    if (data.session?.user) {
+      this.correoSesion.set(data.session.user.email ?? null);
+      await this.loadUserProfile(data.session.user.id, true);
+    } else {
+      this.correoSesion.set(null);
+      this.userProfile.set(null);
+      this.loadingProfile.set(false);
+    }
   }
 
   private async loadUserProfile(
     userId: string,
     isInitialLoad: boolean = false
-  ) {
-    // Prevenir carga múltiple
-    if (this.loadingProfile() && !isInitialLoad) {
-      return;
+  ): Promise<void> {
+    // Espera la carga ya en curso en vez de salir sin hacer nada: quien
+    // llama (p. ej. el guard via refreshUserProfile()) necesita el resultado.
+    if (this.profileLoadPromise && !isInitialLoad && this.profileLoadUserId === userId) {
+      return this.profileLoadPromise;
     }
 
+    const promise = this.fetchAndSetUserProfile(userId);
+    this.profileLoadPromise = promise;
+    this.profileLoadUserId = userId;
+    try {
+      await promise;
+    } finally {
+      if (this.profileLoadPromise === promise) {
+        this.profileLoadPromise = null;
+        this.profileLoadUserId = null;
+      }
+    }
+  }
+
+  private async fetchAndSetUserProfile(userId: string): Promise<void> {
     // Verificar cache primero
     const cached = this.getCachedProfile(userId);
     if (cached) {
@@ -109,14 +206,17 @@ export class AuthService {
     }
 
     this.loadingProfile.set(true);
+    const generacion = this.generacionPerfil;
 
     try {
       // Intentar cargar perfil de la base de datos
       const { data, error } = await this.supabaseClient
         .from('usuarios')
-        .select('id, rol')
+        .select('id, rol, nombre')
         .eq('id', userId)
         .single();
+
+      if (generacion !== this.generacionPerfil) return;
 
       if (error) {
         console.warn(
@@ -136,6 +236,7 @@ export class AuthService {
       this.userProfile.set(data);
       this.loadingProfile.set(false);
     } catch (error) {
+      if (generacion !== this.generacionPerfil) return;
       console.error('Error loading user profile:', error);
 
       // Usar perfil por defecto en caso de error
@@ -201,12 +302,14 @@ export class AuthService {
 
     // 2. Resetear estado local
     this.initializationPromise = null;
+    this.generacionPerfil++;
     this.userProfile.set(null);
     this.loadingProfile.set(false);
     this.clearCache();
 
-    // 3. Reinicializar
-    await this.initializeAuth();
+    // 3. Reinicializar (listo() debe reflejar esta nueva inicializacion, no la anterior)
+    this.readyPromise = this.initializeAuth();
+    await this.readyPromise;
   }
 
   session() {
@@ -219,6 +322,20 @@ export class AuthService {
 
   logIn(credentials: SignInWithPasswordCredentials) {
     return this.supabaseClient.auth.signInWithPassword(credentials);
+  }
+
+  /**
+   * El proveedor es single tenant: el directorio de la UPB decide quien
+   * existe, aqui no se comprueba el dominio del correo.
+   */
+  logInWithMicrosoft() {
+    return this.supabaseClient.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        scopes: 'openid profile email',
+        redirectTo: `${window.location.protocol}//${window.location.host}/`,
+      },
+    });
   }
 
   signOut() {
@@ -262,7 +379,7 @@ export class AuthService {
         return false;
       }
 
-      return true;
+      return this.isRecoveryFlow();
     } catch (error) {
       return false;
     }
@@ -271,6 +388,13 @@ export class AuthService {
   // Método para procesar automáticamente enlaces de recuperación
   async processRecoveryUrl(): Promise<{ success: boolean; error?: string }> {
     try {
+      if (!this.isRecoveryFlow()) {
+        return {
+          success: false,
+          error: 'Esta página solo es accesible desde un enlace de recuperación',
+        };
+      }
+
       // Intentar usar API oficial para procesar la URL (supabase-js v2+)
       // @ts-ignore - métodos dependientes de la versión
       if (typeof this.supabaseClient.auth.getSessionFromUrl === 'function') {
@@ -288,10 +412,12 @@ export class AuthService {
         }
       }
 
-      // Alternativa: si detectSessionInUrl está activado, llamar a getSession
+      // Alternativa: si detectSessionInUrl está activado, la sesión ya existe.
+      // Solo se acepta cuando esta carga viene de un enlace de recuperación:
+      // una sesión normal no autoriza a cambiar la contraseña.
       const { data, error } = await this.supabaseClient.auth.getSession();
       if (error) return { success: false, error: error.message };
-      if (data.session) return { success: true };
+      if (data.session && this.isRecoveryFlow()) return { success: true };
 
       // Fallback manual: parsear fragment (#access_token=...&refresh_token=...)
       const hash = window.location.hash.replace(/^#/, '');

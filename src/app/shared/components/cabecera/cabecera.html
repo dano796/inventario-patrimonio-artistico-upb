@@ -1,0 +1,108 @@
+<header class="sticky top-0 z-40 border-b border-linea bg-cabecera backdrop-blur-md">
+  <div class="mx-auto grid max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-5 px-4 py-2.5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:px-8">
+    <a routerLink="/" class="min-w-0 text-tinta hover:text-tinta">
+      <span class="block text-[16px] font-extrabold leading-tight">Patrimonio Artístico</span>
+      <span class="block truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-tinta-5">Universidad Pontificia Bolivariana</span>
+    </a>
+
+    <nav class="hidden gap-8 justify-self-center md:flex" aria-label="Principal">
+      <a routerLink="/" [class.!text-acento-tinta]="enGaleria()" [class.!border-acento]="enGaleria()" [attr.aria-current]="enGaleria() ? 'page' : null"
+        class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Galería</a>
+      @if (esAdmin()) {
+        <a routerLink="/tablero" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Tablero</a>
+        <a routerLink="/sincronizacion" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Sincronizar</a>
+      }
+    </nav>
+
+    <div class="flex items-center gap-3 justify-self-end">
+      @if (conSesion()) {
+        <div #perfil class="relative">
+          <button #botonPerfil type="button" (click)="perfilAbierto.set(!perfilAbierto())" aria-haspopup="true"
+            [attr.aria-expanded]="perfilAbierto()" aria-controls="menu-perfil"
+            class="-my-1.5 flex items-center gap-2.5 rounded-2xl p-1.5 text-left transition-colors hover:bg-segmento aria-expanded:bg-segmento">
+            <span class="grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] bg-acento-suave text-[14px] font-bold text-acento-tinta">{{ iniciales() }}</span>
+            <span class="sr-only sm:not-sr-only">
+              <span class="block text-[14px] font-semibold leading-tight text-tinta">{{ nombre() }}</span>
+              <span class="mt-0.5 block text-[12px] font-semibold leading-tight text-tinta-5">{{ rol() }}</span>
+            </span>
+            <svg class="ml-2 hidden flex-none text-tinta-5 transition-transform sm:block" [class.rotate-180]="perfilAbierto()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+
+          @if (perfilAbierto()) {
+            <div id="menu-perfil" class="tarjeta absolute right-0 top-[calc(100%+12px)] z-50 w-[min(300px,calc(100vw-32px))] p-[18px]">
+              <div class="flex items-center gap-3.5">
+                <span class="grid h-11 w-11 flex-none place-items-center rounded-[13px] bg-acento-suave text-[16px] font-bold text-acento-tinta" aria-hidden="true">{{ iniciales() }}</span>
+                <span class="min-w-0">
+                  <span class="block truncate text-[16px] font-bold text-tinta">{{ nombre() }}</span>
+                  @if (correo()) {
+                    <span class="block truncate text-[14px] font-medium text-tinta-4">{{ correo() }}</span>
+                  }
+                </span>
+              </div>
+
+              <div class="my-4 border-t border-linea-suave"></div>
+
+              <span id="etiqueta-tema" class="etiqueta">Tema</span>
+              <div class="flex gap-0.5 rounded-xl bg-segmento p-[3px]" role="group" aria-labelledby="etiqueta-tema">
+                @for (opcion of opcionesTema; track opcion.valor) {
+                  <button type="button" (click)="elegirTema(opcion.valor)" [attr.aria-pressed]="tema() === opcion.valor"
+                    [class]="tema() === opcion.valor
+                      ? 'flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-segmento-activo py-2.5 text-[14px] font-semibold text-tinta shadow-sm'
+                      : 'flex flex-1 items-center justify-center gap-2 rounded-[10px] py-2.5 text-[14px] font-semibold text-tinta-4 hover:text-tinta-2'">
+                    @if (opcion.valor === 'oscuro') {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
+                    } @else {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+                    }
+                    {{ opcion.etiqueta }}
+                  </button>
+                }
+              </div>
+
+              <div class="my-4 border-t border-linea-suave"></div>
+
+              <button type="button" (click)="cerrarSesion()"
+                class="flex w-full items-center gap-3 rounded-xl bg-rojo-tenue px-3.5 py-3 text-[15px] font-semibold text-rojo hover:bg-rojo-suave">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+                Cerrar sesión
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <button type="button" (click)="alternarTema()"
+          [attr.aria-label]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+          [attr.title]="esOscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+          class="grid h-[34px] w-[34px] flex-none place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 hover:border-linea-3 hover:text-tinta">
+          @if (esOscuro()) {
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+          } @else {
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
+          }
+        </button>
+        <a routerLink="/autenticacion/iniciar-sesion" class="btn-secundario hidden !px-3.5 !py-2 sm:inline-flex">Iniciar sesión</a>
+      }
+
+      <button type="button" (click)="menuAbierto.set(!menuAbierto())" [attr.aria-expanded]="menuAbierto()"
+        aria-controls="menu-movil" aria-label="Menú"
+        class="grid h-[34px] w-[34px] place-items-center rounded-[11px] border border-linea-2 bg-superficie text-tinta-3 md:hidden">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  @if (menuAbierto()) {
+    <nav id="menu-movil" class="border-t border-linea px-4 py-3 md:hidden" aria-label="Menú móvil">
+      <a routerLink="/" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Galería</a>
+      @if (esAdmin()) {
+        <a routerLink="/tablero" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Tablero</a>
+        <a routerLink="/sincronizacion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Sincronizar</a>
+      }
+      @if (!conSesion()) {
+        <a routerLink="/autenticacion/iniciar-sesion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-acento">Iniciar sesión</a>
+      }
+    </nav>
+  }
+</header>

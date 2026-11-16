@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["scripts/**/*.ts", "src/app/features/sincronizacion/nucleo/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts"]
+}

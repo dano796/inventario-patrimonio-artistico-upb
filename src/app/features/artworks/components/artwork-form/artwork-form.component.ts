@@ -1,4 +1,11 @@
-import { Component, inject, OnInit, ViewChild, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  ViewChild,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   FormBuilder,
@@ -7,14 +14,20 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { ArtworksService } from '../../services/artworks.service';
+import { ResponsablesService } from '../../services/responsables.service';
+import { Responsable } from '../../../../shared/models/responsable.model';
+import {
+  SelectorResponsableComponent,
+  SeleccionResponsable,
+} from '../selector-responsable/selector-responsable.component';
 import { ArtworkImage } from '../../../../shared/models/image.model';
 import { ImageUploaderComponent } from '../../../../shared/components/image-uploader/image-uploader.component';
 
 // Interfaz para el formulario
 interface ArtworkFormData {
-  titulo: FormControl<string>;
+  titulo: FormControl<string | null>;
   autor: FormControl<string | null>;
   tecnica: FormControl<string | null>;
   dimension: FormControl<string | null>;
@@ -22,20 +35,24 @@ interface ArtworkFormData {
   ubicacion: FormControl<string | null>;
   valor: FormControl<number | null>;
   observaciones: FormControl<string | null>;
-  responsable: FormControl<string | null>;
+  descripcion: FormControl<string | null>;
+  bloque_asignado: FormControl<string | null>;
 }
 
 @Component({
   selector: 'app-artwork-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ImageUploaderComponent],
+  imports: [ReactiveFormsModule, ImageUploaderComponent, SelectorResponsableComponent],
   templateUrl: './artwork-form.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ArtworkFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private artworksService = inject(ArtworksService);
   private formBuilder = inject(FormBuilder);
+
+  private responsablesService = inject(ResponsablesService);
 
   @ViewChild(ImageUploaderComponent) imageUploader!: ImageUploaderComponent;
 
@@ -46,6 +63,9 @@ export class ArtworkFormComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
   uploadedImages = signal<ArtworkImage[]>([]);
+  responsables = signal<Responsable[]>([]);
+  seleccionResponsable = signal<SeleccionResponsable>(null);
+  idObra = signal<number | null>(null);
 
   // Computed properties del servicio
   loading = this.artworksService.loading;
@@ -59,8 +79,7 @@ export class ArtworkFormComponent implements OnInit {
 
   // Formulario reactivo
   artworkForm = this.formBuilder.group<ArtworkFormData>({
-    titulo: this.formBuilder.nonNullable.control('', [
-      Validators.required,
+    titulo: this.formBuilder.control<string | null>(null, [
       Validators.minLength(2),
       Validators.maxLength(200),
     ]),
@@ -84,7 +103,10 @@ export class ArtworkFormComponent implements OnInit {
     observaciones: this.formBuilder.control<string | null>(null, [
       Validators.maxLength(1000),
     ]),
-    responsable: this.formBuilder.control<string | null>(null, [
+    descripcion: this.formBuilder.control<string | null>(null, [
+      Validators.maxLength(4000),
+    ]),
+    bloque_asignado: this.formBuilder.control<string | null>(null, [
       Validators.maxLength(100),
     ]),
   });
@@ -95,9 +117,15 @@ export class ArtworkFormComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.uploadedImages.set([]);
+    this.seleccionResponsable.set(null);
+    this.responsablesService
+      .listar()
+      .then((lista) => this.responsables.set(lista))
+      .catch((error) => console.error('Error al cargar responsables:', error));
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
+      this.idObra.set(Number(id));
       this.isEditMode.set(true);
       this.loadArtwork(Number(id));
     } else {
@@ -125,8 +153,17 @@ export class ArtworkFormComponent implements OnInit {
           ubicacion: artwork.ubicacion,
           valor: artwork.valor,
           observaciones: artwork.observaciones,
-          responsable: artwork.responsable,
+          descripcion: artwork.descripcion,
+          bloque_asignado: artwork.bloque_asignado,
         });
+        this.seleccionResponsable.set(
+          artwork.responsable_id === null
+            ? null
+            : {
+                tipo: 'existente',
+                responsable: { id: artwork.responsable_id, nombre: artwork.responsable ?? '', cargo: artwork.cargo },
+              }
+        );
 
         // Cargar imágenes existentes
         if (artwork.imagenes) {
@@ -148,6 +185,18 @@ export class ArtworkFormComponent implements OnInit {
     }
   }
 
+  /**
+   * El responsable nuevo se crea aquí, al guardar: cancelar la edición no deja
+   * responsables huérfanos, y si el guardado falla, onSubmit lo descarta.
+   */
+  private async resolverResponsable(): Promise<{ id: number | null; creado: boolean }> {
+    const seleccion = this.seleccionResponsable();
+    if (seleccion === null) return { id: null, creado: false };
+    if (seleccion.tipo === 'existente') return { id: seleccion.responsable.id, creado: false };
+    const { responsable, creado } = await this.responsablesService.crearOReusar(seleccion.nombre, seleccion.cargo);
+    return { id: responsable.id, creado };
+  }
+
   async onSubmit(): Promise<void> {
     if (this.artworkForm.invalid) {
       this.artworkForm.markAllAsTouched();
@@ -159,13 +208,16 @@ export class ArtworkFormComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
+    let responsableCreado: number | null = null;
     try {
       // Obtener datos del formulario
       const formData = this.artworkForm.getRawValue();
+      const { id: responsable_id, creado } = await this.resolverResponsable();
+      if (creado) responsableCreado = responsable_id;
 
       // Limpiar campos vacíos
       const artworkData = {
-        titulo: formData.titulo,
+        titulo: formData.titulo || null,
         autor: formData.autor || null,
         tecnica: formData.tecnica || null,
         dimension: formData.dimension || null,
@@ -173,7 +225,9 @@ export class ArtworkFormComponent implements OnInit {
         ubicacion: formData.ubicacion || null,
         valor: formData.valor || null,
         observaciones: formData.observaciones || null,
-        responsable: formData.responsable || null,
+        descripcion: formData.descripcion || null,
+        bloque_asignado: formData.bloque_asignado || null,
+        responsable_id,
       };
 
       // Obtener archivos seleccionados del uploader
@@ -181,11 +235,13 @@ export class ArtworkFormComponent implements OnInit {
 
       if (this.isEditMode()) {
         const id = Number(this.route.snapshot.paramMap.get('id'));
+        // Las imagenes que se conservan son las que siguen en el uploader y ya
+        // tienen id en base de datos. Antes se comparaba por nombre de archivo,
+        // asi que subir una imagen con el mismo nombre que una existente
+        // marcaba la existente para borrado.
         const existingImages = this.imageUploader
           .getAllImages()
-          .filter(
-            (img) => !newImageFiles.some((file) => file.name === img.nombre)
-          );
+          .filter((img) => img.id !== undefined);
 
         await this.artworksService.updateArtwork(
           id,
@@ -206,6 +262,9 @@ export class ArtworkFormComponent implements OnInit {
     } catch (error) {
       console.error('Error saving artwork:', error);
       this.errorMessage.set('Error al guardar la obra de arte');
+      if (responsableCreado !== null) {
+        await this.responsablesService.descartarSiSinObras(responsableCreado).catch(() => undefined);
+      }
     } finally {
       this.isLoading.set(false);
     }

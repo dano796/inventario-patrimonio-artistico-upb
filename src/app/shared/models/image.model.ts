@@ -1,10 +1,12 @@
 export interface ArtworkImage {
-  id?: string;
-  artwork_id?: number;
+  /** PK numerica en la tabla `imagenes`. Ausente mientras no se ha guardado. */
+  id?: number;
+  /** FK a `obras.id`. La columna se llama `id_obra`, no `artwork_id`. */
+  id_obra?: number;
   url: string;
   nombre: string;
   tamano?: number;
-  created_at?: string;
+  fecha_creacion?: string;
 }
 
 export interface ImageUploadRequest {

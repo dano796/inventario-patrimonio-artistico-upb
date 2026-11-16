@@ -5,40 +5,45 @@ import {
   ImageUploadRequest,
   ImageUploadResponse,
 } from '../models/image.model';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
+import { aJpeg } from '../utils/convertir-imagen';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ImageService {
-  private supabaseClient = inject(SupabaseService).supabaseClient;
+  private supabaseService = inject(SupabaseService);
   private readonly BUCKET_NAME = 'imagenes-obras';
+
+  /** SupabaseService puede sustituir el cliente con reinitializeClient(): se relee en cada operación. */
+  private async cubo() {
+    await this.supabaseService.ensureActiveSession();
+    return this.supabaseService.supabaseClient.storage.from(this.BUCKET_NAME);
+  }
 
   async uploadImage(
     imageRequest: ImageUploadRequest
   ): Promise<ImageUploadResponse> {
     try {
-      const fileExt = imageRequest.filename.split('.').pop();
+      const file = await aJpeg(imageRequest.file);
+      const fileExt = file === imageRequest.file ? imageRequest.filename.split('.').pop() : 'jpg';
       const fileName = `${Date.now()}-${Math.random()
         .toString(36)
         .substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { data, error } = await this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .upload(filePath, imageRequest.file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      const cubo = await this.cubo();
+      const { error } = await cubo.upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
 
       if (error) {
         throw error;
       }
 
       // Obtener la URL pública
-      const { data: urlData } = this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .getPublicUrl(filePath);
+      const { data: urlData } = cubo.getPublicUrl(filePath);
 
       return {
         url: urlData.publicUrl,
@@ -65,9 +70,7 @@ export class ImageService {
 
   async deleteImage(filePath: string): Promise<void> {
     try {
-      const { error } = await this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .remove([filePath]);
+      const { error } = await (await this.cubo()).remove([filePath]);
 
       if (error) {
         throw error;
@@ -80,9 +83,7 @@ export class ImageService {
 
   async deleteMultipleImages(filePaths: string[]): Promise<void> {
     try {
-      const { error } = await this.supabaseClient.storage
-        .from(this.BUCKET_NAME)
-        .remove(filePaths);
+      const { error } = await (await this.cubo()).remove(filePaths);
 
       if (error) {
         throw error;

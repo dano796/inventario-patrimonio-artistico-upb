@@ -42,4 +42,23 @@ testem.log
 Thumbs.db
 
 # Environments
-# /src/environments/*.ts
+.env
+.env.local
+# Generados por scripts/generate-env.js a partir de .env / variables de entorno
+/src/environments/environment.ts
+/src/environments/environment.development.ts
+
+# Notas de trabajo y SQL de operacion: se mantienen solo en local
+/docs
+/scripts/*.sql
+.mcp.json
+
+# Copias de la hoja oficial: contienen columnas restringidas
+*.xlsx
+
+# Importación inicial: clave service_role y archivos de trabajo con datos restringidos
+.env.importacion
+/importacion/
+
+# Supabase local para probar la RPC: esquema volcado de producción
+/supabase/
