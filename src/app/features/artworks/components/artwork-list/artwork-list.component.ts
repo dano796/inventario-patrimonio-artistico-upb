@@ -94,7 +94,7 @@ export class ArtworkListComponent implements OnDestroy {
     this.isExporting.set(true);
     this.exportError.set(null);
     try {
-      const total = await this.exportService.exportToExcel();
+      const total = await this.exportService.exportToExcel(this.filtrosActuales());
       if (total === 0) this.exportError.set('No hay obras para exportar.');
     } catch (error) {
       console.error('Error exportando a Excel:', error);

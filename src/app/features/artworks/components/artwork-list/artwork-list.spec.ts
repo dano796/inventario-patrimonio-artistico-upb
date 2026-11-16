@@ -62,16 +62,26 @@ describe('ArtworkListComponent', () => {
     expect(html.textContent).toContain('2 obras');
   });
 
-  it('sin rol de administrador no ofrece registrar obras ni muestra ubicaciones', () => {
+  it('sin rol de administrador no ofrece exportar ni registrar obras ni muestra ubicaciones', () => {
     const { html } = montar(false);
+    expect(html.textContent).not.toContain('Exportar');
     expect(html.textContent).not.toContain('Registrar obra');
     expect(html.textContent).not.toContain('Bloque 6');
   });
 
-  it('un administrador puede registrar obras y ve las ubicaciones', () => {
+  it('un administrador puede exportar y registrar obras y ve las ubicaciones', () => {
     const { html } = montar(true);
+    expect([...html.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Exportar')).toBeTrue();
     expect(html.querySelector('a[href="/nueva"]')?.textContent?.trim()).toBe('Registrar obra');
     expect(html.textContent).toContain('Bloque 6');
+  });
+
+  it('Exportar exporta con los filtros que se están viendo', async () => {
+    const { fixture, html } = montar(true);
+    (fixture.componentInstance as unknown as { autorFilter: { set(v: string): void } }).autorFilter.set('Ana');
+    [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Exportar')!.click();
+    await fixture.whenStable();
+    expect(TestBed.inject(ArtworkExportService).exportToExcel).toHaveBeenCalledOnceWith(jasmine.objectContaining({ autor: 'Ana' }));
   });
 
   it('cambia de vista y la recuerda', () => {
@@ -206,34 +216,34 @@ describe('ArtworkListComponent', () => {
     expect(servicio.filterArtworks.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ autor: 'Ana' }));
   });
 
-  it('en mosaico, a cualquier ancho, las filas de una página de 30 obras quedan completas', () => {
+  it('en mosaico, a cualquier ancho, las filas de una página de 48 obras quedan completas', () => {
     localStorage.setItem(CLAVE_VISTA, 'mosaico');
     const { fixture, servicio, html } = montar(false);
-    servicio.artworks.set(Array.from({ length: 30 }, (_, i) => obraDePrueba({ id: i + 1 })));
+    servicio.artworks.set(Array.from({ length: 48 }, (_, i) => obraDePrueba({ id: i + 1 })));
     fixture.detectChanges();
     const rejilla = html.querySelector<HTMLElement>('app-tarjeta-obra')!.parentElement!;
     for (const ancho of [360, 700, 1000, 1336]) {
       html.style.display = 'block';
       html.style.width = `${ancho}px`;
       const columnas = getComputedStyle(rejilla).gridTemplateColumns.split(' ').length;
-      expect(30 % columnas).withContext(`${ancho}px: ${columnas} columnas`).toBe(0);
+      expect(48 % columnas).withContext(`${ancho}px: ${columnas} columnas`).toBe(0);
     }
   });
 
-  it('con la vista Mosaico guardada, pide 30 obras por página desde la primera carga', async () => {
+  it('con la vista Mosaico guardada, pide 48 obras por página desde la primera carga', async () => {
     localStorage.setItem(CLAVE_VISTA, 'mosaico');
     const { fixture, servicio } = montar(false);
     await fixture.whenStable();
-    expect(servicio.fijarTamanoPagina).toHaveBeenCalledOnceWith(30);
+    expect(servicio.fijarTamanoPagina).toHaveBeenCalledOnceWith(48);
     expect(servicio.cargasAlFijarTamano).toBe(0);
   });
 
-  it('cambiar a Mosaico pide 30 obras por página y volver a Galería, 24', async () => {
+  it('cambiar a Mosaico pide 48 obras por página y volver a Galería, 24', async () => {
     const { fixture, servicio, html } = montar(false);
     await fixture.whenStable();
     const boton = (texto: string) => [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto)!;
     boton('Mosaico').click();
     boton('Galería').click();
-    expect(servicio.cambiarTamanoPagina.calls.allArgs()).toEqual([[30], [24]]);
+    expect(servicio.cambiarTamanoPagina.calls.allArgs()).toEqual([[48], [24]]);
   });
 });

@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { IconoSinImagenComponent } from '../../../../../shared/components/icono-sin-imagen/icono-sin-imagen.component';
 import { Artwork } from '../../../../../shared/models/artwork.model';
 
 @Component({
   selector: 'app-tarjeta-obra',
-  imports: [RouterLink],
+  imports: [RouterLink, IconoSinImagenComponent],
   templateUrl: './tarjeta-obra.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

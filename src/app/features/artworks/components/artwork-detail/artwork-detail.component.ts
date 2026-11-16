@@ -3,11 +3,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ArtworksService } from '../../services/artworks.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
+import { IconoSinImagenComponent } from '../../../../shared/components/icono-sin-imagen/icono-sin-imagen.component';
 import { camposFicha, mensajeBorrado, NO_REGISTRA, subtituloFicha, ultimaCaptura } from '../../utils/ficha';
 
 @Component({
   selector: 'app-artwork-detail',
-  imports: [RouterLink, ConfirmModalComponent],
+  imports: [RouterLink, ConfirmModalComponent, IconoSinImagenComponent],
   templateUrl: './artwork-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

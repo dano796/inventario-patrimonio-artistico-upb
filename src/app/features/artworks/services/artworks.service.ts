@@ -39,13 +39,14 @@ const FILTROS_PUBLICOS = ['search', 'autor', 'tecnica'] as const;
 export class ArtworksService {
   // Guardar filtros activos
   private activeFilters: Omit<PaginationParams, 'page' | 'limit'> | null = null;
-  // Obtener todas las obras sin paginación (para exportar)
-  async getAllArtworksNoPagination(): Promise<Artwork[]> {
-    await this.supabaseService.ensureActiveSession();
-    this.supabaseClient = this.supabaseService.supabaseClient;
-    const { data, error } = await this.supabaseClient
+  /** Todas las obras que cumplen los filtros, sin paginar (para exportar). Sin filtros, el inventario completo. */
+  async getAllArtworksNoPagination(filtros: Omit<PaginationParams, 'page' | 'limit'> = {}): Promise<Artwork[]> {
+    await this.prepareClient();
+    const query = this.supabaseClient
       .from(this.tablaLectura())
-      .select(`${this.selectColumns()}, imagenes(*)`)
+      .select(`${this.selectColumns()}, imagenes(*)`);
+    const { data, error } = await this.aplicarFiltros(query, this.sanitizeParams(filtros))
+      .order('fecha_creacion', { ascending: false })
       .returns<Artwork[]>();
     if (error) throw error;
     return data || [];
@@ -127,6 +128,26 @@ export class ArtworksService {
       }
     }
     return permitido;
+  }
+
+  /** Aplica la búsqueda y los filtros no vacíos. Lo comparten la galería paginada y la exportación. */
+  private aplicarFiltros<Q extends { filter(columna: string, operador: string, valor: string): Q; or(filtros: string): Q }>(
+    query: Q,
+    { search, ubicacion, responsable, autor, tecnica }: PaginationParams
+  ): Q {
+    if (search?.trim()) query = query.filter('titulo', 'imatch', patronSinTildes(search));
+
+    const ubicaciones = (Array.isArray(ubicacion) ? ubicacion : [ubicacion ?? '']).filter((u) => u?.trim());
+    if (ubicaciones.length === 1) {
+      query = query.filter('ubicacion', 'imatch', patronSinTildes(ubicaciones[0]));
+    } else if (ubicaciones.length > 1) {
+      query = query.or(ubicaciones.map((u) => `ubicacion.imatch.${this.quoteFilterValue(patronSinTildes(u))}`).join(','));
+    }
+
+    if (responsable?.trim()) query = query.filter('responsable', 'imatch', patronSinTildes(responsable));
+    if (autor?.trim()) query = query.filter('autor', 'imatch', patronSinTildes(autor));
+    if (tecnica?.trim()) query = query.filter('tecnica', 'imatch', patronSinTildes(tecnica));
+    return query;
   }
 
   /**
@@ -230,48 +251,7 @@ export class ArtworksService {
         .from(this.tablaLectura())
         .select(`${this.selectColumns()}, imagenes(*)`, { count: 'exact' });
 
-      // Aplicar filtros de búsqueda si existen (optimización: solo aplicar filtros no vacíos)
-      const activeFilters = [];
-
-      if (search?.trim()) {
-        query = query.filter('titulo', 'imatch', patronSinTildes(search));
-        activeFilters.push('titulo');
-      }
-
-      // Filtro de ubicación: soporta una ubicación o múltiples ubicaciones
-      if (ubicacion) {
-        if (Array.isArray(ubicacion)) {
-          // Múltiples ubicaciones: usar operador OR
-          const ubicacionesValidas = ubicacion.filter((u) => u?.trim());
-          if (ubicacionesValidas.length > 0) {
-            const ubicacionConditions = ubicacionesValidas.map(
-              (u) =>
-                `ubicacion.imatch.${this.quoteFilterValue(patronSinTildes(u))}`
-            );
-            query = query.or(ubicacionConditions.join(','));
-            activeFilters.push('ubicacion');
-          }
-        } else if (ubicacion.trim()) {
-          // Una sola ubicación: usar ILIKE normal
-          query = query.filter('ubicacion', 'imatch', patronSinTildes(ubicacion));
-          activeFilters.push('ubicacion');
-        }
-      }
-
-      if (responsable?.trim()) {
-        query = query.filter('responsable', 'imatch', patronSinTildes(responsable));
-        activeFilters.push('responsable');
-      }
-
-      if (autor?.trim()) {
-        query = query.filter('autor', 'imatch', patronSinTildes(autor));
-        activeFilters.push('autor');
-      }
-
-      if (tecnica?.trim()) {
-        query = query.filter('tecnica', 'imatch', patronSinTildes(tecnica));
-        activeFilters.push('tecnica');
-      }
+      query = this.aplicarFiltros(query, { search, ubicacion, responsable, autor, tecnica });
 
       // Aplicar paginación y orden
       const queryPromise = query

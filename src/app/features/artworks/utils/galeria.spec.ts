@@ -37,14 +37,14 @@ describe('chipsFiltros', () => {
 
 describe('lineaResultado', () => {
   it('sin filtros solo cuenta', () => {
-    expect(lineaResultado(187, [])).toBe('187 obras');
-    expect(lineaResultado(1, [])).toBe('1 obra');
+    expect(lineaResultado(187, [])).toBe('Mostrando 187 obras');
+    expect(lineaResultado(1, [])).toBe('Mostrando 1 obra');
   });
 
   it('nombra los criterios una vez cada uno', () => {
     const chips = chipsFiltros(vacios({ autor: 'Ana', ubicaciones: ['Bloque 3', 'Bloque 6'], tecnica: 'Óleo' }), true);
-    expect(lineaResultado(12, chips)).toBe('12 obras filtradas por ubicación, autor y técnica');
-    expect(lineaResultado(1, chips.slice(-1))).toBe('1 obra filtrada por técnica');
+    expect(lineaResultado(12, chips)).toBe('Mostrando 12 obras filtradas por ubicación, autor y técnica');
+    expect(lineaResultado(1, chips.slice(-1))).toBe('Mostrando 1 obra filtrada por técnica');
   });
 
   it('sin resultados lo dice', () => {

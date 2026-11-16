@@ -9,9 +9,14 @@
     </div>
     <div class="flex flex-wrap gap-2.5">
       <button type="button" class="btn-secundario" (click)="exportar()" [disabled]="exportando()">
+        @if (exportando()) {
+          <span class="indicador-carga" aria-hidden="true"></span>
+        } @else {
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>
+        }
         {{ exportando() ? 'Exportando…' : 'Exportar a Excel' }}
       </button>
-      <a routerLink="/nueva" class="btn-primario">Registrar obra</a>
+      <a routerLink="/nueva" class="btn-primario"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Registrar obra</a>
     </div>
   </header>
 

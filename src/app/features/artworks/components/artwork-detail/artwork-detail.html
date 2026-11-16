@@ -22,7 +22,7 @@
           @if (imagenActual(); as imagen) {
             <img [src]="imagen.url" [alt]="titulo()" class="absolute inset-0 h-full w-full bg-sub object-contain" />
           } @else {
-            <span class="marcador absolute inset-0 grid place-items-center text-sm font-semibold text-tinta-5">Sin imagen</span>
+            <span class="marcador absolute inset-0 grid place-items-center text-tinta-5" role="img" aria-label="Sin imagen"><app-icono-sin-imagen [tamano]="56" /></span>
           }
           @if (imagenes().length > 1) {
             <button type="button" (click)="prevImage()" aria-label="Imagen anterior"

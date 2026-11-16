@@ -14,7 +14,7 @@ export function guardarVista(vista: Vista): void {
 }
 
 /** Múltiplos de las columnas de cada vista, para que las filas queden completas. */
-export const tamanoPagina = (vista: Vista) => (vista === 'mosaico' ? 30 : 24);
+export const tamanoPagina = (vista: Vista) => (vista === 'mosaico' ? 48 : 24);
 
 export type ClaveFiltro = 'busqueda' | 'ubicacion' | 'responsable' | 'autor' | 'tecnica';
 
@@ -66,7 +66,7 @@ function unirConY(partes: readonly string[]): string {
 export function lineaResultado(total: number, chips: readonly ChipFiltro[]): string {
   const criterios = [...new Set(chips.map((c) => NOMBRES[c.clave].toLocaleLowerCase('es')))];
   if (total === 0) return criterios.length ? 'Ninguna obra coincide con los filtros' : 'Todavía no hay obras';
-  const obras = total === 1 ? '1 obra' : `${total.toLocaleString('es-CO')} obras`;
+  const obras = total === 1 ? 'Mostrando 1 obra' : `Mostrando ${total.toLocaleString('es-CO')} obras`;
   if (!criterios.length) return obras;
   return `${obras} ${total === 1 ? 'filtrada' : 'filtradas'} por ${unirConY(criterios)}`;
 }
