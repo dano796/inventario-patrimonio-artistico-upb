@@ -6,7 +6,7 @@ import { InactivityService } from './core/services/inactivity.service';
 import { TemaService } from './core/services/tema.service';
 import { CabeceraComponent } from './shared/components/cabecera/cabecera.component';
 
-const esAutenticacion = (url: string) => url.startsWith('/autenticacion');
+const sinCabecera = (url: string) => url.startsWith('/autenticacion') || url.startsWith('/complemento');
 
 @Component({
   selector: 'app-root',
@@ -22,9 +22,9 @@ export class App implements OnInit {
   mostrarCabecera = toSignal(
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-      map((e) => !esAutenticacion(e.urlAfterRedirects))
+      map((e) => !sinCabecera(e.urlAfterRedirects))
     ),
-    { initialValue: !esAutenticacion(this.router.url) }
+    { initialValue: !sinCabecera(window.location.pathname) }
   );
 
   ngOnInit() {

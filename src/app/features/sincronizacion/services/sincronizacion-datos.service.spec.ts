@@ -94,3 +94,32 @@ describe('SincronizacionDatosService.subirImagen', () => {
     expect(remove).toHaveBeenCalledWith(['sincronizacion/721-1.png']);
   });
 });
+
+describe('SincronizacionDatosService.vincularLibro', () => {
+  function crear(respuesta: { data: unknown; error: unknown }) {
+    const select = jasmine.createSpy('select').and.resolveTo(respuesta);
+    const eq = jasmine.createSpy('eq').and.returnValue({ select });
+    const update = jasmine.createSpy('update').and.returnValue({ eq });
+    const from = jasmine.createSpy('from').and.returnValue({ update });
+    TestBed.configureTestingModule({
+      providers: [{ provide: SupabaseService, useValue: { supabaseClient: { from }, ensureActiveSession: async () => true } }],
+    });
+    return { servicio: TestBed.inject(SincronizacionDatosService), from, update, eq, select };
+  }
+
+  it('guarda solo la URL del libro en la hoja ya vinculada, sin tocar drive_id ni item_id', async () => {
+    const { servicio, from, update, eq, select } = crear({ data: [{ id: 1 }], error: null });
+
+    await servicio.vincularLibro('https://upb/Documents/Inventario.xlsx');
+
+    expect(from).toHaveBeenCalledWith('sincronizacion_hoja');
+    expect(update).toHaveBeenCalledWith({ url: 'https://upb/Documents/Inventario.xlsx' });
+    expect(eq).toHaveBeenCalledWith('id', 1);
+    expect(select).toHaveBeenCalledWith('id');
+  });
+
+  it('falla si no había ninguna hoja vinculada que actualizar', async () => {
+    const { servicio } = crear({ data: [], error: null });
+    await expectAsync(servicio.vincularLibro('https://upb/x.xlsx')).toBeRejectedWithError(/ninguna hoja vinculada/);
+  });
+});

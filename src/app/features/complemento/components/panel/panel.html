@@ -1,0 +1,62 @@
+@switch (fase()) {
+  @case ('cargando') {
+    <div class="px-4 py-6">
+      <div class="tarjeta h-[160px] animate-pulse" aria-busy="true" aria-label="Cargando el complemento"></div>
+    </div>
+  }
+
+  @case ('fuera-de-excel') {
+    <main class="mx-auto flex max-w-[640px] flex-col gap-3 px-4 py-8">
+      <p class="antetitulo">Complemento de Excel</p>
+      <h1 class="titulo-pantalla">Abre esta página desde Excel</h1>
+      <p class="text-[15px] font-medium leading-relaxed text-tinta-3">
+        Esta es la versión de la sincronización que funciona dentro de Excel, con la hoja oficial abierta. Fuera de Excel,
+        usa la página Sincronización de la aplicación.
+      </p>
+    </main>
+  }
+
+  @case ('error') {
+    <main class="flex flex-col gap-3 px-4 py-6" role="alert">
+      <h1 class="text-[20px] font-extrabold">No se pudo iniciar el complemento</h1>
+      <p class="text-[14px] font-medium leading-relaxed text-tinta-3">{{ error() }}</p>
+    </main>
+  }
+
+  @case ('entrar') {
+    <main class="flex flex-col gap-3.5 px-4 py-6">
+      <p class="antetitulo">Inventario Patrimonio Artístico UPB</p>
+      <h1 class="text-[22px] font-extrabold tracking-[-0.01em]">Sincronizar con el inventario</h1>
+      <p class="text-[14px] font-medium leading-relaxed text-tinta-3">
+        Entra con tu cuenta institucional. Solo las cuentas con rol de administrador pueden sincronizar.
+      </p>
+      @if (error(); as texto) {
+        <p class="rounded-2xl border border-rojo-linea bg-rojo-tenue px-4 py-3 text-[14px] font-medium text-rojo-3" role="alert">{{ texto }}</p>
+      }
+      <div>
+        <button type="button" class="btn-primario" (click)="entrar()" [disabled]="entrando()">
+          @if (entrando()) { <span class="indicador-carga"></span> Esperando a Microsoft… } @else { Entrar con Microsoft }
+        </button>
+      </div>
+    </main>
+  }
+
+  @case ('sin-permiso') {
+    <main class="flex flex-col gap-3.5 px-4 py-6">
+      <h1 class="text-[22px] font-extrabold tracking-[-0.01em]">Tu cuenta no puede sincronizar</h1>
+      <p class="text-[14px] font-medium leading-relaxed text-tinta-3">
+        Entraste como {{ correo() }}, que no tiene rol de administrador en el inventario. Pide a un administrador que te lo
+        asigne.
+      </p>
+      <div><button type="button" class="btn-secundario" (click)="salir()">Cerrar sesión</button></div>
+    </main>
+  }
+
+  @case ('listo') {
+    <app-sincronizar />
+    <p class="px-4 pb-6 text-[13px] font-medium text-tinta-5">
+      Sesión: {{ correo() }} ·
+      <button type="button" class="font-semibold text-acento underline" (click)="salir()">Cerrar sesión</button>
+    </p>
+  }
+}

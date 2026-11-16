@@ -63,7 +63,7 @@ export class VincularHojaComponent implements OnInit {
 
   async elegir(archivo: ArchivoOneDrive): Promise<void> {
     await this.ejecutar(async () => {
-      const hoja = { drive_id: archivo.parentReference.driveId, item_id: archivo.id, nombre_hoja: HOJA, etag: archivo.eTag };
+      const hoja = { drive_id: archivo.parentReference.driveId, item_id: archivo.id, nombre_hoja: HOJA, etag: archivo.eTag, url: null };
       await this.datos.vincular(hoja);
       this.hoja.set({ ...hoja, fecha_ultima: null });
       this.resultados.set([]);
@@ -96,7 +96,7 @@ export class VincularHojaComponent implements OnInit {
         return;
       }
       const archivo = await this.graph.archivo(hoja.drive_id, hoja.item_id);
-      await this.datos.vincular({ drive_id: hoja.drive_id, item_id: hoja.item_id, nombre_hoja: hoja.nombre_hoja, etag: archivo.eTag });
+      await this.datos.vincular({ drive_id: hoja.drive_id, item_id: hoja.item_id, nombre_hoja: hoja.nombre_hoja, etag: archivo.eTag, url: hoja.url });
       this.mensaje.set(`ID WEB escrito en ${resultado.escritas} filas (${resultado.yaEscritas} ya lo tenían).`);
     }, 'escribir');
   }

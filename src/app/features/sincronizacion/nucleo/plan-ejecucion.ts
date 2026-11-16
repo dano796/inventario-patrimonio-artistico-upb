@@ -66,7 +66,7 @@ export interface PeticionSincronizacion {
   cargos: CargoABase[];
   altas: AltaABase[];
   fotos: FotoDirecta[];
-  hoja?: { etag: string };
+  hoja?: { etag: string | null };
 }
 
 export type DestinoHoja = { tipo: 'campo'; campo: Campo } | { tipo: 'imagen'; casilla: number } | { tipo: 'id_web' };

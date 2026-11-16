@@ -9,11 +9,12 @@ import { ErrorEncabezados } from '../../nucleo/hoja-obras';
 import { calculoDePrueba } from '../../utils/calculo-de-prueba';
 import { obraBase } from '../../nucleo/pruebas/fabricas';
 import { borrarBorrador } from '../../utils/borrador';
+import { ACCESO_HOJA, ErrorLibroDistinto } from '../../services/acceso-hoja';
 
 @Component({ template: '' })
 class Vacia {}
 
-const HOJA: HojaVinculada = { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: '2026-09-19T15:12:00Z', etag: 'e' };
+const HOJA: HojaVinculada = { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: '2026-09-19T15:12:00Z', etag: 'e', url: null };
 const SIN_RESULTADO = { base: { aplicados: 0, descartados: [], creadas: [] }, escritasEnHoja: 0, altasEnHoja: 0, descartadasEnHoja: [], imagenesSubidas: 0, imagenesFallidas: [], error: null };
 
 const conConflicto = (): Calculo =>
@@ -29,6 +30,7 @@ async function montarPagina(opciones: {
   hoja?: HojaVinculada | null;
   conectado?: boolean;
   calcular?: () => Promise<Calculo>;
+  excel?: boolean;
 }) {
   const servicio = {
     calcular: jasmine.createSpy('calcular').and.callFake(opciones.calcular ?? (async () => conConflicto())),
@@ -39,7 +41,15 @@ async function montarPagina(opciones: {
     conectar: jasmine.createSpy('conectar').and.resolveTo(undefined),
     archivo: jasmine.createSpy('archivo').and.resolveTo({ name: 'Inventario Patrimonio Artístico.xlsx' }),
   };
-  const datos = { hojaVinculada: jasmine.createSpy('hojaVinculada').and.resolveTo(opciones.hoja === undefined ? HOJA : opciones.hoja) };
+  const datos = {
+    hojaVinculada: jasmine.createSpy('hojaVinculada').and.resolveTo(opciones.hoja === undefined ? HOJA : opciones.hoja),
+    vincularLibro: jasmine.createSpy('vincularLibro').and.resolveTo(undefined),
+  };
+  const excel = {
+    origen: 'excel' as const,
+    conectado: async () => true,
+    nombre: async () => 'Inventario Patrimonio UPB 1.xlsx',
+  };
   TestBed.configureTestingModule({
     imports: [SincronizarComponent],
     providers: [
@@ -47,6 +57,7 @@ async function montarPagina(opciones: {
       { provide: SincronizacionService, useValue: servicio },
       { provide: GraphService, useValue: graph },
       { provide: SincronizacionDatosService, useValue: datos },
+      ...(opciones.excel ? [{ provide: ACCESO_HOJA, useValue: excel }] : []),
     ],
   });
   const fixture = TestBed.createComponent(SincronizarComponent);
@@ -269,5 +280,53 @@ describe('SincronizarComponent: revisar y aplicar', () => {
 
     expect(html.textContent).toContain('No se terminó de escribir en la hoja.');
     expect(html.textContent).toContain('La conexión con OneDrive caducó.');
+  });
+});
+
+describe('SincronizarComponent: desde el complemento de Excel', () => {
+  afterEach(() => borrarBorrador());
+
+  const otroLibro = (vinculado: string | null) => () =>
+    Promise.reject(new ErrorLibroDistinto('https://upb/Documents/Inventario%20Patrimonio%20UPB%201.xlsx', vinculado));
+
+  it('compara el libro abierto sin pedir conexión con OneDrive', async () => {
+    const { html, servicio, graph } = await montarPagina({ excel: true });
+
+    expect(graph.tieneAccesoArchivos).not.toHaveBeenCalled();
+    expect(servicio.calcular).toHaveBeenCalledTimes(1);
+    expect(html.textContent).toContain('Libro abierto en Excel');
+    expect(html.textContent).toContain('Inventario Patrimonio UPB 1.xlsx');
+  });
+
+  it('la primera vez pide confirmar el libro y, al vincularlo, compara', async () => {
+    let primera = true;
+    const { html, datos, servicio, boton, actualizar } = await montarPagina({
+      excel: true,
+      calcular: () => (primera ? ((primera = false), otroLibro(null)()) : Promise.resolve(conConflicto())),
+    });
+
+    expect(html.textContent).toContain('Confirma que este es el libro oficial');
+    expect(html.textContent).toContain('«Inventario Patrimonio UPB 1.xlsx»');
+    boton('Vincular este libro').click();
+    await actualizar();
+
+    expect(datos.vincularLibro).toHaveBeenCalledOnceWith('https://upb/Documents/Inventario%20Patrimonio%20UPB%201.xlsx');
+    expect(servicio.calcular).toHaveBeenCalledTimes(2);
+    expect(html.textContent).toContain('Retrato del Fundador');
+  });
+
+  it('si el libro no es el vinculado lo dice y nombra los dos', async () => {
+    const { html } = await montarPagina({ excel: true, calcular: otroLibro('https://upb/Documents/Inventario.xlsx') });
+
+    expect(html.textContent).toContain('Este libro no es la hoja vinculada');
+    expect(html.textContent).toContain('«Inventario Patrimonio UPB 1.xlsx»');
+    expect(html.textContent).toContain('«Inventario.xlsx»');
+  });
+
+  it('sin hoja vinculada no enlaza a una página que no existe dentro de Excel', async () => {
+    const { html } = await montarPagina({ excel: true, hoja: null });
+
+    expect(html.textContent).toContain('Todavía no hay una hoja vinculada');
+    expect(html.querySelector('a[href="/sincronizacion/vincular"]')).toBeNull();
   });
 });

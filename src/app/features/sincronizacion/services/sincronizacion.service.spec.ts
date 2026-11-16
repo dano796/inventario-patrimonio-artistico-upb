@@ -12,8 +12,9 @@ import { ObraBase } from '../nucleo/importacion';
 import { decisionesPorDefecto } from '../nucleo/plan-ejecucion';
 import { MOTIVO_CELDA_CAMBIADA } from '../nucleo/verificar-hoja';
 import { ErrorEncabezados } from '../nucleo/hoja-obras';
+import { ACCESO_HOJA, AccesoHoja, ErrorLibroDistinto } from './acceso-hoja';
 
-const HOJA = { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: 'etag-1' };
+const HOJA = { drive_id: 'd', item_id: 'i', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: 'etag-1', url: null };
 const SIN_RESULTADO = { aplicados: 0, descartados: [], creadas: [] };
 
 const columna = (encabezado: string) => columnaALetra(ENCABEZADOS_HOJA.indexOf(encabezado as never) + 1);
@@ -378,5 +379,75 @@ describe('SincronizacionService, imágenes de las altas', () => {
     expect(siguiente.diff.avisosImagen).toEqual([]);
     expect(siguiente.diff.convergencias).toEqual([]);
     expect(fotoAlta).toEqual(valoresFoto({ ...camposVacios(), autor: 'Ana', titulo: 'Nueva' }, []));
+  });
+});
+
+describe('SincronizacionService, desde el libro abierto en Excel', () => {
+  function montarExcel(opciones: { verificar?: () => Promise<void> } = {}) {
+    const filas = [{ TITULO: 'Paisaje', OBSERVACIONES: 'Nota', 'ID WEB': 14 }];
+    const acceso: jasmine.SpyObj<AccesoHoja> & { origen: 'excel' } = Object.assign(
+      jasmine.createSpyObj<AccesoHoja>('acceso', [
+        'conectado', 'nombre', 'verificar', 'descargar', 'leerRangoUsado', 'escribirValores', 'version', 'minutosRestantes',
+      ]),
+      { origen: 'excel' as const }
+    );
+    acceso.verificar.and.callFake(opciones.verificar ?? (async () => undefined));
+    acceso.descargar.and.resolveTo(xlsx(filas));
+    acceso.leerRangoUsado.and.resolveTo(rangoDePrueba(filas));
+    acceso.escribirValores.and.resolveTo(undefined);
+    acceso.version.and.resolveTo(null);
+    acceso.minutosRestantes.and.resolveTo(Number.POSITIVE_INFINITY);
+    const datos = {
+      hojaVinculada: jasmine.createSpy('hojaVinculada').and.resolveTo({ ...HOJA, url: 'https://upb/Inventario.xlsx' }),
+      obras: jasmine.createSpy('obras').and.resolveTo([obraBase(14, { titulo: 'Paisaje', observaciones: 'Nota corregida' })]),
+      responsables: jasmine.createSpy('responsables').and.resolveTo([]),
+      fotos: jasmine.createSpy('fotos').and.resolveTo(new Map([[14, foto({ titulo: 'Paisaje', observaciones: 'Nota' })]])),
+      aplicar: jasmine.createSpy('aplicar').and.resolveTo(SIN_RESULTADO),
+      subirImagen: jasmine.createSpy('subirImagen'),
+    };
+    TestBed.configureTestingModule({
+      providers: [{ provide: ACCESO_HOJA, useValue: acceso }, { provide: SincronizacionDatosService, useValue: datos }],
+    });
+    return { servicio: TestBed.inject(SincronizacionService), acceso, datos };
+  }
+
+  it('escribe en el libro y, sin eTag, registra igualmente la sincronización con la foto', async () => {
+    const { servicio, acceso, datos } = montarExcel();
+    const calculo = await servicio.calcular();
+
+    const resultado = await servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff));
+
+    expect(acceso.escribirValores).toHaveBeenCalledOnceWith(calculo.hoja, 'M2:M2', [["'Nota corregida"]]);
+    expect(datos.aplicar.calls.mostRecent().args[0]).toEqual({
+      campos: [], cargos: [], altas: [],
+      fotos: [{ obra_id: 14, valores: { observaciones: 'Nota corregida' } }],
+      hoja: { etag: null },
+    });
+    expect(resultado.error).toBeNull();
+  });
+
+  it('no lee nada de un libro que no es el vinculado', async () => {
+    const { servicio, acceso, datos } = montarExcel({
+      verificar: async () => {
+        throw new ErrorLibroDistinto('https://upb/Copia.xlsx', 'https://upb/Inventario.xlsx');
+      },
+    });
+
+    await expectAsync(servicio.calcular()).toBeRejectedWith(jasmine.any(ErrorLibroDistinto));
+    expect(acceso.descargar).not.toHaveBeenCalled();
+    expect(datos.obras).not.toHaveBeenCalled();
+  });
+
+  it('vuelve a comprobar el libro antes de aplicar y, si cambió, no toca la base', async () => {
+    let llamadas = 0;
+    const { servicio, datos } = montarExcel({
+      verificar: async () => {
+        if (llamadas++ > 0) throw new ErrorLibroDistinto('https://upb/Copia.xlsx', 'https://upb/Inventario.xlsx');
+      },
+    });
+    const calculo = await servicio.calcular();
+
+    await expectAsync(servicio.aplicar(calculo, decisionesPorDefecto(calculo.diff))).toBeRejectedWith(jasmine.any(ErrorLibroDistinto));
+    expect(datos.aplicar).not.toHaveBeenCalled();
   });
 });

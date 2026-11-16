@@ -35,9 +35,13 @@ src/app/
 │   ├── auth/
 │   │   ├── components/        # auth-log-in · forgot-password · update-password
 │   │   └── auth.routes.ts
+│   ├── complemento/           # complemento de Excel: la misma sincronización sobre el libro abierto
+│   │   ├── services/          # office.service (carga office.js, diálogo) · acceso-hoja-excel (Office.js)
+│   │   ├── components/        # panel (/complemento) · entrar (/complemento/entrar, diálogo de inicio de sesión)
+│   │   └── complemento.routes.ts
 │   ├── sincronizacion/
 │   │   ├── nucleo/            # TS puro, compartido con scripts/importar-hoja.ts
-│   │   ├── services/          # graph.service (Microsoft Graph, token delegado) · sincronizacion · sincronizacion-datos
+│   │   ├── services/          # acceso-hoja (interfaz + Graph) · graph.service (token delegado) · sincronizacion · sincronizacion-datos
 │   │   ├── utils/             # revision (modelo de vista puro) · borrador (decisiones en sessionStorage)
 │   │   ├── components/        # sincronizar (/sincronizacion) · revision/ (grupo-revision, resumen-ejecucion) · vincular-hoja
 │   │   └── sincronizacion.routes.ts
@@ -95,6 +99,37 @@ Graph no llama a `markActivity()`: no depende de la sesión de Supabase.
 Reconectar es una redirección completa, así que las decisiones de la revisión
 se guardan en `sessionStorage` (con hash, sin valores en claro) y se
 restauran al volver si el elemento no cambió.
+
+### Dos caminos a la misma hoja
+
+La hoja oficial está en el OneDrive de quien la custodia. Graph con
+`Files.ReadWrite` solo alcanza el OneDrive de quien conecta, y abrir un archivo
+ajeno, incluso por su enlace de compartir, pide `Files.ReadWrite.All`, que en
+el tenant de la UPB exige consentimiento de administrador (probado: `/shares`
+responde 403). Por eso hay dos caminos:
+
+- **/sincronizacion** (web): Graph, solo para quien custodia el archivo.
+- **/complemento** (complemento de Excel): Office.js sobre el libro abierto,
+  con los permisos de edición de quien lo abre y sin ningún permiso de Graph.
+
+Los dos implementan `AccesoHoja` y comparten todo lo demás: núcleo, foto,
+revisión y RPC. `ACCESO_HOJA` resuelve a Graph en la raíz; el panel del
+complemento provee `SincronizacionService` y `AccesoHojaExcel` en su propio
+inyector. El complemento compara con `sincronizacion_hoja.url` antes de leer y
+antes de escribir, para no sincronizar nunca contra una copia.
+
+Microsoft no deja cargar su inicio de sesión dentro del panel, así que
+`/complemento/entrar` lo hace en un diálogo de Office con su propio cliente de
+Supabase (PKCE, `sessionStorage`, otra clave) y pasa los tokens al panel con
+`messageParent`. Si usara el cliente de la aplicación, la sesión quedaría en el
+`localStorage` que comparten las pestañas de la web y dos clientes refrescarían
+el mismo refresh token.
+
+El manifiesto (`dist/.../complemento/manifest.xml`) lo genera
+`scripts/generar-manifiesto.js` después del build, con la URL del despliegue.
+La CSP general prohíbe que la app viva en un iframe y cargar office.js; la edge
+function `netlify/edge-functions/complemento.ts` relaja esa misma CSP solo en
+`/complemento`.
 
 ### Columnas públicas y columnas restringidas
 

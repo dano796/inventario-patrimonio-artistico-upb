@@ -24,9 +24,39 @@
         <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Todavía no hay una hoja vinculada</h2>
         <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
           Antes de sincronizar hay que elegir, desde el OneDrive de quien la custodia, el archivo de la hoja oficial.
+          @if (enExcel) { Se hace en la página Sincronización de la aplicación web. }
         </p>
-        <div><a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a></div>
+        @if (!enExcel) {
+          <div><a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a></div>
+        }
       </section>
+    }
+
+    @case ('otro-libro') {
+      @if (libroAbierto(); as l) {
+        <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
+          <span class="self-start rounded-full bg-ambar-suave px-[11px] py-1 text-xs font-bold text-ambar">Libro sin confirmar</span>
+          @if (l.vinculado) {
+            <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Este libro no es la hoja vinculada</h2>
+            <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+              Está abierto «{{ l.abierto }}» y la hoja vinculada es «{{ l.vinculado }}». Si la hoja oficial se renombró o se
+              movió, vincula este libro. Si es una copia, ciérrala y abre la hoja oficial: sincronizar contra una copia
+              llevaría sus diferencias al inventario.
+            </p>
+          } @else {
+            <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Confirma que este es el libro oficial</h2>
+            <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+              Es la primera vez que se sincroniza desde Excel con esta hoja vinculada. Vincula «{{ l.abierto }}» solo si es
+              la hoja oficial del inventario y no una copia.
+            </p>
+          }
+          <div>
+            <button type="button" class="btn-primario" (click)="vincularLibro()" [disabled]="vinculando()">
+              @if (vinculando()) { <span class="indicador-carga"></span> Vinculando… } @else { Vincular este libro }
+            </button>
+          </div>
+        </section>
+      }
     }
 
     @case ('hoja-perdida') {

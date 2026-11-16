@@ -39,7 +39,7 @@ class GraphFalso {
 }
 
 const HOJA: HojaVinculada = {
-  drive_id: 'drive-1', item_id: 'item-1', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: 'etag-1',
+  drive_id: 'drive-1', item_id: 'item-1', nombre_hoja: 'Inventario Obras', fecha_ultima: null, etag: 'etag-1', url: null,
 };
 
 function crearServicio(filas: unknown[][]): { servicio: IdWebService; graph: GraphFalso } {

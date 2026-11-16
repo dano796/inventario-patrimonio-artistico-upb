@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
-import { ErrorGraph, GraphService } from './graph.service';
+import { ErrorGraph } from './graph.service';
+import { ACCESO_HOJA } from './acceso-hoja';
 import { HojaVinculada, ResultadoRpc, SincronizacionDatosService } from './sincronizacion-datos.service';
 import { abrirXlsx, extraerMedios, leerHoja } from '../nucleo/leer-xlsx';
 import {
@@ -54,7 +55,7 @@ export interface ResultadoAplicacion {
 
 @Injectable({ providedIn: 'root' })
 export class SincronizacionService {
-  private graph = inject(GraphService);
+  private acceso = inject(ACCESO_HOJA);
   private datos = inject(SincronizacionDatosService);
   /** Las altas no son idempotentes: reintentar con el mismo cálculo duplicaría obras. */
   private gastados = new WeakSet<Calculo>();
@@ -63,7 +64,8 @@ export class SincronizacionService {
   async calcular(progreso: AvisoProgreso = () => undefined): Promise<Calculo> {
     const hoja = await this.datos.hojaVinculada();
     if (!hoja) throw new Error('No hay ninguna hoja vinculada. Vincúlala antes de sincronizar.');
-    const contenido = await this.graph.descargar(hoja.drive_id, hoja.item_id);
+    await this.acceso.verificar(hoja);
+    const contenido = await this.acceso.descargar(hoja);
     progreso('descargar', `${(contenido.byteLength / 1024 / 1024).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`);
     const { archivos, tamanos } = abrirXlsx(contenido);
     const lectura = leerFilasObras(leerHoja(archivos, hoja.nombre_hoja, new DOMParser()));
@@ -87,12 +89,12 @@ export class SincronizacionService {
    * la base ya no se deshace; después la base, en una transacción; después la
    * hoja, rango a rango, empezando por el ID WEB de las obras nuevas. La foto de
    * lo escrito en la hoja se registra al final y solo de lo que se escribió: si
-   * Graph falla a medias, lo que falta reaparece en la siguiente ejecución.
+   * la escritura falla a medias, lo que falta reaparece en la siguiente ejecución.
    * Las imágenes pegadas de las altas se suben después del ID WEB, que es lo
    * que impide que la siguiente ejecución vuelva a proponer el alta.
    */
   async aplicar(calculo: Calculo, decisiones: Decisiones): Promise<ResultadoAplicacion> {
-    if ((await this.graph.minutosRestantes()) < MARGEN_TOKEN_MIN) {
+    if ((await this.acceso.minutosRestantes()) < MARGEN_TOKEN_MIN) {
       throw new ErrorGraph(401, 'La conexión con OneDrive está a punto de caducar. Reconecta antes de aplicar.');
     }
     if (this.gastados.has(calculo)) {
@@ -106,8 +108,9 @@ export class SincronizacionService {
       prefijoBucket: PREFIJO_BUCKET,
     });
 
-    const { drive_id, item_id, nombre_hoja } = calculo.hoja;
-    const rango = await this.graph.leerRangoUsado(drive_id, item_id, nombre_hoja);
+    const { hoja } = calculo;
+    await this.acceso.verificar(hoja);
+    const rango = await this.acceso.leerRangoUsado(hoja);
     const origen = origenDeDireccion(rango.address);
     const columnas = columnasDeEncabezados(rango.values[1 - origen.fila] ?? []);
     if ('faltantes' in columnas) throw new Error(mensajeEncabezados(columnas.faltantes, columnas.repetidos));
@@ -135,13 +138,13 @@ export class SincronizacionService {
     };
     try {
       for (const bloque of [...agruparEnBloques(ids.ubicadas), ...agruparEnBloques(campos.ubicadas)]) {
-        await this.graph.escribirValores(drive_id, item_id, nombre_hoja, bloque.direccion, bloque.valores);
+        await this.acceso.escribirValores(hoja, bloque.direccion, bloque.valores);
         for (const e of bloque.escrituras) anotar(e.obraId, e.foto);
         resultado.escritasEnHoja += bloque.escrituras.length;
       }
       const altas = bloqueDeAltas(plan.altasHoja, lectura.ultimaFila + 1, columnas);
       if (altas) {
-        await this.graph.escribirValores(drive_id, item_id, nombre_hoja, altas.direccion, altas.valores);
+        await this.acceso.escribirValores(hoja, altas.direccion, altas.valores);
         for (const alta of altas.altas) anotar(alta.obraId, alta.foto);
         resultado.altasEnHoja = altas.altas.length;
       }
@@ -161,16 +164,17 @@ export class SincronizacionService {
     let etag: string | null = null;
     if (resultado.error === null) {
       try {
-        etag = (await this.graph.archivo(drive_id, item_id)).eTag;
+        etag = await this.acceso.version(hoja);
       } catch (e) {
         resultado.error = mensajeDeError(e);
       }
     }
-    if (fotos.size || etag) {
+    const completa = resultado.error === null;
+    if (fotos.size || completa) {
       await this.datos.aplicar({
         campos: [], cargos: [], altas: [],
         fotos: [...fotos].map(([obra_id, valores]) => ({ obra_id, valores })),
-        ...(etag ? { hoja: { etag } } : {}),
+        ...(completa ? { hoja: { etag } } : {}),
       });
     }
     return resultado;

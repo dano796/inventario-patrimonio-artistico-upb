@@ -5,6 +5,7 @@ import {
   AvisoProgreso, Calculo, PasoCalculo, ResultadoAplicacion, SincronizacionService,
 } from '../../services/sincronizacion.service';
 import { ErrorGraph, GraphService } from '../../services/graph.service';
+import { ACCESO_HOJA, ErrorLibroDistinto, nombreDeUrl } from '../../services/acceso-hoja';
 import { HojaVinculada, SincronizacionDatosService } from '../../services/sincronizacion-datos.service';
 import { ENCABEZADO_ID_WEB, ENCABEZADOS, ENCABEZADOS_IMAGEN, ErrorEncabezados } from '../../nucleo/hoja-obras';
 import { hayCambios } from '../../nucleo/diff';
@@ -14,12 +15,12 @@ import { borrarBorrador, guardarBorrador, restaurarBorrador } from '../../utils/
 import { Eleccion, GrupoRevisionComponent } from '../revision/grupo-revision/grupo-revision.component';
 import { ResumenEjecucionComponent } from '../revision/resumen-ejecucion/resumen-ejecucion.component';
 
-type Fase = 'cargando' | 'sin-hoja' | 'hoja-perdida' | 'conectar' | 'calculando' | 'error' | 'vacio' | 'revision' | 'resultado';
+type Fase = 'cargando' | 'sin-hoja' | 'hoja-perdida' | 'otro-libro' | 'conectar' | 'calculando' | 'error' | 'vacio' | 'revision' | 'resultado';
 
 const RUTA = '/sincronizacion';
 
 const PASOS: { paso: PasoCalculo; etiqueta: string }[] = [
-  { paso: 'descargar', etiqueta: 'Descargar la hoja desde OneDrive' },
+  { paso: 'descargar', etiqueta: 'Descargar la hoja' },
   { paso: 'encabezados', etiqueta: 'Localizar encabezados' },
   { paso: 'inventario', etiqueta: 'Leer el inventario' },
   { paso: 'foto', etiqueta: 'Leer la última sincronización' },
@@ -39,7 +40,10 @@ const fecha = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short',
 export class SincronizarComponent implements OnInit {
   private servicio = inject(SincronizacionService);
   private graph = inject(GraphService);
+  private acceso = inject(ACCESO_HOJA);
   private datos = inject(SincronizacionDatosService);
+
+  readonly enExcel = this.acceso.origen === 'excel';
 
   fase = signal<Fase>('cargando');
   hoja = signal<HojaVinculada | null>(null);
@@ -57,6 +61,8 @@ export class SincronizarComponent implements OnInit {
   errorAplicar = signal<string | null>(null);
   recuperadas = signal<{ recuperadas: number; total: number } | null>(null);
   resultado = signal<ResultadoAplicacion | null>(null);
+  libro = signal<ErrorLibroDistinto | null>(null);
+  vinculando = signal(false);
 
   revision = computed(() => {
     const calculo = this.calculo();
@@ -72,8 +78,14 @@ export class SincronizarComponent implements OnInit {
   });
 
   conexion = computed(() => {
+    if (this.enExcel) return { texto: 'Libro abierto en Excel', punto: 'bg-verde' };
     if (this.caducado()) return { texto: 'Conexión caducada', punto: 'bg-rojo' };
     return this.conectado() ? { texto: 'OneDrive conectado', punto: 'bg-verde' } : { texto: 'OneDrive sin conectar', punto: 'bg-linea-3' };
+  });
+
+  libroAbierto = computed(() => {
+    const libro = this.libro();
+    return libro ? { abierto: nombreDeUrl(libro.abierto), vinculado: libro.vinculado ? nombreDeUrl(libro.vinculado) : null } : null;
   });
 
   textoRecuperadas = computed(() => {
@@ -121,6 +133,7 @@ export class SincronizarComponent implements OnInit {
     const enCurso = PASOS.find((p) => !(p.paso in hechos))?.paso;
     return PASOS.map((p) => ({
       ...p,
+      etiqueta: p.paso === 'descargar' ? (this.enExcel ? 'Leer el libro abierto' : 'Descargar la hoja desde OneDrive') : p.etiqueta,
       detalle: hechos[p.paso] ?? '',
       estado: p.paso in hechos ? 'hecho' : p.paso === enCurso ? 'en-curso' : 'pendiente',
     }));
@@ -158,7 +171,7 @@ export class SincronizarComponent implements OnInit {
       return;
     }
     try {
-      this.conectado.set(await this.graph.tieneAccesoArchivos());
+      this.conectado.set(await this.acceso.conectado());
     } catch {
       this.conectado.set(false);
     }
@@ -166,7 +179,7 @@ export class SincronizarComponent implements OnInit {
       this.fase.set('conectar');
       return;
     }
-    this.graph.archivo(hoja.drive_id, hoja.item_id).then((a) => this.archivo.set(a.name), () => undefined);
+    this.acceso.nombre(hoja).then((nombre) => this.archivo.set(nombre), () => undefined);
     await this.comparar();
   }
 
@@ -196,6 +209,23 @@ export class SincronizarComponent implements OnInit {
       }
     } finally {
       this.aplicando.set(false);
+    }
+  }
+
+  /** Solo desde el complemento: la URL del libro es la que da Office.js, y la web no la conoce. */
+  async vincularLibro(): Promise<void> {
+    const libro = this.libro();
+    if (!libro || this.vinculando()) return;
+    this.vinculando.set(true);
+    try {
+      await this.datos.vincularLibro(libro.abierto);
+      this.hoja.update((h) => (h ? { ...h, url: libro.abierto } : h));
+      this.libro.set(null);
+      await this.comparar();
+    } catch (e) {
+      this.mostrarError(e);
+    } finally {
+      this.vinculando.set(false);
     }
   }
 
@@ -265,6 +295,11 @@ export class SincronizarComponent implements OnInit {
   private mostrarError(e: unknown): void {
     if (e instanceof ErrorGraph && e.estado === 404) {
       this.fase.set('hoja-perdida');
+      return;
+    }
+    if (e instanceof ErrorLibroDistinto) {
+      this.libro.set(e);
+      this.fase.set('otro-libro');
       return;
     }
     if (e instanceof ErrorEncabezados) this.encabezados.set(e);

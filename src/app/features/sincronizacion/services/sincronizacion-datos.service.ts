@@ -12,6 +12,8 @@ export interface HojaVinculada {
   nombre_hoja: string;
   fecha_ultima: string | null;
   etag: string | null;
+  /** La del libro tal como la da Office.js: el complemento solo compara con este libro. */
+  url: string | null;
 }
 
 export interface ResultadoRpc {
@@ -50,7 +52,7 @@ export class SincronizacionDatosService {
     await this.prepareClient();
     const { data, error } = await this.supabaseClient
       .from('sincronizacion_hoja')
-      .select('drive_id, item_id, nombre_hoja, fecha_ultima, etag')
+      .select('drive_id, item_id, nombre_hoja, fecha_ultima, etag, url')
       .maybeSingle();
     if (error) throw error;
     return data;
@@ -63,6 +65,17 @@ export class SincronizacionDatosService {
       .upsert({ id: 1, ...hoja })
       .select('id');
     if (error) throw error;
+  }
+
+  async vincularLibro(url: string): Promise<void> {
+    await this.prepareClient();
+    const { data, error } = await this.supabaseClient
+      .from('sincronizacion_hoja')
+      .update({ url })
+      .eq('id', 1)
+      .select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('No hay ninguna hoja vinculada que actualizar.');
   }
 
   async obras(): Promise<ObraBase[]> {

@@ -8,6 +8,7 @@
     "start": "ng serve",
     "prebuild": "npm run env",
     "build": "ng build",
+    "postbuild": "node scripts/generar-manifiesto.js",
     "prewatch": "npm run env",
     "watch": "ng build --watch --configuration development",
     "pretest": "npm run env",
