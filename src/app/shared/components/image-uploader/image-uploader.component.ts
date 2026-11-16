@@ -10,6 +10,7 @@ import {
   computed,
   OnChanges,
   OnInit,
+  OnDestroy,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { ImageService } from '../../services/image.service';
@@ -21,7 +22,7 @@ import { ArtworkImage } from '../../models/image.model';
   templateUrl: './image-uploader.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ImageUploaderComponent implements OnInit, OnChanges {
+export class ImageUploaderComponent implements OnInit, OnChanges, OnDestroy {
   private imageService = inject(ImageService);
 
   @Input() existingImages: ArtworkImage[] = [];
@@ -31,7 +32,7 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
   @ViewChild('fileInput') fileInput!: ElementRef;
 
   // Signals para el estado del componente
-  private selectedFiles = signal<File[]>([]);
+  private pendientes = signal<{ archivo: File; url: string }[]>([]);
   private isDragging = signal(false);
   private allImages = signal<ArtworkImage[]>([]);
   /** Motivos de rechazo a mostrar al usuario (antes solo iban a console.warn). */
@@ -44,7 +45,7 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
   private removedImages = signal<ArtworkImage[]>([]);
 
   // Computed properties
-  hasFiles = computed(() => this.selectedFiles().length > 0);
+  hasFiles = computed(() => this.pendientes().length > 0);
   hasImages = computed(() => this.allImages().length > 0);
 
   constructor() {
@@ -59,7 +60,7 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
   ngOnChanges() {
     // Reinicializar cuando cambien las imágenes existentes
     this.allImages.set([...this.existingImages]);
-    this.selectedFiles.set([]);
+    this.vaciarPendientes();
     this.removedImages.set([]);
     this.rejectedFiles.set([]);
     this.clearFileInput();
@@ -68,9 +69,9 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files) {
-      const validFiles = this.validateFiles(Array.from(input.files));
-      this.selectedFiles.set(validFiles);
+      this.agregarPendientes(this.validateFiles(Array.from(input.files)));
     }
+    this.clearFileInput();
   }
 
   onDragOver(event: DragEvent): void {
@@ -92,8 +93,7 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
 
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
-      const validFiles = this.validateFiles(Array.from(files));
-      this.selectedFiles.update((current) => [...current, ...validFiles]);
+      this.agregarPendientes(this.validateFiles(Array.from(files)));
     }
   }
 
@@ -122,7 +122,24 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
   }
 
   removeSelectedFile(index: number): void {
-    this.selectedFiles.update((files) => files.filter((_, i) => i !== index));
+    const quitado = this.pendientes()[index];
+    if (!quitado) return;
+    URL.revokeObjectURL(quitado.url);
+    this.pendientes.update((lista) => lista.filter((_, i) => i !== index));
+  }
+
+  ngOnDestroy(): void {
+    this.vaciarPendientes();
+  }
+
+  private agregarPendientes(archivos: File[]): void {
+    const nuevos = archivos.map((archivo) => ({ archivo, url: URL.createObjectURL(archivo) }));
+    this.pendientes.update((lista) => [...lista, ...nuevos]);
+  }
+
+  private vaciarPendientes(): void {
+    for (const p of this.pendientes()) URL.revokeObjectURL(p.url);
+    this.pendientes.set([]);
   }
 
   clearFileInput(): void {
@@ -132,7 +149,7 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
   }
 
   clearAllFiles(): void {
-    this.selectedFiles.set([]);
+    this.vaciarPendientes();
     this.clearFileInput();
   }
 
@@ -181,8 +198,8 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
   }
 
   // Getters para el template
-  get selectedFilesArray() {
-    return this.selectedFiles();
+  get pendientesArray() {
+    return this.pendientes();
   }
 
   get allImagesArray() {
@@ -195,7 +212,7 @@ export class ImageUploaderComponent implements OnInit, OnChanges {
 
   // Método para obtener archivos seleccionados sin subir
   getSelectedFiles(): File[] {
-    return this.selectedFiles();
+    return this.pendientes().map((p) => p.archivo);
   }
 
   // Método para obtener todas las imágenes (subidas + existentes)

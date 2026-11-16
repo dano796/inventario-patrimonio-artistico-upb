@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, model, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, Injector, inject, input, model, signal, viewChild } from '@angular/core';
 import { Responsable } from '../../../../shared/models/responsable.model';
 import { buscarPorNombre, filtrarResponsables, responsablesParecidos } from '../../utils/buscar-responsables';
 
@@ -12,28 +12,46 @@ export type SeleccionResponsable =
   standalone: true,
   templateUrl: './selector-responsable.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown.escape)': 'abierto() && cerrar()' },
 })
 export class SelectorResponsableComponent {
   responsables = input.required<Responsable[]>();
   seleccion = model<SeleccionResponsable>(null);
 
+  abierto = signal(false);
   texto = signal('');
-  listaAbierta = signal(false);
   creando = signal(false);
   nombreNuevo = signal('');
   cargoNuevo = signal('');
 
-  coincidencias = computed(() => filtrarResponsables(this.texto(), this.responsables()).slice(0, 8));
-  existeExacto = computed(() => buscarPorNombre(this.texto(), this.responsables()) !== undefined);
+  private readonly injector = inject(Injector);
+  private readonly campo = viewChild<ElementRef<HTMLButtonElement>>('campo');
+  private readonly dialogo = viewChild<ElementRef<HTMLElement>>('dialogo');
+  private readonly buscador = viewChild<ElementRef<HTMLInputElement>>('buscador');
+  private readonly nombre = viewChild<ElementRef<HTMLInputElement>>('nombre');
+
+  coincidencias = computed(() => filtrarResponsables(this.texto(), this.responsables()));
   parecidos = computed(() => responsablesParecidos(this.nombreNuevo(), this.responsables()));
   cargos = computed(() =>
     [...new Set(this.responsables().map((r) => r.cargo).filter((c): c is string => !!c))].sort()
   );
 
+  abrir(): void {
+    this.texto.set('');
+    this.creando.set(false);
+    this.abierto.set(true);
+    this.enfocar(() => this.buscador());
+  }
+
+  cerrar(): void {
+    this.abierto.set(false);
+    this.creando.set(false);
+    this.enfocar(() => this.campo());
+  }
+
   elegir(responsable: Responsable): void {
     this.seleccion.set({ tipo: 'existente', responsable });
-    this.texto.set('');
-    this.listaAbierta.set(false);
+    this.abierto.set(false);
     this.creando.set(false);
   }
 
@@ -45,8 +63,8 @@ export class SelectorResponsableComponent {
   abrirCreacion(): void {
     this.nombreNuevo.set(this.texto().trim());
     this.cargoNuevo.set('');
-    this.listaAbierta.set(false);
     this.creando.set(true);
+    this.enfocar(() => this.nombre());
   }
 
   confirmarCreacion(): void {
@@ -58,20 +76,41 @@ export class SelectorResponsableComponent {
       return;
     }
     this.seleccion.set({ tipo: 'nuevo', nombre, cargo: this.cargoNuevo().trim() || null });
+    this.abierto.set(false);
     this.creando.set(false);
-    this.texto.set('');
   }
 
   cancelarCreacion(): void {
     this.creando.set(false);
+    this.enfocar(() => this.buscador());
+  }
+
+  cargoDe(seleccion: NonNullable<SeleccionResponsable>): string | null {
+    return seleccion.tipo === 'existente' ? seleccion.responsable.cargo : seleccion.cargo;
   }
 
   quitar(): void {
     this.seleccion.set(null);
+    this.enfocar(() => this.campo());
   }
 
-  /** El blur del campo llega antes que el click en una opcion de la lista; sin la espera, la lista se cierra y el clic se pierde. */
-  cerrarLista(): void {
-    setTimeout(() => this.listaAbierta.set(false), 150);
+  atraparFoco(evento: KeyboardEvent): void {
+    if (evento.key !== 'Tab') return;
+    const dialogo = this.dialogo()?.nativeElement;
+    if (!dialogo) return;
+    const enfocables = [...dialogo.querySelectorAll<HTMLElement>('button:not([disabled]), input')];
+    const primero = enfocables[0];
+    const ultimo = enfocables[enfocables.length - 1];
+    if (evento.shiftKey && document.activeElement === primero) {
+      evento.preventDefault();
+      ultimo.focus();
+    } else if (!evento.shiftKey && document.activeElement === ultimo) {
+      evento.preventDefault();
+      primero.focus();
+    }
+  }
+
+  private enfocar(destino: () => ElementRef<HTMLElement> | undefined): void {
+    afterNextRender(() => destino()?.nativeElement.focus(), { injector: this.injector });
   }
 }

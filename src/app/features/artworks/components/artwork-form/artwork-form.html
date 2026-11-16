@@ -1,4 +1,4 @@
-<main class="mx-auto flex max-w-[1060px] flex-col gap-5 px-4 pb-16 pt-[26px] md:px-8">
+<main class="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 pb-10 pt-[26px] md:px-8">
   <header class="flex flex-wrap items-end justify-between gap-5">
     <div>
       <p class="antetitulo">Catalogación</p>
@@ -22,128 +22,125 @@
     <p role="status" class="rounded-xl border border-verde bg-verde-suave px-4 py-3 text-sm font-medium text-verde">{{ successMessage() }}</p>
   }
 
-  <form id="formulario-obra" [formGroup]="artworkForm" (ngSubmit)="onSubmit()" novalidate class="flex flex-col gap-5">
-    <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
+  <form id="formulario-obra" [formGroup]="artworkForm" (ngSubmit)="onSubmit()" novalidate
+    class="grid items-start gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <section class="tarjeta order-last flex flex-col gap-3 p-5 lg:order-none lg:self-stretch">
       <div>
-        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">01</span> Identificación</h2>
-        <p class="mt-1 text-xs font-medium text-tinta-5">Cómo se nombra la obra en el inventario.</p>
-      </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="sm:col-span-2">
-          <label for="titulo" class="etiqueta">Título</label>
-          <input id="titulo" type="text" formControlName="titulo" class="campo" placeholder="Déjalo vacío si la obra no tiene título"
-            [attr.aria-invalid]="isFieldInvalid('titulo')" />
-          @if (isFieldInvalid('titulo')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('titulo') }}</p>
-          }
-        </div>
-        <div>
-          <label for="autor" class="etiqueta">Autor</label>
-          <input id="autor" type="text" formControlName="autor" class="campo" placeholder="Nombre del autor o «Anónimo»"
-            [attr.aria-invalid]="isFieldInvalid('autor')" />
-          @if (isFieldInvalid('autor')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('autor') }}</p>
-          }
-        </div>
-        <div>
-          <label for="ano" class="etiqueta">Año</label>
-          <input id="ano" type="number" inputmode="numeric" formControlName="ano" class="campo" [placeholder]="'Entre 1700 y ' + currentYear"
-            [attr.aria-invalid]="isFieldInvalid('ano')" />
-          @if (isFieldInvalid('ano')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('ano') }}</p>
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
-      <div>
-        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">02</span> Descripción técnica</h2>
-        <p class="mt-1 text-xs font-medium text-tinta-5">Material, medidas y valoración.</p>
-      </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label for="tecnica" class="etiqueta">Técnica</label>
-          <input id="tecnica" type="text" formControlName="tecnica" class="campo" placeholder="Óleo sobre lienzo, bronce, impresión…"
-            [attr.aria-invalid]="isFieldInvalid('tecnica')" />
-          @if (isFieldInvalid('tecnica')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('tecnica') }}</p>
-          }
-        </div>
-        <div>
-          <label for="dimension" class="etiqueta">Dimensión</label>
-          <input id="dimension" type="text" formControlName="dimension" class="campo" placeholder="Ej: 75 x 105 cm"
-            [attr.aria-invalid]="isFieldInvalid('dimension')" />
-          @if (isFieldInvalid('dimension')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('dimension') }}</p>
-          }
-        </div>
-        <div>
-          <label for="valor" class="etiqueta">Valor estimado</label>
-          <input id="valor" type="number" inputmode="numeric" min="0" formControlName="valor" class="campo" placeholder="COP"
-            [attr.aria-invalid]="isFieldInvalid('valor')" />
-          @if (isFieldInvalid('valor')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('valor') }}</p>
-          }
-        </div>
-        <div class="sm:col-span-2">
-          <label for="descripcion" class="etiqueta">Descripción</label>
-          <textarea id="descripcion" formControlName="descripcion" class="campo min-h-[96px] resize-y" placeholder="Qué representa la obra y cómo es"
-            [attr.aria-invalid]="isFieldInvalid('descripcion')"></textarea>
-          @if (isFieldInvalid('descripcion')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('descripcion') }}</p>
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
-      <div>
-        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">03</span> Custodia</h2>
-        <p class="mt-1 text-xs font-medium text-tinta-5">Dónde está y quién responde por ella.</p>
-      </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label for="ubicacion" class="etiqueta">Ubicación</label>
-          <input id="ubicacion" type="text" formControlName="ubicacion" class="campo" placeholder="Ej: Biblioteca Central Piso 3"
-            [attr.aria-invalid]="isFieldInvalid('ubicacion')" />
-          @if (isFieldInvalid('ubicacion')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('ubicacion') }}</p>
-          }
-        </div>
-        <div>
-          <label for="bloque_asignado" class="etiqueta">Bloque asignado</label>
-          <input id="bloque_asignado" type="text" formControlName="bloque_asignado" class="campo" placeholder="Ej: Bloque 6"
-            [attr.aria-invalid]="isFieldInvalid('bloque_asignado')" />
-          @if (isFieldInvalid('bloque_asignado')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('bloque_asignado') }}</p>
-          }
-        </div>
-        <div class="sm:col-span-2">
-          <label for="responsable" class="etiqueta">Responsable</label>
-          <app-selector-responsable [responsables]="responsables()" [(seleccion)]="seleccionResponsable" />
-        </div>
-        <div class="sm:col-span-2">
-          <label for="observaciones" class="etiqueta">Observaciones</label>
-          <textarea id="observaciones" formControlName="observaciones" class="campo min-h-[96px] resize-y"
-            placeholder="Procedencia, inscripciones, notas de conservación…" [attr.aria-invalid]="isFieldInvalid('observaciones')"></textarea>
-          @if (isFieldInvalid('observaciones')) {
-            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('observaciones') }}</p>
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
-      <div>
-        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">04</span> Imágenes</h2>
-        <p class="mt-1 text-xs font-medium text-tinta-5">JPG, PNG o WEBP, máximo 5 MB.</p>
+        <h2 class="text-[16px] font-bold">Imágenes</h2>
+        <p class="mt-0.5 text-xs font-medium text-tinta-5">JPG, PNG o WEBP, máximo 5 MB.</p>
       </div>
       <app-image-uploader
         [existingImages]="isEditMode() ? selectedArtwork()?.imagenes || [] : []"
         (imagesChanged)="onImagesChanged($event)"
         (isUploading)="onImageUploading($event)"
       />
+    </section>
+
+    <section class="tarjeta flex flex-col gap-6 px-6 py-[22px]">
+      <div class="flex flex-col gap-3">
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">01 -</span> Identificación</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-12">
+          <div class="sm:col-span-5">
+            <label for="titulo" class="etiqueta">Título</label>
+            <input id="titulo" type="text" formControlName="titulo" class="campo" placeholder="Déjalo vacío si la obra no tiene título"
+              [attr.aria-invalid]="isFieldInvalid('titulo')" />
+            @if (isFieldInvalid('titulo')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('titulo') }}</p>
+            }
+          </div>
+          <div class="sm:col-span-4">
+            <label for="autor" class="etiqueta">Autor</label>
+            <input id="autor" type="text" formControlName="autor" class="campo" placeholder="Nombre del autor o «Anónimo»"
+              [attr.aria-invalid]="isFieldInvalid('autor')" />
+            @if (isFieldInvalid('autor')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('autor') }}</p>
+            }
+          </div>
+          <div class="sm:col-span-3">
+            <label for="ano" class="etiqueta">Año</label>
+            <input id="ano" type="text" inputmode="numeric" formControlName="ano" (beforeinput)="soloDigitos($event)" class="campo" [placeholder]="'Entre 1700 y ' + currentYear"
+              [attr.aria-invalid]="isFieldInvalid('ano')" />
+            @if (isFieldInvalid('ano')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('ano') }}</p>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3">
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">02 -</span> Descripción técnica</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-12">
+          <div class="sm:col-span-5">
+            <label for="tecnica" class="etiqueta">Técnica</label>
+            <input id="tecnica" type="text" formControlName="tecnica" class="campo" placeholder="Óleo sobre lienzo, bronce, impresión…"
+              [attr.aria-invalid]="isFieldInvalid('tecnica')" />
+            @if (isFieldInvalid('tecnica')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('tecnica') }}</p>
+            }
+          </div>
+          <div class="sm:col-span-4">
+            <label for="dimension" class="etiqueta">Dimensión</label>
+            <input id="dimension" type="text" formControlName="dimension" class="campo" placeholder="Ej: 75 x 105 cm"
+              [attr.aria-invalid]="isFieldInvalid('dimension')" />
+            @if (isFieldInvalid('dimension')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('dimension') }}</p>
+            }
+          </div>
+          <div class="sm:col-span-3">
+            <label for="valor" class="etiqueta">Valor estimado</label>
+            <input id="valor" appCampoMiles formControlName="valor" class="campo" placeholder="COP"
+              [attr.aria-invalid]="isFieldInvalid('valor')" />
+            @if (isFieldInvalid('valor')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('valor') }}</p>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3">
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">03 -</span> Custodia</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-12">
+          <div class="sm:col-span-5">
+            <label for="ubicacion" class="etiqueta">Ubicación</label>
+            <input id="ubicacion" type="text" formControlName="ubicacion" class="campo" placeholder="Ej: Biblioteca Central Piso 3"
+              [attr.aria-invalid]="isFieldInvalid('ubicacion')" />
+            @if (isFieldInvalid('ubicacion')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('ubicacion') }}</p>
+            }
+          </div>
+          <div class="sm:col-span-4">
+            <label for="responsable" class="etiqueta">Responsable</label>
+            <app-selector-responsable [responsables]="responsables()" [(seleccion)]="seleccionResponsable" />
+          </div>
+          <div class="sm:col-span-3">
+            <label for="bloque_asignado" class="etiqueta">Bloque asignado</label>
+            <input id="bloque_asignado" type="text" formControlName="bloque_asignado" class="campo" placeholder="Ej: Bloque 6"
+              [attr.aria-invalid]="isFieldInvalid('bloque_asignado')" />
+            @if (isFieldInvalid('bloque_asignado')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('bloque_asignado') }}</p>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3">
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">04 -</span> Notas</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-12">
+          <div class="sm:col-span-6">
+            <label for="descripcion" class="etiqueta">Descripción</label>
+            <textarea id="descripcion" formControlName="descripcion" rows="3" class="campo min-h-[96px] resize-y" placeholder="Qué representa la obra y cómo es"
+              [attr.aria-invalid]="isFieldInvalid('descripcion')"></textarea>
+            @if (isFieldInvalid('descripcion')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('descripcion') }}</p>
+            }
+          </div>
+          <div class="sm:col-span-6">
+            <label for="observaciones" class="etiqueta">Observaciones</label>
+            <textarea id="observaciones" formControlName="observaciones" rows="3" class="campo min-h-[96px] resize-y" placeholder="Procedencia, inscripciones, notas de conservación…"
+              [attr.aria-invalid]="isFieldInvalid('observaciones')"></textarea>
+            @if (isFieldInvalid('observaciones')) {
+              <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('observaciones') }}</p>
+            }
+          </div>
+        </div>
+      </div>
     </section>
   </form>
 </main>
