@@ -71,7 +71,7 @@ describe('TableroComponent', () => {
     const hace3 = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
     const { html } = await montar(Promise.resolve([obra(1)]), async () => ({ fechaUltima: hace3, editadas: 5 }));
 
-    expect(html.textContent).toContain('Última sincronización: hace 3 días · 5 obras editadas en la web desde entonces');
+    expect(html.textContent).toContain('Última sincronización: hace 3 días (5 obras editadas en la web desde entonces)');
     expect(html.querySelector('a[href="/sincronizacion"]')?.textContent?.trim()).toBe('Sincronizar');
   });
 

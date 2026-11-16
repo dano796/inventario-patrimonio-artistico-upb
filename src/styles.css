@@ -49,7 +49,7 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-linea-2 bg-superficie px-[18px] py-2.5 text-sm font-semibold text-tinta-2 hover:border-linea-3 hover:bg-sub disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-peligro {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-rojo-linea bg-superficie px-[18px] py-2.5 text-sm font-semibold text-rojo hover:bg-rojo-tenue disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-rojo-linea bg-superficie px-[18px] py-2.5 text-sm font-semibold text-rojo-2 hover:bg-rojo-tenue disabled:cursor-not-allowed disabled:opacity-50;
   }
   .campo {
     @apply w-full rounded-xl border border-linea-2 bg-superficie px-3.5 py-[11px] text-sm font-medium text-tinta placeholder:text-tinta-5 focus:border-acento focus:shadow-anillo focus:outline-none aria-[invalid=true]:border-rojo;

@@ -68,5 +68,5 @@ export function lineaResultado(total: number, chips: readonly ChipFiltro[]): str
   if (total === 0) return criterios.length ? 'Ninguna obra coincide con los filtros' : 'Todavía no hay obras';
   const obras = total === 1 ? '1 obra' : `${total.toLocaleString('es-CO')} obras`;
   if (!criterios.length) return obras;
-  return `${obras} · ${total === 1 ? 'filtrada' : 'filtradas'} por ${unirConY(criterios)}`;
+  return `${obras} ${total === 1 ? 'filtrada' : 'filtradas'} por ${unirConY(criterios)}`;
 }

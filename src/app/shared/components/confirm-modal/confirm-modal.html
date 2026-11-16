@@ -2,7 +2,7 @@
   <div class="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 p-6" (click)="cerrar(false)">
     <div #dialogo class="tarjeta w-full max-w-[430px] px-7 py-[26px] outline-none" role="dialog" aria-modal="true" aria-labelledby="titulo-confirmacion"
       tabindex="-1" (click)="$event.stopPropagation()" (keydown)="atraparFoco($event)">
-      <div class="mb-3.5 grid h-11 w-11 place-items-center rounded-[14px] bg-rojo-suave text-xl font-bold text-rojo" aria-hidden="true">!</div>
+      <div class="mb-3.5 grid h-11 w-11 place-items-center rounded-[14px] bg-rojo-suave text-xl font-bold text-rojo-2" aria-hidden="true">!</div>
       <h2 id="titulo-confirmacion" class="mb-1.5 text-xl font-bold">{{ titulo() }}</h2>
       @if (mensaje()) {
         <p class="mb-5 text-sm font-medium text-tinta-4">{{ mensaje() }}</p>

@@ -40,7 +40,7 @@ describe('ArtworkFormComponent', () => {
     const html = await montar('/nueva');
     expect(html.querySelector('h1')?.textContent?.trim()).toBe('Nueva obra');
     expect(html.textContent).toContain('El código de ficha se asigna automáticamente al guardar.');
-    for (const bloque of ['01 · Identificación', '02 · Descripción técnica', '03 · Custodia', '04 · Imágenes']) {
+    for (const bloque of ['01 Identificación', '02 Descripción técnica', '03 Custodia', '04 Imágenes']) {
       expect(html.textContent).toContain(bloque);
     }
   });

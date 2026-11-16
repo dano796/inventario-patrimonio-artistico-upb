@@ -9,7 +9,7 @@
           }
         </ul>
       </div>
-      <button type="button" (click)="dismissRejected()" class="shrink-0 font-semibold" aria-label="Cerrar aviso">✕</button>
+      <button type="button" (click)="dismissRejected()" class="grid h-5 w-5 shrink-0 place-items-center" aria-label="Cerrar aviso"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
     </div>
   </div>
 }
@@ -19,7 +19,7 @@
     <div class="tarjeta group relative aspect-square overflow-hidden">
       <img [src]="image.url" [alt]="image.nombre" loading="lazy" class="h-full w-full object-cover" />
       <button type="button" (click)="removeImage(i)" [attr.aria-label]="'Quitar ' + image.nombre"
-        class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-white focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">×</button>
+        class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-white focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
       <span class="absolute inset-x-0 bottom-0 truncate bg-slate-900/80 px-2 py-1.5 text-[12px] font-medium text-white">{{ image.nombre }}</span>
     </div>
   }
@@ -29,7 +29,7 @@
       <span class="truncate text-xs font-semibold">{{ file.name }}</span>
       <span class="text-[12px] text-tinta-5">{{ (file.size / 1024 / 1024).toFixed(2) }} MB</span>
       <button type="button" (click)="removeSelectedFile(i)" [attr.aria-label]="'Quitar ' + file.name"
-        class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-white">×</button>
+        class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-white"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
     </div>
   }
   <label

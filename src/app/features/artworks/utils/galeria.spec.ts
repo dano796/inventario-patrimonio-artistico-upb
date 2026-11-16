@@ -43,8 +43,8 @@ describe('lineaResultado', () => {
 
   it('nombra los criterios una vez cada uno', () => {
     const chips = chipsFiltros(vacios({ autor: 'Ana', ubicaciones: ['Bloque 3', 'Bloque 6'], tecnica: 'Óleo' }), true);
-    expect(lineaResultado(12, chips)).toBe('12 obras · filtradas por ubicación, autor y técnica');
-    expect(lineaResultado(1, chips.slice(-1))).toBe('1 obra · filtrada por técnica');
+    expect(lineaResultado(12, chips)).toBe('12 obras filtradas por ubicación, autor y técnica');
+    expect(lineaResultado(1, chips.slice(-1))).toBe('1 obra filtrada por técnica');
   });
 
   it('sin resultados lo dice', () => {

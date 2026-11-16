@@ -8,8 +8,8 @@ describe('iniciales', () => {
 
   it('con una sola palabra usa una letra, y sin nombre un signo neutro', () => {
     expect(iniciales('Lina')).toBe('L');
-    expect(iniciales(null)).toBe('·');
-    expect(iniciales('   ')).toBe('·');
+    expect(iniciales(null)).toBe('?');
+    expect(iniciales('   ')).toBe('?');
   });
 });
 

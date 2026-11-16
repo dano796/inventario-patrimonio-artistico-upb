@@ -35,7 +35,7 @@ export function camposFicha(obra: Artwork, esAdmin: boolean): CampoFicha[] {
 
 export function subtituloFicha(obra: Artwork): string {
   const autor = obra.autor?.trim() || 'Autor no registrado';
-  return obra.ano === null ? autor : `${autor} · ${obra.ano}`;
+  return obra.ano === null ? autor : `${autor}, ${obra.ano}`;
 }
 
 export function ultimaCaptura(imagenes: readonly ArtworkImage[]): string | null {
@@ -46,7 +46,7 @@ export function ultimaCaptura(imagenes: readonly ArtworkImage[]): string | null 
   const fecha = new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
     new Date(Math.max(...tiempos))
   );
-  return `Última captura ${fecha} · ${imagenes.length} ${imagenes.length === 1 ? 'imagen' : 'imágenes'}`;
+  return `Última captura ${fecha} (${imagenes.length} ${imagenes.length === 1 ? 'imagen' : 'imágenes'})`;
 }
 
 export function mensajeBorrado(titulo: string, imagenes: number): string {

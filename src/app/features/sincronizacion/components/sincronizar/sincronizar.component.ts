@@ -145,7 +145,7 @@ export class SincronizarComponent implements OnInit {
     return ESPERADOS.map((texto) => {
       const falta = error.faltantes.includes(texto);
       const repetido = error.repetidos.includes(texto);
-      return { texto: falta ? `${texto} · no encontrado` : repetido ? `${texto} · repetido` : texto, mal: falta || repetido };
+      return { texto: falta ? `${texto} (no encontrado)` : repetido ? `${texto} (repetido)` : texto, mal: falta || repetido };
     });
   });
 

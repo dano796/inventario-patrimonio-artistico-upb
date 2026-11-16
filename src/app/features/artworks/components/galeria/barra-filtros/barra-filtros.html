@@ -10,7 +10,7 @@
     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M7 12h10M10 18h4"></path></svg>
     Filtros
     @if (contador() > 0) {
-      <span data-contador-filtros class="rounded-full bg-acento px-2 py-px text-[12px] font-bold text-white">{{ contador() }}</span>
+      <span data-contador-filtros class="inline-grid h-5 min-w-5 place-items-center rounded-full bg-acento px-1.5 text-[12px] font-bold text-white"><span class="[text-box:trim-both_cap_alphabetic]">{{ contador() }}</span></span>
     }
   </button>
 </div>
@@ -26,8 +26,8 @@
               [value]="valores()[campo.clave]" (input)="emitir(campo.clave, $event)"
               (keydown.enter)="alPulsarEnter(campo.clave, $event)" />
             @if (valores()[campo.clave]) {
-              <button type="button" class="absolute right-2 h-[22px] w-[22px] rounded-[7px] bg-linea-suave text-[14px] font-semibold leading-none text-tinta-4"
-                [attr.aria-label]="'Limpiar ' + campo.etiqueta" (click)="cambio.emit({ clave: campo.clave, valor: '' })">×</button>
+              <button type="button" class="absolute right-2 grid h-[22px] w-[22px] place-items-center rounded-[7px] bg-linea-suave text-tinta-4"
+                [attr.aria-label]="'Limpiar ' + campo.etiqueta" (click)="cambio.emit({ clave: campo.clave, valor: '' })"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
             }
           </div>
           @if (campo.clave === 'ubicacion') {
@@ -41,14 +41,14 @@
         @for (chip of chips(); track chip.clave + chip.valor) {
           <span class="inline-flex items-center gap-2 rounded-full border border-acento-suave bg-acento-tenue px-3 py-[5px] text-xs font-semibold text-acento-tinta">
             {{ chip.texto }}
-            <button type="button" class="text-sm leading-none" [attr.aria-label]="'Quitar filtro ' + chip.texto" (click)="quitar.emit(chip)">×</button>
+            <button type="button" class="grid h-3.5 w-3.5 place-items-center" [attr.aria-label]="'Quitar filtro ' + chip.texto" (click)="quitar.emit(chip)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
           </span>
         } @empty {
           <span class="text-xs font-medium text-tinta-5">Escribe en cualquier campo para acotar el listado.</span>
         }
       </div>
       @if (chips().length) {
-        <button type="button" class="text-[14px] font-semibold text-rojo" (click)="limpiar.emit()">Limpiar todos los filtros</button>
+        <button type="button" class="text-[14px] font-semibold text-rojo-2" (click)="limpiar.emit()">Limpiar todos los filtros</button>
       }
     </div>
   </div>

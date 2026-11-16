@@ -35,7 +35,7 @@ export class TableroComponent implements OnInit {
     const s = this.sincronizacion();
     if (!s?.fechaUltima) return 'Nunca se ha sincronizado con la hoja oficial.';
     const editadas = s.editadas === 1 ? '1 obra editada' : `${this.numero(s.editadas)} obras editadas`;
-    return `Última sincronización: ${haceCuanto(s.fechaUltima, new Date())} · ${editadas} en la web desde entonces`;
+    return `Última sincronización: ${haceCuanto(s.fechaUltima, new Date())} (${editadas} en la web desde entonces)`;
   });
 
   cifras = computed<Cifra[]>(() => {

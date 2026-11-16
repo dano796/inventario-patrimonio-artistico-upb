@@ -184,7 +184,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrar diferencias">
                 @for (f of r.filtros; track f.filtro) {
-                  <button type="button" class="chip" [attr.aria-pressed]="filtro() === f.filtro" (click)="filtro.set(f.filtro)">{{ f.etiqueta }} · {{ f.cuenta }}</button>
+                  <button type="button" class="chip" [attr.aria-pressed]="filtro() === f.filtro" (click)="filtro.set(f.filtro)">{{ f.etiqueta }} ({{ f.cuenta }})</button>
                 }
               </div>
               <span class="text-[13px] font-medium text-tinta-5">{{ gruposVisibles().length }} de {{ r.grupos.length }} con diferencias</span>

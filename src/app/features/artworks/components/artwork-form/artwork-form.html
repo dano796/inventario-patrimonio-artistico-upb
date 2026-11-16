@@ -25,7 +25,7 @@
   <form id="formulario-obra" [formGroup]="artworkForm" (ngSubmit)="onSubmit()" novalidate class="flex flex-col gap-5">
     <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
       <div>
-        <h2 class="text-[16px] font-bold">01 · Identificación</h2>
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">01</span> Identificación</h2>
         <p class="mt-1 text-xs font-medium text-tinta-5">Cómo se nombra la obra en el inventario.</p>
       </div>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -34,7 +34,7 @@
           <input id="titulo" type="text" formControlName="titulo" class="campo" placeholder="Déjalo vacío si la obra no tiene título"
             [attr.aria-invalid]="isFieldInvalid('titulo')" />
           @if (isFieldInvalid('titulo')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('titulo') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('titulo') }}</p>
           }
         </div>
         <div>
@@ -42,7 +42,7 @@
           <input id="autor" type="text" formControlName="autor" class="campo" placeholder="Nombre del autor o «Anónimo»"
             [attr.aria-invalid]="isFieldInvalid('autor')" />
           @if (isFieldInvalid('autor')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('autor') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('autor') }}</p>
           }
         </div>
         <div>
@@ -50,7 +50,7 @@
           <input id="ano" type="number" inputmode="numeric" formControlName="ano" class="campo" [placeholder]="'Entre 1700 y ' + currentYear"
             [attr.aria-invalid]="isFieldInvalid('ano')" />
           @if (isFieldInvalid('ano')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('ano') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('ano') }}</p>
           }
         </div>
       </div>
@@ -58,7 +58,7 @@
 
     <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
       <div>
-        <h2 class="text-[16px] font-bold">02 · Descripción técnica</h2>
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">02</span> Descripción técnica</h2>
         <p class="mt-1 text-xs font-medium text-tinta-5">Material, medidas y valoración.</p>
       </div>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -67,7 +67,7 @@
           <input id="tecnica" type="text" formControlName="tecnica" class="campo" placeholder="Óleo sobre lienzo, bronce, impresión…"
             [attr.aria-invalid]="isFieldInvalid('tecnica')" />
           @if (isFieldInvalid('tecnica')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('tecnica') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('tecnica') }}</p>
           }
         </div>
         <div>
@@ -75,7 +75,7 @@
           <input id="dimension" type="text" formControlName="dimension" class="campo" placeholder="Ej: 75 x 105 cm"
             [attr.aria-invalid]="isFieldInvalid('dimension')" />
           @if (isFieldInvalid('dimension')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('dimension') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('dimension') }}</p>
           }
         </div>
         <div>
@@ -83,7 +83,7 @@
           <input id="valor" type="number" inputmode="numeric" min="0" formControlName="valor" class="campo" placeholder="COP"
             [attr.aria-invalid]="isFieldInvalid('valor')" />
           @if (isFieldInvalid('valor')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('valor') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('valor') }}</p>
           }
         </div>
         <div class="sm:col-span-2">
@@ -91,7 +91,7 @@
           <textarea id="descripcion" formControlName="descripcion" class="campo min-h-[96px] resize-y" placeholder="Qué representa la obra y cómo es"
             [attr.aria-invalid]="isFieldInvalid('descripcion')"></textarea>
           @if (isFieldInvalid('descripcion')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('descripcion') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('descripcion') }}</p>
           }
         </div>
       </div>
@@ -99,7 +99,7 @@
 
     <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
       <div>
-        <h2 class="text-[16px] font-bold">03 · Custodia</h2>
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">03</span> Custodia</h2>
         <p class="mt-1 text-xs font-medium text-tinta-5">Dónde está y quién responde por ella.</p>
       </div>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -108,7 +108,7 @@
           <input id="ubicacion" type="text" formControlName="ubicacion" class="campo" placeholder="Ej: Biblioteca Central Piso 3"
             [attr.aria-invalid]="isFieldInvalid('ubicacion')" />
           @if (isFieldInvalid('ubicacion')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('ubicacion') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('ubicacion') }}</p>
           }
         </div>
         <div>
@@ -116,7 +116,7 @@
           <input id="bloque_asignado" type="text" formControlName="bloque_asignado" class="campo" placeholder="Ej: Bloque 6"
             [attr.aria-invalid]="isFieldInvalid('bloque_asignado')" />
           @if (isFieldInvalid('bloque_asignado')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('bloque_asignado') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('bloque_asignado') }}</p>
           }
         </div>
         <div class="sm:col-span-2">
@@ -128,7 +128,7 @@
           <textarea id="observaciones" formControlName="observaciones" class="campo min-h-[96px] resize-y"
             placeholder="Procedencia, inscripciones, notas de conservación…" [attr.aria-invalid]="isFieldInvalid('observaciones')"></textarea>
           @if (isFieldInvalid('observaciones')) {
-            <p class="mt-1 text-xs font-medium text-rojo">{{ getFieldError('observaciones') }}</p>
+            <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('observaciones') }}</p>
           }
         </div>
       </div>
@@ -136,8 +136,8 @@
 
     <section class="tarjeta grid gap-6 px-6 py-[22px] md:grid-cols-[170px_minmax(0,1fr)]">
       <div>
-        <h2 class="text-[16px] font-bold">04 · Imágenes</h2>
-        <p class="mt-1 text-xs font-medium text-tinta-5">JPG, PNG o WEBP · máximo 5 MB.</p>
+        <h2 class="text-[16px] font-bold"><span class="text-tinta-5">04</span> Imágenes</h2>
+        <p class="mt-1 text-xs font-medium text-tinta-5">JPG, PNG o WEBP, máximo 5 MB.</p>
       </div>
       <app-image-uploader
         [existingImages]="isEditMode() ? selectedArtwork()?.imagenes || [] : []"

@@ -6,7 +6,7 @@ import { estadoInicial, EstadoRevision } from './revision';
 
 export const CLAVE_BORRADOR = 'sincronizacion-borrador';
 
-/** d: cambio desmarcado · c: conflicto · g: cargo · i: imagen · ab: alta en la base · ah: alta en la hoja ignorada */
+/** d: cambio desmarcado, c: conflicto, g: cargo, i: imagen, ab: alta en la base, ah: alta en la hoja ignorada. */
 type Tipo = 'd' | 'c' | 'g' | 'i' | 'ab' | 'ah';
 type Entrada = [tipo: Tipo, clave: string, valor: string | number | null, huella: string];
 

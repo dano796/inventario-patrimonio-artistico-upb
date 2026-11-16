@@ -114,7 +114,7 @@ describe('SincronizarComponent: entrada y comparación', () => {
     const { html } = await montarPagina({ calcular: () => Promise.reject(new ErrorEncabezados(['UBICACIÓN'])) });
 
     expect(html.textContent).toContain('No se encontró el encabezado «UBICACIÓN»');
-    expect(html.textContent).toContain('UBICACIÓN · no encontrado');
+    expect(html.textContent).toContain('UBICACIÓN (no encontrado)');
     expect(html.textContent).toContain('AUTOR');
   });
 
@@ -193,7 +193,7 @@ describe('SincronizarComponent: revisar y aplicar', () => {
   it('el filtro Conflictos deja solo las tarjetas con conflicto', async () => {
     const { html, boton, actualizar } = await montarPagina({});
 
-    boton('Conflictos · 1').click();
+    boton('Conflictos (1)').click();
     await actualizar();
 
     expect(html.textContent).not.toContain('Retrato del Fundador');

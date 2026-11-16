@@ -15,7 +15,7 @@ const grupo = (r: { grupos: GrupoRevision[] }, clave: string) => r.grupos.find((
 
 describe('textoValor', () => {
   it('muestra un guion si no hay valor, el valor en pesos y el resto tal cual', () => {
-    expect(textoValor('ubicacion', null)).toEqual({ texto: '—', vacio: true });
+    expect(textoValor('ubicacion', null)).toEqual({ texto: 'Vacía', vacio: true });
     expect(textoValor('valor', 1200000)).toEqual({ texto: '$1.200.000', vacio: false });
     expect(textoValor('ano', 1998)).toEqual({ texto: '1998', vacio: false });
   });
@@ -160,7 +160,7 @@ describe('construirRevision: personas', () => {
     );
 
     const g = grupo(r, 'persona|JOBANY');
-    expect([g.tipo, g.titulo, g.etiqueta]).toEqual(['persona', 'JOBANY ALONSO TOBON PEÑA · cargo', 'Afecta a 3 obras']);
+    expect([g.tipo, g.titulo, g.etiqueta]).toEqual(['persona', 'Cargo de JOBANY ALONSO TOBON PEÑA', 'Afecta a 3 obras']);
     expect(g.filas[0].accion).toEqual(jasmine.objectContaining({ tipo: 'casilla', ref: { tipo: 'descartado', clave: 'cargo|JOBANY' } }));
     expect(r.resumen.haciaBase).toBe(1);
   });
@@ -279,8 +279,8 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
     expect(r.noSeTocan.map((x) => [x.tipo, x.titulo, x.detalle])).toEqual([
       ['ID duplicado', 'ID WEB 66 aparece 2 veces', 'Filas 71 y 140 de la hoja. Ninguna se toca.'],
       ['ID desconocido', 'ID WEB 999 no existe en el inventario', 'Fila 88 de la hoja. Puede ser una obra borrada o un ID tecleado a mano.'],
-      ['Celda ilegible', 'Fila 140 · VALOR', 'el valor está en otra moneda: «USD 1»'],
-      ['Celda ilegible', 'Fila 300 · ID WEB', 'el ID WEB no es un número entero positivo: «abc»'],
+      ['Celda ilegible', 'Fila 140, columna VALOR', 'el valor está en otra moneda: «USD 1»'],
+      ['Celda ilegible', 'Fila 300, columna ID WEB', 'el ID WEB no es un número entero positivo: «abc»'],
     ]);
     expect(r.grupos).toEqual([]);
   });
@@ -292,7 +292,7 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
       estadoInicial()
     );
 
-    expect(r.filtros.map((f) => `${f.etiqueta} · ${f.cuenta}`)).toEqual(['Todo · 3', 'Conflictos · 1', 'A la base · 0', 'A la hoja · 1', 'Altas y bajas · 1']);
+    expect(r.filtros.map((f) => `${f.etiqueta} ${f.cuenta}`)).toEqual(['Todo 3', 'Conflictos 1', 'A la base 0', 'A la hoja 1', 'Altas y bajas 1']);
   });
 });
 

@@ -54,8 +54,8 @@
 
   @case ('listo') {
     <app-sincronizar />
-    <p class="px-4 pb-6 text-[13px] font-medium text-tinta-5">
-      Sesión: {{ correo() }} ·
+    <p class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pb-6 text-[13px] font-medium text-tinta-5">
+      <span>Sesión: {{ correo() }}</span>
       <button type="button" class="font-semibold text-acento underline" (click)="salir()">Cerrar sesión</button>
     </p>
   }

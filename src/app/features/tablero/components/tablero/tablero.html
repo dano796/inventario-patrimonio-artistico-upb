@@ -84,7 +84,7 @@
             <div class="flex items-center justify-between gap-3 py-[11px]">
               <span class="text-[14px] font-medium">{{ p.etiqueta }}</span>
               <span class="flex items-center gap-3">
-                <span class="rounded-full bg-ambar-suave px-2.5 py-[3px] text-xs font-bold text-ambar">{{ numero(r.pendientes[p.clave].length) }}</span>
+                <span class="inline-grid h-[22px] min-w-[22px] place-items-center rounded-full bg-ambar-suave px-1.5 text-xs font-bold text-ambar"><span class="[text-box:trim-both_cap_alphabetic]">{{ numero(r.pendientes[p.clave].length) }}</span></span>
                 @if (r.pendientes[p.clave].length) {
                   <button type="button" class="text-xs font-semibold text-acento hover:text-acento-tinta" (click)="alternar(p.clave)"
                     [attr.aria-expanded]="abierta() === p.clave" [attr.aria-controls]="'pendientes-' + p.clave">
@@ -100,7 +100,7 @@
                 @for (o of r.pendientes[p.clave]; track o.id) {
                   <li class="border-b border-linea-0 py-1.5 last:border-0">
                     <a [routerLink]="['/obra', o.id]" class="text-[14px] font-medium text-tinta hover:text-acento-tinta">{{ titulo(o) }}</a>
-                    <span class="text-xs text-tinta-5"> · N.º {{ o.id }}</span>
+                    <span class="text-xs text-tinta-5"> (N.º {{ o.id }})</span>
                   </li>
                 }
               </ul>

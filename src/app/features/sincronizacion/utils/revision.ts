@@ -100,7 +100,7 @@ const ETIQUETAS_FILTRO: Record<Filtro, string> = {
 };
 
 const ORDEN_NO_SE_TOCA = ['ID duplicado', 'ID desconocido', 'Celda ilegible'];
-const VACIO: Celda = { texto: '—', vacio: true };
+const VACIO: Celda = { texto: 'Vacía', vacio: true };
 const plural = (n: number, palabra: string) => `${n} ${palabra}${n === 1 ? '' : 's'}`;
 const pesos = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
 
@@ -189,7 +189,7 @@ export function construirRevision(calculo: Calculo, estado: EstadoRevision): Rev
       } else {
         noSeTocan.push({
           clave: `fila|${a.fila}|${a.campo}`, tipo: 'Celda ilegible',
-          titulo: `Fila ${a.fila} · ${encabezado(a.campo)}`, detalle: `${a.motivo}: «${a.original}»`,
+          titulo: `Fila ${a.fila}, columna ${encabezado(a.campo)}`, detalle: `${a.motivo}: «${a.original}»`,
         });
       }
     } else if (aviso.tipo === 'id_duplicado') {
@@ -389,7 +389,7 @@ function grupoPersona(c: CambioCargo | ConflictoCargo, filas: FilaRevision[]): G
   if (conflicto) filtros.push('conflictos');
   else filtros.push((c as CambioCargo).destino);
   return {
-    clave: `persona|${c.clave}`, tipo: 'persona', numero: '', titulo: `${c.nombre} · cargo`,
+    clave: `persona|${c.clave}`, tipo: 'persona', numero: '', titulo: `Cargo de ${c.nombre}`,
     etiqueta: `Afecta a ${plural(c.filas.length, 'obra')}`, tono: conflicto ? 'ambar' : 'acento',
     pendiente, filas, resumen: null, opciones: [], ref: null, filtros,
   };

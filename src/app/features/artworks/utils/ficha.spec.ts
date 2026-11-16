@@ -30,7 +30,7 @@ describe('camposFicha con una lectura sin columnas restringidas', () => {
 
 describe('subtituloFicha', () => {
   it('une autor y año, y nombra lo que falta', () => {
-    expect(subtituloFicha(obraDePrueba())).toBe('Ana Pérez · 1998');
+    expect(subtituloFicha(obraDePrueba())).toBe('Ana Pérez, 1998');
     expect(subtituloFicha(obraDePrueba({ autor: null, ano: null }))).toBe('Autor no registrado');
   });
 });
@@ -41,7 +41,7 @@ describe('ultimaCaptura', () => {
       { url: 'a', nombre: 'a', fecha_creacion: '2024-03-01T12:00:00Z' },
       { url: 'b', nombre: 'b', fecha_creacion: '2025-10-22T12:00:00Z' },
     ];
-    expect(ultimaCaptura(imagenes)).toBe('Última captura 22/10/2025 · 2 imágenes');
+    expect(ultimaCaptura(imagenes)).toBe('Última captura 22/10/2025 (2 imágenes)');
   });
 
   it('sin fechas no dice nada', () => {
