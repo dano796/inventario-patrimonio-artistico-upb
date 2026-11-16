@@ -38,7 +38,8 @@ describe('ArtworkDetailComponent', () => {
   it('sin rol de administrador no muestra custodia, valor ni acciones', async () => {
     const { html } = await montar(obraDePrueba(), false);
     expect(html.textContent).toContain('Técnica');
-    for (const oculto of ['Valor estimado', 'Bloque 6', 'JOBANY TOBÓN', 'Editar', 'Eliminar']) {
+    expect(html.querySelector('[aria-label="Editar obra"], [aria-label="Eliminar obra"]')).toBeNull();
+    for (const oculto of ['Valor estimado', 'Bloque 6', 'JOBANY TOBÓN']) {
       expect(html.textContent).not.toContain(oculto);
     }
   });
@@ -47,9 +48,20 @@ describe('ArtworkDetailComponent', () => {
     const imagenes = [{ id: 1, url: 'https://x/a.jpg', nombre: 'a' }, { id: 2, url: 'https://x/b.jpg', nombre: 'b' }];
     const { harness, html } = await montar(obraDePrueba({ imagenes }), true);
     expect(html.textContent).toContain('Valor estimado');
-    [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Eliminar')!.click();
+    expect(html.querySelector('a[aria-label="Editar obra"]')?.getAttribute('href')).toBe('/editar/14');
+    html.querySelector<HTMLButtonElement>('button[aria-label="Eliminar obra"]')!.click();
     harness.detectChanges();
     expect(html.querySelector('[role="dialog"]')?.textContent).toContain('«Paisaje» y sus 2 imágenes se eliminarán de forma permanente.');
+  });
+
+  it('el clic en la imagen la amplía en el visor, con la imagen que se está viendo', async () => {
+    const imagenes = [{ id: 1, url: 'https://x/a.jpg', nombre: 'a' }, { id: 2, url: 'https://x/b.jpg', nombre: 'b' }];
+    const { harness, html } = await montar(obraDePrueba({ imagenes } as never), false);
+    html.querySelector<HTMLButtonElement>('button[aria-label="Imagen siguiente"]')!.click();
+    harness.detectChanges();
+    html.querySelector<HTMLButtonElement>('button[aria-label^="Ampliar"]')!.click();
+    harness.detectChanges();
+    expect(html.querySelector('[role="dialog"] img')?.getAttribute('src')).toBe('https://x/b.jpg');
   });
 
   it('una obra sin título muestra «Sin título»', async () => {

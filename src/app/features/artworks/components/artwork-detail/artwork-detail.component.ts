@@ -4,11 +4,12 @@ import { ArtworksService } from '../../services/artworks.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
 import { IconoSinImagenComponent } from '../../../../shared/components/icono-sin-imagen/icono-sin-imagen.component';
+import { VisorImagenComponent } from '../../../../shared/components/visor-imagen/visor-imagen.component';
 import { camposFicha, mensajeBorrado, NO_REGISTRA, subtituloFicha, ultimaCaptura } from '../../utils/ficha';
 
 @Component({
   selector: 'app-artwork-detail',
-  imports: [RouterLink, ConfirmModalComponent, IconoSinImagenComponent],
+  imports: [RouterLink, ConfirmModalComponent, IconoSinImagenComponent, VisorImagenComponent],
   templateUrl: './artwork-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -30,6 +31,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   private id: number | null = null;
 
   imagenes = computed(() => this.artwork()?.imagenes ?? []);
+  ampliada = signal(false);
   imagenActual = computed(() => this.imagenes()[this.currentImageIndex()] ?? this.imagenes()[0] ?? null);
   titulo = computed(() => this.artwork()?.titulo?.trim() || 'Sin título');
   subtitulo = computed(() => {
