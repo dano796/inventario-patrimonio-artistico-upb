@@ -193,3 +193,32 @@ describe('GraphService.buscarArchivos', () => {
     expect((window.fetch as jasmine.Spy).calls.argsFor(1)[0]).toBe('https://graph.microsoft.com/v1.0/siguiente');
   });
 });
+
+describe('GraphService: mensajes de error de Graph', () => {
+  const descargarCon = async (respuesta: Response): Promise<ErrorGraph> => {
+    spyOn(window, 'fetch').and.resolveTo(respuesta);
+    try {
+      await crearGraphService('token-cualquiera').descargar('d', 'i');
+    } catch (e) {
+      return e as ErrorGraph;
+    }
+    throw new Error('debía lanzar ErrorGraph');
+  };
+
+  it('un 403 explica que la hoja es de otra persona y remite al complemento, sin el JSON de Microsoft', async () => {
+    const e = await descargarCon(new Response('{"error":{"code":"accessDenied","message":"Access denied"}}', { status: 403 }));
+    expect(e.estado).toBe(403);
+    expect(e.message).toContain('complemento de Excel');
+    expect(e.message).not.toContain('accessDenied');
+  });
+
+  it('otro error conserva el código de Graph y el estado para poder diagnosticarlo', async () => {
+    const e = await descargarCon(new Response('{"error":{"code":"generalException"}}', { status: 500 }));
+    expect(e.message).toBe('OneDrive respondió con un error (generalException, código 500).');
+  });
+
+  it('un cuerpo que no es JSON no rompe el mensaje', async () => {
+    const e = await descargarCon(new Response('boom', { status: 502 }));
+    expect(e.message).toBe('OneDrive respondió con un error (código 502).');
+  });
+});

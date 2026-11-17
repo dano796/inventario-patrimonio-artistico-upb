@@ -52,7 +52,7 @@
                       <li class="relative before:absolute before:-left-5 before:top-[13px] before:h-1.5 before:w-1.5 before:rounded-full before:bg-tinta-5 before:ring-2 before:ring-superficie">
                         <button type="button" (click)="alternarLugar(l.nombre)" [attr.aria-expanded]="lugarAbierto() === l.nombre"
                           class="group/lugar flex w-full cursor-pointer items-baseline justify-between gap-4 rounded-lg py-[5px] text-left text-[13px] hover:text-tinta focus-visible:outline-offset-[-2px]">
-                          <span [class]="l.nombre ? 'min-w-0 font-medium text-tinta-3 group-hover/lugar:text-tinta' : 'min-w-0 font-medium italic text-tinta-4 group-hover/lugar:text-tinta'">{{ l.nombre ?? 'Sin ubicación registrada' }}</span>
+                          <span [class]="l.nombre ? 'min-w-0 font-medium text-tinta-3 group-hover/lugar:text-tinta' : 'min-w-0 font-medium text-tinta-5 group-hover/lugar:text-tinta'">{{ l.nombre ?? 'Sin ubicación registrada' }}</span>
                           <span class="flex flex-none items-center gap-1.5 font-semibold text-tinta-4">
                             {{ numero(l.obras) }}
                             <svg class="transition-transform group-aria-expanded/lugar:rotate-90" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>

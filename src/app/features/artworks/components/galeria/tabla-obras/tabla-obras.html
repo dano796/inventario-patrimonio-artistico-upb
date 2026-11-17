@@ -13,13 +13,13 @@
     <tbody>
       @for (obra of obras(); track obra.id) {
         <tr class="cursor-pointer border-b border-linea-00 align-middle last:border-0 hover:bg-sub" (click)="abrirFicha(obra, $event)">
-          <td class="py-2.5 pr-4" [class]="texto(obra.autor) ? 'text-tinta-3' : 'italic text-tinta-5'">{{ texto(obra.autor) ?? noRegistra }}</td>
+          <td class="py-2.5 pr-4" [class]="texto(obra.autor) ? 'text-tinta-3' : 'text-tinta-5'">{{ texto(obra.autor) ?? noRegistra }}</td>
           <td class="py-2.5 pr-4">
             <a [routerLink]="['/obra', obra.id]" class="font-semibold text-tinta hover:text-acento-tinta">{{ titulo(obra) }}</a>
           </td>
           @for (columna of columnas(); track columna.etiqueta) {
             @let valor = texto(columna.valor(obra));
-            <td class="py-2.5 pr-4" [class.whitespace-nowrap]="columna.corta" [class]="valor ? 'text-tinta-3' : 'italic text-tinta-5'">{{ valor ?? noRegistra }}</td>
+            <td class="py-2.5 pr-4" [class.whitespace-nowrap]="columna.corta" [class]="valor ? 'text-tinta-3' : 'text-tinta-5'">{{ valor ?? noRegistra }}</td>
           }
           <td class="py-2.5">
             @if (imagen(obra); as url) {

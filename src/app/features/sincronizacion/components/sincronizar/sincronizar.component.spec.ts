@@ -70,7 +70,7 @@ async function montarPagina(opciones: {
     await fixture.whenStable();
     fixture.detectChanges();
   };
-  const boton = (texto: string) => [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto) as HTMLButtonElement;
+  const boton = (texto: string) => [...html.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === texto) as HTMLButtonElement;
   return { fixture, html, servicio, graph, datos, actualizar, boton };
 }
 

@@ -1,17 +1,17 @@
 @let g = grupo();
 <article class="tarjeta overflow-hidden" [class.!border-ambar-linea]="g.pendiente">
-  <header class="flex items-center justify-between gap-3 border-b border-linea-suave px-5 py-3.5">
+  <header class="flex items-center justify-between gap-3 px-5 py-4">
     <div class="flex min-w-0 items-baseline gap-2.5">
       @if (g.numero) {
         <span class="whitespace-nowrap text-[14px] font-bold text-acento">{{ g.numero }}</span>
       }
-      <span class="truncate text-[16px] font-bold">{{ g.titulo }}</span>
+      <span class="truncate text-[17px] font-bold">{{ g.titulo }}</span>
     </div>
     <span [class]="'whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-bold ' + tonos[g.tono]">{{ g.etiqueta }}</span>
   </header>
 
   @if (g.tipo === 'presencia') {
-    <div class="flex flex-wrap items-center justify-between gap-3.5 px-5 py-3.5" [class.bg-ambar-tenue]="g.pendiente">
+    <div class="flex flex-wrap items-center justify-between gap-3.5 border-t border-linea-suave px-5 py-4" [class.bg-ambar-tenue]="g.pendiente">
       <p class="min-w-0 flex-[1_1_320px] text-[14px] font-medium leading-normal text-tinta-3">{{ g.resumen }}</p>
       @if (g.ref; as ref) {
         <div class="flex flex-wrap gap-1.5">
@@ -23,75 +23,106 @@
     </div>
   }
 
-  @if (g.filas.length) {
-    <div class="hidden grid-cols-[22px_118px_minmax(0,1fr)_minmax(0,1fr)_230px] gap-3.5 bg-sub-2 px-5 pb-[7px] pt-[9px] text-[11px] font-bold uppercase tracking-[0.1em] text-tinta-5 md:grid" aria-hidden="true">
-      <span></span><span>Campo</span><span>Hoja</span><span>Base</span><span>Acción</span>
-    </div>
-    @for (fila of g.filas; track fila.clave) {
-      <div class="grid grid-cols-[22px_minmax(0,1fr)] items-center gap-x-3.5 gap-y-1.5 border-t border-linea-suave px-5 py-3 md:grid-cols-[22px_118px_minmax(0,1fr)_minmax(0,1fr)_230px] md:gap-y-[5px]"
-        [class.bg-ambar-tenue]="fila.pendiente">
-        <span class="grid place-items-center">
-          @switch (fila.accion.tipo) {
-            @case ('casilla') {
-              @if (fila.accion.tipo === 'casilla') {
-                <input type="checkbox" class="m-0 h-4 w-4 cursor-pointer accent-acento" [checked]="fila.accion.incluido"
-                  [attr.aria-label]="'Incluir el cambio de ' + fila.campo" (change)="elegir(fila.accion.ref, null)" />
-              }
-            }
-            @case ('opciones') {
-              @if (fila.notaAmbar) {
-                <svg class="text-ambar-3" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
-              }
-            }
-            @case ('fuera') {
-              <svg class="text-tinta-5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg>
+  @for (fila of g.filas; track fila.clave) {
+    @let estadoFila = estado(fila);
+    @let direccion = flecha(fila);
+    <div class="grid grid-cols-1 items-center gap-x-3 gap-y-2.5 border-t border-linea-suave px-5 py-4 md:grid-cols-[190px_minmax(0,1fr)]"
+      [class.bg-ambar-tenue]="fila.pendiente">
+      <div class="flex min-w-0 items-start gap-2.5">
+        @switch (fila.accion.tipo) {
+          @case ('casilla') {
+            @if (fila.accion.tipo === 'casilla') {
+              <app-casilla class="mt-[2px]" [id]="'incluir-' + fila.clave" [marcada]="fila.accion.incluido"
+                [etiqueta]="'Incluir el cambio de ' + etiqueta(fila.campo)" (cambio)="elegir(fila.accion.ref, null)" />
             }
           }
+          @case ('opciones') {
+            @if (fila.notaAmbar) {
+              <svg class="mt-0.5 flex-none text-ambar-3" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+            }
+          }
+          @case ('fuera') {
+            <svg class="mt-0.5 flex-none text-tinta-5" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg>
+          }
+        }
+        <span class="flex min-w-0 flex-col gap-0.5">
+          @if (fila.accion.tipo === 'casilla') {
+            <label class="cursor-pointer text-[15px] font-bold" [for]="'incluir-' + fila.clave">{{ etiqueta(fila.campo) }}</label>
+          } @else {
+            <span class="text-[15px] font-bold">{{ etiqueta(fila.campo) }}</span>
+          }
+          <span class="text-[13px] font-semibold" [class]="estadoFila.clase">{{ estadoFila.texto }}</span>
+          @if (fila.accion.tipo === 'fuera' && fila.accion.enlaceObra) {
+            <a [routerLink]="['/obra', fila.accion.enlaceObra]" class="text-[13px] font-semibold text-acento hover:text-acento-tinta">Ver la ficha</a>
+          }
         </span>
-        <span class="font-mono text-[13px] text-tinta-3">{{ fila.campo }}</span>
-        @for (lado of lados; track lado) {
-          @let celda = lado === 'hoja' ? fila.hoja : fila.base;
-          <span class="col-start-2 flex min-w-0 items-center gap-2.5 text-[15px] font-medium leading-[1.4] [overflow-wrap:anywhere] md:col-start-auto">
-            <span class="w-10 flex-none text-xs font-semibold text-tinta-5 md:hidden">{{ lado === 'hoja' ? 'Hoja' : 'Base' }}</span>
-            @if (celda.miniatura) {
-              <span class="marcador h-12 w-12 flex-none overflow-hidden rounded-lg">
-                <img [src]="celda.miniatura" alt="" loading="lazy" class="h-full w-full object-cover" (error)="ocultar($event)" />
-              </span>
-            } @else {
-              <span [class]="claseValor(fila, lado)" [attr.data-gana]="fila.gana === lado ? '' : null"
-                [attr.data-pierde]="fila.gana && fila.gana !== lado ? '' : null">{{ celda.texto }}</span>
+      </div>
+
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)] items-stretch gap-x-1.5 sm:grid-cols-[minmax(0,1fr)_28px_minmax(0,1fr)] sm:gap-x-3">
+      @for (lado of lados; track lado) {
+        @let opcion = opcionDeLado(fila, lado);
+        @if (opcion) {
+          <button type="button" [class]="'flex min-h-[64px] min-w-0 flex-col items-start justify-center gap-1 rounded-xl px-3 py-2.5 sm:px-3.5 text-left ' + claseCaja(fila, lado)"
+            [attr.aria-pressed]="opcion.elegida" [attr.aria-label]="opcion.etiqueta" (click)="elegirOpcion(fila, opcion.valor)">
+            <ng-container *ngTemplateOutlet="contenido; context: { $implicit: fila, lado: lado, elegible: true }" />
+          </button>
+        } @else {
+          <div [class]="'flex min-h-[64px] min-w-0 flex-col items-start justify-center gap-1 rounded-xl px-3 py-2.5 sm:px-3.5 ' + claseCaja(fila, lado)">
+            <ng-container *ngTemplateOutlet="contenido; context: { $implicit: fila, lado: lado, elegible: false }" />
+          </div>
+        }
+        @if (lado === 'hoja') {
+          <span class="grid place-items-center" [attr.aria-hidden]="true">
+            @switch (direccion) {
+              @case ('duda') {
+                <svg class="text-ambar-3" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"></path><path d="M20 7H4"></path><path d="m8 21-4-4 4-4"></path><path d="M4 17h16"></path></svg>
+              }
+              @case ('nada') {
+                <span class="h-0.5 w-3 rounded-full bg-linea-3"></span>
+              }
+              @case ('fuera') {
+                <span class="h-0.5 w-3 rounded-full bg-linea-2"></span>
+              }
+              @default {
+                <svg class="text-acento" [class.rotate-180]="direccion === 'a-hoja'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+              }
             }
           </span>
         }
-        <span class="col-start-2 flex flex-wrap items-center gap-1.5 md:col-start-auto">
-          @switch (fila.accion.tipo) {
-            @case ('casilla') {
-              @if (fila.accion.tipo === 'casilla') {
-                <span class="inline-flex items-center gap-1.5 text-[13px] font-semibold" [class]="fila.accion.incluido ? 'text-acento-tinta' : 'text-tinta-5'">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                  {{ fila.accion.destino === 'base' ? 'Se escribe en la base' : 'Se escribe en la hoja' }}
-                </span>
-              }
-            }
-            @case ('opciones') {
-              @if (fila.accion.tipo === 'opciones') {
-                @for (o of fila.accion.opciones; track o.valor) {
-                  <button type="button" class="eleccion" [attr.aria-pressed]="o.elegida" (click)="elegir(fila.accion.ref, o.valor)">{{ o.etiqueta }}</button>
-                }
-              }
-            }
-            @case ('fuera') {
-              <span class="text-[13px] font-semibold text-tinta-4">Queda fuera</span>
-              @if (fila.accion.tipo === 'fuera' && fila.accion.enlaceObra) {
-                <a [routerLink]="['/obra', fila.accion.enlaceObra]" class="text-[13px] font-semibold text-acento hover:text-acento-tinta">Ver la ficha</a>
-              }
-            }
-          }
-        </span>
-        @if (fila.nota) {
-          <span class="col-start-2 text-[13px] font-medium leading-[1.45] md:col-start-3 md:col-end-6" [class]="fila.notaAmbar ? 'text-ambar' : 'text-tinta-4'">{{ fila.nota }}</span>
-        }
+      }
+
       </div>
-    }
+
+      @if (otrasOpciones(fila).length && fila.accion.tipo === 'opciones') {
+        <div class="flex flex-wrap gap-1.5 md:col-start-2">
+          @for (o of otrasOpciones(fila); track o.valor) {
+            <button type="button" class="eleccion" [attr.aria-pressed]="o.elegida" (click)="elegirOpcion(fila, o.valor)">{{ o.etiqueta }}</button>
+          }
+        </div>
+      }
+      @if (fila.nota) {
+        <p class="text-[13px] font-medium leading-[1.45] md:col-start-2" [class]="fila.notaAmbar ? 'text-ambar' : 'text-tinta-4'">{{ fila.nota }}</p>
+      }
+    </div>
   }
 </article>
+
+<ng-template #contenido let-fila let-lado="lado" let-elegible="elegible">
+  @let celda = lado === 'hoja' ? fila.hoja : fila.base;
+  <span class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em]" [class]="elegible && fila.gana === lado ? 'text-acento-tinta' : 'text-tinta-5'">
+    {{ nombreLado(lado) }}
+    @if (elegible && fila.gana === lado) {
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+      <span class="normal-case tracking-normal">Se queda</span>
+    }
+  </span>
+  @if (celda.miniatura) {
+    <span class="marcador h-14 w-14 flex-none overflow-hidden rounded-lg">
+      <img [src]="celda.miniatura" alt="" loading="lazy" class="h-full w-full object-cover" (error)="ocultar($event)" />
+    </span>
+  } @else {
+    <span class="min-w-0 text-[15px] font-medium leading-[1.4] [overflow-wrap:anywhere]" [class]="claseValor(fila, lado)"
+      [class.!text-tinta-5]="celda.vacio" [attr.data-gana]="fila.gana === lado ? '' : null"
+      [attr.data-pierde]="fila.gana && fila.gana !== lado ? '' : null">{{ celda.texto }}</span>
+  }
+</ng-template>

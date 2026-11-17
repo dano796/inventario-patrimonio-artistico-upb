@@ -25,7 +25,7 @@ function montar(g: GrupoRevision) {
 }
 
 const boton = (html: HTMLElement, texto: string) =>
-  [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto) as HTMLButtonElement;
+  [...html.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === texto) as HTMLButtonElement;
 
 describe('GrupoRevisionComponent', () => {
   it('pinta el número, el título, la etiqueta y la acción del cambio', () => {

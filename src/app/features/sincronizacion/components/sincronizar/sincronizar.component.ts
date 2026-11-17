@@ -27,6 +27,10 @@ const PASOS: { paso: PasoCalculo; etiqueta: string }[] = [
   { paso: 'comparar', etiqueta: 'Comparar campo por campo' },
 ];
 
+const PREVIAS: Fase[] = ['cargando', 'sin-hoja', 'hoja-perdida', 'otro-libro', 'conectar', 'calculando', 'error'];
+
+type EstadoEtapa = 'hecho' | 'actual' | 'en-curso' | 'aviso' | 'error' | 'pendiente';
+
 const ESPERADOS = [...Object.values(ENCABEZADOS), ...ENCABEZADOS_IMAGEN, ENCABEZADO_ID_WEB];
 
 const fecha = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -137,6 +141,40 @@ export class SincronizarComponent implements OnInit {
       detalle: hechos[p.paso] ?? '',
       estado: p.paso in hechos ? 'hecho' : p.paso === enCurso ? 'en-curso' : 'pendiente',
     }));
+  });
+
+  previa = computed(() => PREVIAS.includes(this.fase()));
+
+  etapas = computed(() => {
+    const fase = this.fase();
+    const hayHoja = !!this.hoja();
+    const vincular: EstadoEtapa =
+      fase === 'cargando' ? 'pendiente'
+      : fase === 'sin-hoja' ? 'actual'
+      : fase === 'hoja-perdida' || fase === 'otro-libro' ? 'aviso'
+      : fase === 'error' && !hayHoja ? 'error'
+      : 'hecho';
+    const conectar: EstadoEtapa =
+      vincular !== 'hecho' ? 'pendiente'
+      : fase === 'conectar' ? 'actual'
+      : fase === 'error' && !this.conectado() ? 'error'
+      : 'hecho';
+    const listo = vincular === 'hecho' && (this.enExcel || conectar === 'hecho');
+    const comparar: EstadoEtapa =
+      !listo ? 'pendiente'
+      : fase === 'calculando' ? 'en-curso'
+      : fase === 'error' ? 'error'
+      : 'pendiente';
+    return [
+      this.enExcel
+        ? { clave: 'vincular', titulo: 'Confirmar el libro oficial', texto: 'El libro abierto en Excel tiene que ser la hoja vinculada, no una copia.', estado: vincular }
+        : { clave: 'vincular', titulo: 'Vincular la hoja oficial', texto: 'El archivo del OneDrive de quien la custodia que se compara con el inventario.', estado: vincular },
+      ...(this.enExcel ? [] : [
+        { clave: 'conectar', titulo: 'Conectar con OneDrive', texto: 'Permiso para leer y escribir la hoja, pedido solo desde esta página.', estado: conectar },
+      ]),
+      { clave: 'comparar', titulo: 'Comparar campo por campo', texto: 'Solo lectura: se leen las dos copias y se buscan las diferencias.', estado: comparar },
+      { clave: 'revisar', titulo: 'Revisar y aprobar', texto: 'Eliges qué valor queda en cada diferencia. Al aprobar se escribe en la base y en la hoja.', estado: 'pendiente' as EstadoEtapa },
+    ].map((e, i) => ({ ...e, numero: i + 1 }));
   });
 
   chipsEncabezados = computed(() => {

@@ -81,7 +81,7 @@
           @for (campo of campos(); track campo.etiqueta) {
             <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-4 border-b border-linea-0 py-3 last:border-0 sm:grid-cols-[150px_minmax(0,1fr)]">
               <dt class="text-[14px] font-semibold text-tinta-5">{{ campo.etiqueta }}</dt>
-              <dd [class]="campo.vacio ? 'text-sm font-medium italic text-tinta-5' : 'whitespace-pre-line text-sm font-medium'">{{ campo.valor }}</dd>
+              <dd [class]="campo.vacio ? 'text-sm font-medium text-tinta-5' : 'whitespace-pre-line text-sm font-medium'">{{ campo.valor }}</dd>
             </div>
           }
         </dl>
