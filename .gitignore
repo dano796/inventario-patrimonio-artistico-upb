@@ -49,7 +49,8 @@ Thumbs.db
 /src/environments/environment.development.ts
 
 # Notas de trabajo y SQL de operacion: se mantienen solo en local
-/docs
+/docs/*
+!/docs/diagramas/
 /scripts/*.sql
 .mcp.json
 
