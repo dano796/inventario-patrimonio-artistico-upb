@@ -1,7 +1,7 @@
 import { CLAVE_VISTA, chipsFiltros, guardarVista, leerVista, lineaResultado, ValoresFiltros } from './galeria';
 
 const vacios = (v: Partial<ValoresFiltros> = {}): ValoresFiltros => ({
-  busqueda: '', ubicacion: '', ubicaciones: [], responsable: '', autor: '', tecnica: '', ...v,
+  busqueda: '', ubicacion: '', ubicaciones: [], responsable: '', autor: '', tecnica: '', falta: '', ...v,
 });
 
 describe('chipsFiltros', () => {
@@ -32,6 +32,19 @@ describe('chipsFiltros', () => {
 
   it('ignora los filtros que solo tienen espacios', () => {
     expect(chipsFiltros(vacios({ autor: '   ' }), true)).toEqual([]);
+  });
+});
+
+describe('filtro por dato faltante', () => {
+  it('es un chip propio, solo para administradores', () => {
+    expect(chipsFiltros(vacios({ falta: 'autor' }), true)).toEqual([{ clave: 'falta', valor: 'autor', texto: 'Sin autor registrado' }]);
+    expect(chipsFiltros(vacios({ falta: 'autor' }), false)).toEqual([]);
+  });
+
+  it('la línea de resultado lo dice con palabras', () => {
+    const chips = chipsFiltros(vacios({ falta: 'imagen' }), true);
+    expect(lineaResultado(74, chips)).toBe('Mostrando 74 obras sin imagen');
+    expect(lineaResultado(3, chipsFiltros(vacios({ falta: 'imagen', autor: 'Toro' }), true))).toBe('Mostrando 3 obras sin imagen, filtradas por autor');
   });
 });
 

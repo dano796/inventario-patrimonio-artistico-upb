@@ -22,12 +22,20 @@ export const routes: Routes = [
     children: ComplementoRoutes,
   },
   {
-    path: 'tablero',
-    title: 'Tablero | Inventario Patrimonio Artístico UPB',
+    path: 'resumen',
+    title: 'Resumen | Inventario Patrimonio Artístico UPB',
     canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/tablero/components/tablero/tablero.component').then((m) => m.TableroComponent),
   },
+  {
+    path: 'mapa',
+    title: 'Mapa | Inventario Patrimonio Artístico UPB',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/tablero/components/mapa-obras/mapa-obras.component').then((m) => m.MapaObrasComponent),
+  },
+  { path: 'tablero', redirectTo: 'resumen' },
   {
     path: '',
     children: ArtworkRoutes,

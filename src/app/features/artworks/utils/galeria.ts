@@ -1,4 +1,5 @@
 import { guardarAlmacen, leerAlmacen } from '../../../shared/utils/almacen';
+import { DATOS_FALTANTES, DatoFaltante } from '../../../shared/models/artwork.model';
 
 export type Vista = 'galeria' | 'mosaico' | 'tabla';
 export const CLAVE_VISTA = 'galeria-vista';
@@ -25,10 +26,14 @@ export interface ValoresFiltros {
   responsable: string;
   autor: string;
   tecnica: string;
+  falta: DatoFaltante | '';
 }
 
+/** «falta» no tiene control en la barra: llega desde el Resumen y solo se puede quitar. */
+export type ClaveChip = ClaveFiltro | 'falta';
+
 export interface ChipFiltro {
-  clave: ClaveFiltro;
+  clave: ClaveChip;
   valor: string;
   texto: string;
 }
@@ -56,6 +61,7 @@ export function chipsFiltros(valores: ValoresFiltros, esAdmin: boolean): ChipFil
   }
   agregar('autor', valores.autor);
   agregar('tecnica', valores.tecnica);
+  if (esAdmin && valores.falta) chips.push({ clave: 'falta', valor: valores.falta, texto: DATOS_FALTANTES[valores.falta] });
   return chips;
 }
 
@@ -64,9 +70,10 @@ function unirConY(partes: readonly string[]): string {
 }
 
 export function lineaResultado(total: number, chips: readonly ChipFiltro[]): string {
-  const criterios = [...new Set(chips.map((c) => NOMBRES[c.clave].toLocaleLowerCase('es')))];
-  if (total === 0) return criterios.length ? 'Ninguna obra coincide con los filtros' : 'Todavía no hay obras';
-  const obras = total === 1 ? 'Mostrando 1 obra' : `Mostrando ${total.toLocaleString('es-CO')} obras`;
+  const falta = chips.find((c) => c.clave === 'falta');
+  const criterios = [...new Set(chips.flatMap((c) => (c.clave === 'falta' ? [] : [NOMBRES[c.clave].toLocaleLowerCase('es')])))];
+  if (total === 0) return criterios.length || falta ? 'Ninguna obra coincide con los filtros' : 'Todavía no hay obras';
+  const obras = (total === 1 ? 'Mostrando 1 obra' : `Mostrando ${total.toLocaleString('es-CO')} obras`) + (falta ? ` ${falta.texto.toLocaleLowerCase('es')}` : '');
   if (!criterios.length) return obras;
-  return `${obras} ${total === 1 ? 'filtrada' : 'filtradas'} por ${unirConY(criterios)}`;
+  return `${obras}${falta ? ',' : ''} ${total === 1 ? 'filtrada' : 'filtradas'} por ${unirConY(criterios)}`;
 }

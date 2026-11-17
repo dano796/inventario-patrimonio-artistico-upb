@@ -3,15 +3,18 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { leerPorPaginas } from '../../shared/utils/leer-por-paginas';
 import { ObraTablero } from './tablero';
 
-/** ubicacion y responsable son restringidas: solo obras_admin las sirve, y solo a administradores. */
-const COLUMNAS = 'id, titulo, autor, tecnica, ubicacion, responsable, fecha_creacion, imagenes(id)';
+/** ubicacion, valor, bloque_asignado y responsable son restringidas: solo obras_admin las sirve, y solo a administradores. */
+const COLUMNAS = 'id, titulo, autor, tecnica, ano, valor, ubicacion, bloque_asignado, responsable, fecha_creacion, imagenes(id)';
 
 export interface FilaTablero {
   id: number;
   titulo: string | null;
   autor: string | null;
   tecnica: string | null;
+  ano: number | null;
+  valor: number | string | null;
   ubicacion: string | null;
+  bloque_asignado: string | null;
   responsable: string | null;
   fecha_creacion: string | null;
   imagenes: { id: number }[] | null;
@@ -22,16 +25,14 @@ export const obraTableroDesdeFila = (fila: FilaTablero): ObraTablero => ({
   titulo: fila.titulo,
   autor: fila.autor,
   tecnica: fila.tecnica,
+  ano: fila.ano === null ? null : Number(fila.ano),
+  valor: fila.valor === null ? null : Number(fila.valor),
   ubicacion: fila.ubicacion,
+  bloque: fila.bloque_asignado,
   responsable: fila.responsable,
   fechaCreacion: fila.fecha_creacion,
   imagenes: fila.imagenes?.length ?? 0,
 });
-
-export interface EstadoSincronizacion {
-  fechaUltima: string | null;
-  editadas: number;
-}
 
 @Injectable({ providedIn: 'root' })
 export class TableroService {
@@ -44,20 +45,6 @@ export class TableroService {
       this.supabaseClient.from('obras_admin').select(COLUMNAS).order('id').range(desde, hasta)
     );
     return filas.map(obraTableroDesdeFila);
-  }
-
-  async estadoSincronizacion(): Promise<EstadoSincronizacion> {
-    await this.prepareClient();
-    const { data, error } = await this.supabaseClient.from('sincronizacion_hoja').select('fecha_ultima').maybeSingle();
-    if (error) throw error;
-    const fechaUltima: string | null = data?.fecha_ultima ?? null;
-    if (!fechaUltima) return { fechaUltima: null, editadas: 0 };
-    const { count, error: errorCuenta } = await this.supabaseClient
-      .from('obras')
-      .select('id', { count: 'exact', head: true })
-      .gt('fecha_actualizacion', fechaUltima);
-    if (errorCuenta) throw errorCuenta;
-    return { fechaUltima, editadas: count ?? 0 };
   }
 
   /**

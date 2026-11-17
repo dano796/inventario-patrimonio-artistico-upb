@@ -1,0 +1,12 @@
+<div class="relative h-full overflow-hidden bg-sub">
+  <div #lienzo class="h-full w-full" role="img" aria-label="Plano del campus de Laureles con las obras de cada bloque"></div>
+  @if (estado() === 'cargando') {
+    <div class="absolute inset-0 grid place-items-center" aria-busy="true">
+      <span class="flex items-center gap-2 text-sm font-medium text-tinta-4"><span class="indicador-carga" aria-hidden="true"></span>Cargando el plano…</span>
+    </div>
+  } @else if (estado() === 'error') {
+    <div class="absolute inset-0 grid place-items-center px-6 text-center" role="alert">
+      <p class="text-sm font-medium text-tinta-4">No se pudo mostrar el plano. La lista de bloques tiene los mismos datos.</p>
+    </div>
+  }
+</div>

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ArtworksService } from '../../services/artworks.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -20,6 +21,13 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
 
   isAdmin = this.authService.isAdmin;
+  /**
+   * El mapa abre las fichas con este estado de navegación. El router lo escribe en el historial al terminar,
+   * después de crear este componente: se lee de la navegación en curso y, al recargar, del historial.
+   */
+  private vieneDelMapa =
+    (this.router.getCurrentNavigation()?.extras.state ?? inject(DOCUMENT).defaultView?.history.state)?.['desde'] === 'mapa';
+  volver = this.vieneDelMapa ? { ruta: '/mapa', texto: 'Volver al mapa' } : { ruta: '/', texto: 'Volver a la galería' };
   artwork = this.artworksService.selectedArtwork;
   isLoading = this.artworksService.loading;
   error = this.artworksService.error;

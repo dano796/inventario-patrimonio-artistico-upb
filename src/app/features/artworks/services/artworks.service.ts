@@ -133,7 +133,7 @@ export class ArtworksService {
   /** Aplica la búsqueda y los filtros no vacíos. Lo comparten la galería paginada y la exportación. */
   private aplicarFiltros<Q extends { filter(columna: string, operador: string, valor: string): Q; or(filtros: string): Q }>(
     query: Q,
-    { search, ubicacion, responsable, autor, tecnica }: PaginationParams
+    { search, ubicacion, responsable, autor, tecnica, falta }: PaginationParams
   ): Q {
     if (search?.trim()) query = query.filter('titulo', 'imatch', patronSinTildes(search));
 
@@ -147,6 +147,16 @@ export class ArtworksService {
     if (responsable?.trim()) query = query.filter('responsable', 'imatch', patronSinTildes(responsable));
     if (autor?.trim()) query = query.filter('autor', 'imatch', patronSinTildes(autor));
     if (tecnica?.trim()) query = query.filter('tecnica', 'imatch', patronSinTildes(tecnica));
+
+    // Las mismas reglas con las que el Resumen cuenta las fichas incompletas.
+    if (falta === 'autor' || falta === 'tecnica' || falta === 'responsable') {
+      query = query.or(`${falta}.is.null,${falta}.match.^\\s*$`);
+    } else if (falta === 'bloque') {
+      // Igual que numeroDeBloque(): un valor que no nombra un bloque cuenta como sin bloque.
+      query = query.or('bloque_asignado.is.null,bloque_asignado.not.imatch.^\\s*b\\S*\\s*\\d+\\s*$');
+    } else if (falta === 'imagen') {
+      query = query.filter('imagenes', 'is', 'null');
+    }
     return query;
   }
 
@@ -185,7 +195,8 @@ export class ArtworksService {
       !('ubicacion' in params) &&
       !('responsable' in params) &&
       !('autor' in params) &&
-      !('tecnica' in params)
+      !('tecnica' in params) &&
+      !('falta' in params)
     ) {
       finalParams = { ...this.activeFilters, ...params };
     }
@@ -231,7 +242,7 @@ export class ArtworksService {
 
       const page = params.page || this.state().currentPage;
       const limit = params.limit || this.state().itemsPerPage;
-      const { search, ubicacion, responsable, autor, tecnica } = params;
+      const { search, ubicacion, responsable, autor, tecnica, falta } = params;
 
       this.state.update((state) => ({
         ...state,
@@ -251,7 +262,7 @@ export class ArtworksService {
         .from(this.tablaLectura())
         .select(`${this.selectColumns()}, imagenes(*)`, { count: 'exact' });
 
-      query = this.aplicarFiltros(query, { search, ubicacion, responsable, autor, tecnica });
+      query = this.aplicarFiltros(query, { search, ubicacion, responsable, autor, tecnica, falta });
 
       // Aplicar paginación y orden
       const queryPromise = query
@@ -471,6 +482,7 @@ export class ArtworksService {
       responsable: '',
       autor: '',
       tecnica: '',
+      falta: '',
       page: 1,
     });
   }

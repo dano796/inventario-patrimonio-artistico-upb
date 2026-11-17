@@ -75,6 +75,10 @@
   .indicador-carga {
     @apply inline-block h-3.5 w-3.5 flex-none animate-spin rounded-full border-2 border-current border-r-transparent;
   }
+  .barra-fina {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-3) transparent;
+  }
   .marcador {
     background: linear-gradient(135deg, var(--ph-1), var(--ph-2) 60%, var(--ph-3));
   }
@@ -83,4 +87,22 @@
 /* Sin esto el icono se recorta cuando el texto de al lado ocupa varias lineas. */
 ng-icon {
   flex-shrink: 0;
+}
+
+/* MapLibre trae sus controles en blanco fijo; aquí siguen el tema. */
+.maplibregl-map .maplibregl-ctrl-group:not(:empty),
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: var(--surface);
+  color: var(--t-3);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 6px 16px -8px rgba(15, 23, 42, 0.35);
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--line);
+}
+.maplibregl-map .maplibregl-ctrl-attrib a {
+  color: var(--t-3);
+}
+:root[data-theme='oscuro'] .maplibregl-ctrl button .maplibregl-ctrl-icon,
+:root[data-theme='oscuro'] .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
 }

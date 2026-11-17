@@ -1,9 +1,9 @@
 <main class="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 pb-16 pt-[26px] md:px-8">
-  <a routerLink="/" class="group inline-flex items-center gap-3 self-start text-sm font-semibold text-tinta-2 hover:text-tinta">
+  <a [routerLink]="volver.ruta" class="group inline-flex items-center gap-3 self-start text-sm font-semibold text-tinta-2 hover:text-tinta">
     <span class="grid h-10 w-10 place-items-center rounded-full border border-linea-2 bg-superficie shadow-tarjeta group-hover:border-linea-3 group-hover:bg-sub">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
     </span>
-    Volver a la galería
+    {{ volver.texto }}
   </a>
 
   @if (error()) {
@@ -95,7 +95,7 @@
   } @else {
     <div class="tarjeta flex flex-col items-center gap-3 px-6 py-12 text-center">
       <p class="text-[16px] font-bold">No encontramos esta obra.</p>
-      <a routerLink="/" class="btn-secundario">Volver a la galería</a>
+      <a [routerLink]="volver.ruta" class="btn-secundario">{{ volver.texto }}</a>
     </div>
   }
 

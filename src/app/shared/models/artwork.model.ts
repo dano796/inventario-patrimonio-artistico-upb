@@ -48,6 +48,19 @@ export interface ArtworkState {
   totalPages: number;
 }
 
+/** Datos cuya ausencia vuelve incompleta una ficha; la Galería puede listar las obras a las que les falta uno. */
+export type DatoFaltante = 'autor' | 'tecnica' | 'bloque' | 'responsable' | 'imagen';
+
+export const DATOS_FALTANTES: Readonly<Record<DatoFaltante, string>> = {
+  autor: 'Sin autor registrado',
+  tecnica: 'Sin técnica',
+  bloque: 'Sin bloque asignado',
+  responsable: 'Sin responsable asignado',
+  imagen: 'Sin imagen',
+};
+
+export const esDatoFaltante = (valor: unknown): valor is DatoFaltante => typeof valor === 'string' && valor in DATOS_FALTANTES;
+
 export interface PaginationParams {
   page?: number;
   limit?: number;
@@ -56,4 +69,6 @@ export interface PaginationParams {
   responsable?: string;
   autor?: string;
   tecnica?: string;
+  /** Solo para administradores: bloque y responsable son columnas restringidas. */
+  falta?: DatoFaltante | '';
 }

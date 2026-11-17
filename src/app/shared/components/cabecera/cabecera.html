@@ -9,8 +9,10 @@
       <a routerLink="/" [class.!text-acento-tinta]="enGaleria()" [class.!border-acento]="enGaleria()" [attr.aria-current]="enGaleria() ? 'page' : null"
         class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Galería</a>
       @if (esAdmin()) {
-        <a routerLink="/tablero" routerLinkActive="!text-acento-tinta !border-acento"
-          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Tablero</a>
+        <a routerLink="/resumen" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Resumen</a>
+        <a routerLink="/mapa" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Mapa</a>
         <a routerLink="/sincronizacion" routerLinkActive="!text-acento-tinta !border-acento"
           class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Sincronizar</a>
       }
@@ -97,7 +99,8 @@
     <nav id="menu-movil" class="border-t border-linea px-4 py-3 md:hidden" aria-label="Menú móvil">
       <a routerLink="/" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Galería</a>
       @if (esAdmin()) {
-        <a routerLink="/tablero" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Tablero</a>
+        <a routerLink="/resumen" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Resumen</a>
+        <a routerLink="/mapa" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Mapa</a>
         <a routerLink="/sincronizacion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Sincronizar</a>
       }
       @if (!conSesion()) {

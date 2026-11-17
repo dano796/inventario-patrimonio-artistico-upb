@@ -74,6 +74,25 @@ describe('ArtworksService', () => {
     ]);
   });
 
+  it('lista las obras a las que les falta un dato, con las reglas del Resumen', async () => {
+    const consultas: Record<string, unknown[][]> = {};
+    for (const falta of ['autor', 'bloque', 'imagen'] as const) {
+      const { servicio, filtros } = montar();
+      await servicio.filterArtworks({ falta });
+      consultas[falta] = filtros;
+      TestBed.resetTestingModule();
+    }
+    expect(consultas['autor']).toEqual([['or', 'autor.is.null,autor.match.^\\s*$']]);
+    expect(consultas['bloque']).toEqual([['or', 'bloque_asignado.is.null,bloque_asignado.not.imatch.^\\s*b\\S*\\s*\\d+\\s*$']]);
+    expect(consultas['imagen']).toEqual([['filter', 'imagenes', 'is', 'null']]);
+  });
+
+  it('sin rol de administrador descarta el filtro por dato faltante', async () => {
+    const { servicio, filtros } = montar(false);
+    await servicio.filterArtworks({ falta: 'bloque' });
+    expect(filtros).toEqual([]);
+  });
+
   it('exportar lee sin paginar con los mismos filtros que la galería', async () => {
     const { servicio, filtros, rangos } = montar();
     await servicio.getAllArtworksNoPagination({ autor: 'Gomez', ubicacion: 'Bloque' });

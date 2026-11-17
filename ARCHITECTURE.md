@@ -45,10 +45,10 @@ src/app/
 │   │   ├── utils/             # revision (modelo de vista puro), borrador (decisiones en sessionStorage)
 │   │   ├── components/        # sincronizar (/sincronizacion), revision/ (grupo-revision, resumen-ejecucion), vincular-hoja
 │   │   └── sincronizacion.routes.ts
-│   └── tablero/               # estado del inventario (solo administradores, lee obras_admin)
+│   └── tablero/               # Resumen (/resumen) y Mapa (/mapa): solo administradores, leen obras_admin
 │       ├── tablero.ts         # calcularTablero: función pura
 │       ├── tablero.service.ts
-│       └── components/        # tablero
+│       └── components/        # tablero (Resumen), mapa-obras (Mapa), mapa-campus (el plano MapLibre)
 │
 └── shared/
     ├── components/            # cabecera, confirm-modal, image-uploader

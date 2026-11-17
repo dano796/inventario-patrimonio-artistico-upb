@@ -5,8 +5,9 @@ import { ArtworksService } from '../../services/artworks.service';
 import { ArtworkExportService } from '../../services/artwork-export.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { borrarAlmacen, guardarAlmacen, leerAlmacen } from '../../../../shared/utils/almacen';
+import { DatoFaltante, esDatoFaltante } from '../../../../shared/models/artwork.model';
 import {
-  ChipFiltro, ClaveFiltro, chipsFiltros, guardarVista,
+  ChipFiltro, ClaveChip, ClaveFiltro, chipsFiltros, guardarVista,
   leerVista, lineaResultado, tamanoPagina, ValoresFiltros, Vista,
 } from '../../utils/galeria';
 import { BarraFiltrosComponent } from '../galeria/barra-filtros/barra-filtros.component';
@@ -45,6 +46,7 @@ export class ArtworkListComponent implements OnDestroy {
   responsableFilter = signal('');
   autorFilter = signal('');
   tecnicaFilter = signal('');
+  faltaFilter = signal<DatoFaltante | ''>('');
   showAdvancedFilters = signal(false);
 
   readonly vistas: readonly { valor: Vista; etiqueta: string }[] = [
@@ -74,6 +76,7 @@ export class ArtworkListComponent implements OnDestroy {
     responsable: this.responsableFilter(),
     autor: this.autorFilter(),
     tecnica: this.tecnicaFilter(),
+    falta: this.faltaFilter(),
   }));
   chips = computed(() => chipsFiltros(this.valoresFiltros(), this.isAdmin()));
   linea = computed(() => lineaResultado(this.totalItems(), this.chips()));
@@ -155,6 +158,7 @@ export class ArtworkListComponent implements OnDestroy {
       responsableFilter: this.responsableFilter(),
       autorFilter: this.autorFilter(),
       tecnicaFilter: this.tecnicaFilter(),
+      faltaFilter: this.faltaFilter(),
       currentPage: this.currentPage(),
       showAdvancedFilters: this.showAdvancedFilters(),
       timestamp: Date.now(),
@@ -179,6 +183,7 @@ export class ArtworkListComponent implements OnDestroy {
       this.responsableFilter.set(puedeFiltrarRestringido ? filters.responsableFilter || '' : '');
       this.autorFilter.set(filters.autorFilter || '');
       this.tecnicaFilter.set(filters.tecnicaFilter || '');
+      this.faltaFilter.set(puedeFiltrarRestringido && esDatoFaltante(filters.faltaFilter) ? filters.faltaFilter : '');
       this.showAdvancedFilters.set(filters.showAdvancedFilters || false);
       this.savedPage.set(filters.currentPage || 1);
       return true;
@@ -234,9 +239,10 @@ export class ArtworkListComponent implements OnDestroy {
       const responsable = puedeFiltrarRestringido ? params['responsable'] || '' : '';
       const autor = params['autor'] || '';
       const tecnica = params['tecnica'] || '';
+      const falta: DatoFaltante | '' = puedeFiltrarRestringido && esDatoFaltante(params['falta']) ? params['falta'] : '';
 
       const filterUbicacion = ubicaciones.length > 0 ? ubicaciones : ubicacion;
-      const desdeUrl = { search, ubicacion: filterUbicacion, responsable, autor, tecnica };
+      const desdeUrl = { search, ubicacion: filterUbicacion, responsable, autor, tecnica, falta };
       if (this.isInitialized() && JSON.stringify(desdeUrl) === JSON.stringify(this.filtrosActuales())) return;
 
       this.searchTerm.set(search);
@@ -245,14 +251,15 @@ export class ArtworkListComponent implements OnDestroy {
       this.responsableFilter.set(responsable);
       this.autorFilter.set(autor);
       this.tecnicaFilter.set(tecnica);
+      this.faltaFilter.set(falta);
 
       if (this.isInitialized()) {
         this.savedPage.set(1);
         await this.performFiltersWithoutUrlUpdate();
       } else {
         this.isInitialized.set(true);
-        if (search || filterUbicacion || responsable || autor || tecnica) {
-          await this.artworksService.filterArtworks({ search, ubicacion: filterUbicacion, responsable, autor, tecnica }, 1);
+        if (search || filterUbicacion || responsable || autor || tecnica || falta) {
+          await this.artworksService.filterArtworks({ search, ubicacion: filterUbicacion, responsable, autor, tecnica, falta }, 1);
         } else {
           await this.artworksService.getAllArtworks();
         }
@@ -268,6 +275,7 @@ export class ArtworkListComponent implements OnDestroy {
       responsable: this.responsableFilter(),
       autor: this.autorFilter(),
       tecnica: this.tecnicaFilter(),
+      falta: this.faltaFilter(),
     };
   }
 
@@ -288,6 +296,7 @@ export class ArtworkListComponent implements OnDestroy {
           responsable: filters.responsable || null,
           autor: filters.autor || null,
           tecnica: filters.tecnica || null,
+          falta: filters.falta || null,
           ubicaciones: Array.isArray(ubicacion) && ubicacion.length ? ubicacion.join(',') : null,
           ubicacion: typeof ubicacion === 'string' && ubicacion ? ubicacion : null,
           page: null,
@@ -331,16 +340,17 @@ export class ArtworkListComponent implements OnDestroy {
     this.responsableFilter.set('');
     this.autorFilter.set('');
     this.tecnicaFilter.set('');
+    this.faltaFilter.set('');
     this.clearFiltersFromStorage();
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { search: null, ubicacion: null, ubicaciones: null, responsable: null, autor: null, tecnica: null, page: null },
+      queryParams: { search: null, ubicacion: null, ubicaciones: null, responsable: null, autor: null, tecnica: null, falta: null, page: null },
       queryParamsHandling: 'merge',
     });
     await this.artworksService.clearAllFilters();
   }
 
-  async clearFilter(filterType: Exclude<ClaveFiltro, 'busqueda'>) {
+  async clearFilter(filterType: Exclude<ClaveChip, 'busqueda'>) {
     if (filterType === 'ubicacion') {
       this.ubicacionFilter.set('');
       this.selectedUbicaciones.set([]);
@@ -348,6 +358,8 @@ export class ArtworkListComponent implements OnDestroy {
       this.responsableFilter.set('');
     } else if (filterType === 'autor') {
       this.autorFilter.set('');
+    } else if (filterType === 'falta') {
+      this.faltaFilter.set('');
     } else {
       this.tecnicaFilter.set('');
     }
