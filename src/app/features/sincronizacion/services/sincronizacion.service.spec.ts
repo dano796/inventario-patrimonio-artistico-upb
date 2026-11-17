@@ -68,7 +68,7 @@ function montar(opciones: {
 }
 
 describe('SincronizacionService', () => {
-  it('calcular descarga la hoja vinculada y propone llevar a la base lo que cambió en ella', async () => {
+  it('calcular descarga el Excel vinculado y propone llevar a la base lo que cambió en ella', async () => {
     const { servicio, graph } = montar({
       hoja: [{ TITULO: 'Paisaje', 'UBICACIÓN': 'Bloque 11', 'ID WEB': 14 }],
       obras: [obraBase(14, { titulo: 'Paisaje', ubicacion: 'Bloque 6' })],
@@ -156,7 +156,7 @@ describe('SincronizacionService', () => {
     expect(resultado.descartadasEnHoja.map((d) => d.motivo)).toEqual([MOTIVO_CELDA_CAMBIADA]);
   });
 
-  it('escribe el ID WEB en la fila de una obra creada desde la hoja', async () => {
+  it('escribe el ID WEB en la fila de una obra creada desde el Excel', async () => {
     const { servicio, graph, datos } = montar({ hoja: [{ AUTOR: 'Ana', TITULO: 'Nueva' }], obras: [], fotos: [] });
     datos.aplicar.and.returnValues(
       Promise.resolve({ aplicados: 0, descartados: [], creadas: [{ fila: 2, obra_id: 700 }] }),
@@ -172,7 +172,7 @@ describe('SincronizacionService', () => {
 });
 
 describe('SincronizacionService, protecciones al aplicar', () => {
-  it('no toca la base si antes no puede leer la hoja', async () => {
+  it('no toca la base si antes no puede leer el Excel', async () => {
     const { servicio, graph, datos } = montar({ hoja: [{ AUTOR: 'Ana', TITULO: 'Nueva' }], obras: [], fotos: [] });
     graph.leerRangoUsado.and.rejectWith(new ErrorGraph(401, 'caducado'));
     const calculo = await servicio.calcular();
@@ -212,7 +212,7 @@ describe('SincronizacionService, protecciones al aplicar', () => {
     expect(datos.aplicar).not.toHaveBeenCalled();
   });
 
-  it('calcular aborta si la hoja no tiene la columna ID WEB', async () => {
+  it('calcular aborta si el Excel no tiene la columna ID WEB', async () => {
     const { servicio, graph } = montar({ hoja: [], obras: [], fotos: [] });
     const sinIdWeb = ENCABEZADOS_HOJA.filter((e) => e !== 'ID WEB');
     graph.descargar.and.resolveTo(
@@ -344,7 +344,7 @@ describe('SincronizacionService, imágenes de las altas', () => {
     ]);
   });
 
-  it('sube las imágenes aunque Graph falle a mitad de escribir en la hoja', async () => {
+  it('sube las imágenes aunque Graph falle a mitad de escribir en el Excel', async () => {
     const { servicio, datos, graph } = montarAlta();
     graph.escribirValores.and.rejectWith(new ErrorGraph(401, 'caducado'));
     const calculo = await servicio.calcular();

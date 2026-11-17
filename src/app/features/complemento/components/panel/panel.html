@@ -8,10 +8,10 @@
   @case ('fuera-de-excel') {
     <main class="mx-auto flex max-w-[640px] flex-col gap-3 px-4 py-8">
       <p class="antetitulo">Complemento de Excel</p>
-      <h1 class="titulo-pantalla">Abre esta página desde Excel</h1>
+      <h1 class="titulo-pantalla">Esta página se abre desde Excel</h1>
       <p class="text-[15px] font-medium leading-relaxed text-tinta-3">
-        Esta es la versión de la sincronización que funciona dentro de Excel, con la hoja oficial abierta. Fuera de Excel,
-        usa la página Sincronización de la aplicación.
+        Esta es la versión de la sincronización que funciona dentro de Excel, con el Excel oficial abierto. Fuera de Excel,
+        se usa la página Sincronización de la aplicación.
       </p>
     </main>
   }
@@ -28,7 +28,7 @@
       <p class="antetitulo">Inventario Patrimonio Artístico UPB</p>
       <h1 class="text-[22px] font-extrabold tracking-[-0.01em]">Sincronizar con el inventario</h1>
       <p class="text-[14px] font-medium leading-relaxed text-tinta-3">
-        Entra con tu cuenta institucional. Solo las cuentas con rol de administrador pueden sincronizar.
+        El acceso es con la cuenta institucional. Solo las cuentas con rol de administrador pueden sincronizar.
       </p>
       @if (error(); as texto) {
         <p class="rounded-2xl border border-rojo-linea bg-rojo-tenue px-4 py-3 text-[14px] font-medium text-rojo-3" role="alert">{{ texto }}</p>
@@ -43,10 +43,10 @@
 
   @case ('sin-permiso') {
     <main class="flex flex-col gap-3.5 px-4 py-6">
-      <h1 class="text-[22px] font-extrabold tracking-[-0.01em]">Tu cuenta no puede sincronizar</h1>
+      <h1 class="text-[22px] font-extrabold tracking-[-0.01em]">Esta cuenta no puede sincronizar</h1>
       <p class="text-[14px] font-medium leading-relaxed text-tinta-3">
-        Entraste como {{ correo() }}, que no tiene rol de administrador en el inventario. Pide a un administrador que te lo
-        asigne.
+        La sesión es de {{ correo() }}, que no tiene rol de administrador en el inventario. Un administrador
+        debe asignárselo.
       </p>
       <div><button type="button" class="btn-secundario" (click)="salir()">Cerrar sesión</button></div>
     </main>

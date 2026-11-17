@@ -107,7 +107,7 @@ describe('SincronizacionDatosService.vincularLibro', () => {
     return { servicio: TestBed.inject(SincronizacionDatosService), from, update, eq, select };
   }
 
-  it('guarda solo la URL del libro en la hoja ya vinculada, sin tocar drive_id ni item_id', async () => {
+  it('guarda solo la URL del libro en el Excel ya vinculada, sin tocar drive_id ni item_id', async () => {
     const { servicio, from, update, eq, select } = crear({ data: [{ id: 1 }], error: null });
 
     await servicio.vincularLibro('https://upb/Documents/Inventario.xlsx');
@@ -120,6 +120,6 @@ describe('SincronizacionDatosService.vincularLibro', () => {
 
   it('falla si no había ninguna hoja vinculada que actualizar', async () => {
     const { servicio } = crear({ data: [], error: null });
-    await expectAsync(servicio.vincularLibro('https://upb/x.xlsx')).toBeRejectedWithError(/ninguna hoja vinculada/);
+    await expectAsync(servicio.vincularLibro('https://upb/x.xlsx')).toBeRejectedWithError(/ningún Excel vinculado/);
   });
 });

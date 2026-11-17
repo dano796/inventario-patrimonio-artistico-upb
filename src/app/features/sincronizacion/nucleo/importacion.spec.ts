@@ -85,7 +85,7 @@ describe('planificarImportacion', () => {
     ]);
   });
 
-  it('no borra en la base un campo que la hoja trae vacío', () => {
+  it('no borra en la base un campo que el Excel trae vacío', () => {
     const plan = planDe({
       filas: [fila(2, { titulo: 'Obra', observaciones: null })],
       emparejamientos: [par(2, 5)],

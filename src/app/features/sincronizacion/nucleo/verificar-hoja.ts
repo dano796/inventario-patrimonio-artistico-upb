@@ -55,8 +55,8 @@ export interface ObraCreada {
   noConvertibles: readonly Campo[];
 }
 
-export const MOTIVO_SIN_FILA = 'la fila ya no está en la hoja';
-export const MOTIVO_ID_REPETIDO = 'el ID WEB está repetido en la hoja';
+export const MOTIVO_SIN_FILA = 'la fila ya no está en el Excel';
+export const MOTIVO_ID_REPETIDO = 'el ID WEB está repetido en el Excel';
 export const MOTIVO_CELDA_CAMBIADA = 'la celda cambió desde que se calculó el diff';
 
 export function columnasDeEncabezados(

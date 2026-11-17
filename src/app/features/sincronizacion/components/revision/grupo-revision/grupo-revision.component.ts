@@ -46,7 +46,7 @@ export class GrupoRevisionComponent {
   }
 
   nombreLado(lado: Lado): string {
-    return lado === 'hoja' ? 'En la hoja' : 'En la base';
+    return lado === 'hoja' ? 'En el Excel' : 'En la base';
   }
 
   ocultar(evento: Event): void {
@@ -81,18 +81,28 @@ export class GrupoRevisionComponent {
     switch (fila.accion.tipo) {
       case 'casilla':
         return fila.accion.incluido
-          ? { texto: fila.accion.destino === 'base' ? 'Se escribe en la base' : 'Se escribe en la hoja', clase: 'text-acento-tinta' }
+          ? { texto: this.textoDestino(fila.accion.destino), clase: 'text-acento-tinta' }
           : { texto: 'No se aplica', clase: 'text-tinta-5' };
       case 'opciones':
-        if (fila.pendiente) return { texto: 'Elige el valor que se queda', clase: 'text-ambar' };
+        if (fila.pendiente) return { texto: 'Pendiente de elegir el valor', clase: 'text-ambar' };
         if (fila.accion.ref.tipo === 'cargo') return { texto: 'Se aplica el cargo elegido', clase: 'text-acento-tinta' };
-        if (fila.accion.ref.tipo === 'imagen' && fila.gana === 'hoja') return { texto: 'La hoja conserva la suya', clase: 'text-tinta-4' };
+        if (fila.accion.ref.tipo === 'imagen' && fila.gana === 'hoja') return { texto: 'El Excel conserva la suya', clase: 'text-tinta-4' };
+        if (fila.accion.ref.tipo === 'imagen' && !fila.gana && fila.accion.opciones.length > 1) {
+          return { texto: 'Pendiente de decisión', clase: 'text-ambar' };
+        }
         if (fila.gana === 'hoja') return { texto: 'Se escribe en la base', clase: 'text-acento-tinta' };
-        if (fila.gana === 'base') return { texto: 'Se escribe en la hoja', clase: 'text-acento-tinta' };
-        return { texto: 'Sin cambios', clase: 'text-tinta-5' };
+        if (fila.gana === 'base') return { texto: 'Se escribe en el Excel', clase: 'text-acento-tinta' };
+        return { texto: 'El Excel no cambia', clase: 'text-tinta-5' };
       case 'fuera':
-        return { texto: 'Queda fuera', clase: 'text-tinta-4' };
+        return { texto: fila.accion.enlaceObra ? 'No se puede copiar' : 'Queda fuera', clase: 'text-tinta-4' };
     }
+  }
+
+  private textoDestino(destino: Lado): string {
+    const texto = destino === 'base' ? 'Se escribe en la base' : 'Se escribe en el Excel';
+    const obras = this.grupo().obras;
+    if (!obras || obras < 2) return texto;
+    return `${texto}, en sus ${obras} ${destino === 'base' ? 'obras' : 'filas'}`;
   }
 
   claseValor(fila: FilaRevision, lado: Lado): string {

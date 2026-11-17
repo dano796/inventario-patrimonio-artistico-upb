@@ -27,7 +27,7 @@ describe('planificarEjecucion', () => {
     expect(plan.escrituras).toEqual([]);
   });
 
-  it('un cambio hacia la hoja guarda lo leído para comprobarlo antes de escribir', () => {
+  it('un cambio hacia el Excel guarda lo leído para comprobarlo antes de escribir', () => {
     const plan = planDe({ cambios: [cambio({ destino: 'hoja', hoja: 'Bloque 6', base: 'Bloque 3' })] });
     expect(plan.escrituras).toEqual([
       { obraId: 14, fila: 2, destino: { tipo: 'campo', campo: 'ubicacion' }, valor: "'Bloque 3", leido: 'Bloque 6', foto: { ubicacion: 'Bloque 3' } },
@@ -35,7 +35,7 @@ describe('planificarEjecucion', () => {
     expect(plan.peticion.campos).toEqual([]);
   });
 
-  it('un NULL de la base se escribe en la hoja como «No registra»', () => {
+  it('un NULL de la base se escribe en el Excel como «No registra»', () => {
     const plan = planDe({ cambios: [cambio({ destino: 'hoja', hoja: 'Bloque 6', base: null })] });
     expect(plan.escrituras.map((e) => [e.valor, e.foto])).toEqual([["'No registra", { ubicacion: null }]]);
   });
@@ -61,7 +61,7 @@ describe('planificarEjecucion', () => {
     ]);
   });
 
-  it('escribir el responsable en la hoja escribe también su cargo', () => {
+  it('escribir el responsable en el Excel escribe también su cargo', () => {
     const plan = planDe({
       cambios: [cambio({ campo: 'responsable', destino: 'hoja', hoja: 'LUIS GÓMEZ', base: 'ANA PÉREZ', foto: 'LUIS GÓMEZ' })],
     });
@@ -71,7 +71,7 @@ describe('planificarEjecucion', () => {
     ]);
   });
 
-  it('escribir el responsable en la hoja no toca un CARGO combinado', () => {
+  it('escribir el responsable en el Excel no toca un CARGO combinado', () => {
     const conCargoCombinado: ContextoPlan = {
       ...contexto(),
       filas: new Map([[2, filaHoja(2, { responsable: 'LUIS GÓMEZ', cargo: 'RECTOR' }, { idWeb: 14, combinados: ['cargo'] })]]),
@@ -81,7 +81,7 @@ describe('planificarEjecucion', () => {
     expect(plan.escrituras.map((e) => e.destino)).toEqual([{ tipo: 'campo', campo: 'responsable' }]);
   });
 
-  it('si el responsable de la fila va a la hoja, no escribe además el cargo de la persona anterior', () => {
+  it('si el responsable de la fila va al Excel, no escribe además el cargo de la persona anterior', () => {
     const plan = planDe({
       cambios: [cambio({ campo: 'responsable', destino: 'hoja', hoja: 'LUIS GÓMEZ', base: 'ANA PÉREZ', foto: 'LUIS GÓMEZ' })],
       cargos: [{
@@ -96,7 +96,7 @@ describe('planificarEjecucion', () => {
     expect(plan.escrituras.filter((e) => e.fila === 5).map((e) => e.valor)).toEqual(["'VICERRECTOR"]);
   });
 
-  it('un cargo cambiado en la hoja actualiza la persona y la foto de todas sus obras', () => {
+  it('un cargo cambiado en el Excel actualiza la persona y la foto de todas sus obras', () => {
     const plan = planDe({
       cargos: [{
         clave: 'ANA PÉREZ', nombre: 'ANA PÉREZ', destino: 'base', hoja: 'DIRECTORA', base: 'DECANA', foto: 'DECANA',
@@ -119,7 +119,7 @@ describe('planificarEjecucion', () => {
     expect(plan.peticion.cargos).toEqual([]);
   });
 
-  it('un conflicto de cargo resuelto escribe en la hoja solo las filas que no tienen el cargo elegido', () => {
+  it('un conflicto de cargo resuelto escribe en el Excel solo las filas que no tienen el cargo elegido', () => {
     const plan = planDe(
       {
         conflictosCargo: [{
@@ -140,7 +140,7 @@ describe('planificarEjecucion', () => {
     ]);
   });
 
-  it('una imagen: «Dejar la de la hoja» solo pone al día la foto; «Reemplazar» escribe =IMAGE()', () => {
+  it('una imagen: «Dejar la del Excel» solo pone al día la foto; «Reemplazar» escribe =IMAGE()', () => {
     const aviso = {
       obraId: 14, fila: 2, casilla: 1, motivo: 'reemplazada' as const,
       imagen: { id: 81, url: `${PREFIJO}b.jpg` }, leida: { tipo: 'pegada' as const, archivo: null },
@@ -162,7 +162,7 @@ describe('planificarEjecucion', () => {
     expect(plan.escrituras).toEqual([]);
   });
 
-  it('las altas en la base solo entran si se eligen; las de la hoja, salvo que se desmarquen', () => {
+  it('las altas en la base solo entran si se eligen; las del Excel, salvo que se desmarquen', () => {
     const diff = { altasBase: [{ fila: 9, campos: filaHoja(9, { titulo: 'Nueva' }).campos, imagenes: [], imagenesRechazadas: [] }], altasHoja: [{ obraId: 14 }] };
     const porDefecto = planDe(diff);
     expect(porDefecto.peticion.altas).toEqual([]);
@@ -175,7 +175,7 @@ describe('planificarEjecucion', () => {
     expect(elegidas.altasHoja).toEqual([]);
   });
 
-  it('una obra nueva en la hoja con una imagen fuera del bucket se añade sin esa imagen', () => {
+  it('una obra nueva en el Excel con una imagen fuera del bucket se añade sin esa imagen', () => {
     const conExterna: ContextoPlan = {
       ...contexto(),
       obras: new Map([[14, obraBase(14, { titulo: 'Paisaje' }, [{ id: 3, url: 'https://otro.sitio/a.jpg' }, { id: 4, url: `${PREFIJO}b.jpg` }])]]),

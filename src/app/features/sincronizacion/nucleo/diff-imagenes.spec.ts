@@ -49,13 +49,13 @@ describe('diffImagenes', () => {
     expect(r).toEqual({ imagenes: [], avisosImagen: [], convergencias: [] });
   });
 
-  it('avisa, sin escribir, si la web cambió la imagen y la hoja tiene una pegada a mano', () => {
+  it('avisa, sin escribir, si la web cambió la imagen y el Excel tiene una pegada a mano', () => {
     const r = diff([{ tipo: 'pegada', archivo: 'xl/media/image1.jpeg' }], [img(81)], fotoImagenes(80));
     expect(r.imagenes).toEqual([]);
     expect(r.avisosImagen.map((a) => [a.casilla, a.motivo])).toEqual([[1, 'reemplazada']]);
   });
 
-  it('avisa si la web borró la imagen y la hoja tiene una pegada a mano', () => {
+  it('avisa si la web borró la imagen y el Excel tiene una pegada a mano', () => {
     const r = diff([{ tipo: 'pegada', archivo: null }], [], fotoImagenes(80));
     expect(r.avisosImagen.map((a) => a.motivo)).toEqual(['borrada']);
   });
@@ -81,7 +81,7 @@ describe('diffImagenes', () => {
     expect(r.imagenes.map((i) => [i.casilla, i.imagen?.id])).toEqual([[1, 80], [2, 90]]);
   });
 
-  it('pone al día la foto si la hoja ya tiene la fórmula correcta', () => {
+  it('pone al día la foto si el Excel ya tiene la fórmula correcta', () => {
     const r = diff([{ tipo: 'formula', url: img(80).url }], [img(80)], fotoImagenes());
     expect(r.convergencias).toEqual([{ obraId: 1, clave: 'imagen_1', valor: 80 }]);
   });

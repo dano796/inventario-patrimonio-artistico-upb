@@ -55,7 +55,7 @@ describe('diffCamposObra', () => {
     ]);
   });
 
-  it('salta los campos que la hoja no pudo convertir', () => {
+  it('salta los campos que el Excel no pudo convertir', () => {
     const r = diffCamposObra(
       filaHoja(3, { valor: null }, { noConvertibles: ['valor'] }),
       obraBase(7, { valor: 900000 }),
@@ -84,7 +84,7 @@ describe('diffCamposObra', () => {
     expect(r.avisos.length).toBe(1);
   });
 
-  it('una celda combinada cambiada en la hoja sí se lleva a la base', () => {
+  it('una celda combinada cambiada en el Excel sí se lleva a la base', () => {
     const r = diffCamposObra(
       filaHoja(130, { valor: 950000 }, { combinados: ['valor'] }),
       obraBase(40, { valor: 800000 }),
@@ -93,7 +93,7 @@ describe('diffCamposObra', () => {
     expect(r.cambios.map((c) => c.destino)).toEqual(['base']);
   });
 
-  it('avisa si el responsable va a la hoja y su CARGO está en una celda combinada', () => {
+  it('avisa si el responsable va al Excel y su CARGO está en una celda combinada', () => {
     const r = diffCamposObra(
       filaHoja(130, { responsable: 'LUIS GÓMEZ' }, { combinados: ['cargo'] }),
       obraBase(40, { responsable: 'ANA PÉREZ' }),

@@ -76,7 +76,7 @@ describe('GraphService.tieneAccesoArchivos', () => {
 
     expect(error instanceof ErrorGraph).toBe(true);
     expect((error as ErrorGraph).estado).toBe(408);
-    expect((error as ErrorGraph).message).toBe('Microsoft no respondió a tiempo. Vuelve a intentarlo.');
+    expect((error as ErrorGraph).message).toBe('Microsoft no respondió a tiempo.');
   }));
 });
 
@@ -205,7 +205,7 @@ describe('GraphService: mensajes de error de Graph', () => {
     throw new Error('debía lanzar ErrorGraph');
   };
 
-  it('un 403 explica que la hoja es de otra persona y remite al complemento, sin el JSON de Microsoft', async () => {
+  it('un 403 explica que el Excel es de otra persona y remite al complemento, sin el JSON de Microsoft', async () => {
     const e = await descargarCon(new Response('{"error":{"code":"accessDenied","message":"Access denied"}}', { status: 403 }));
     expect(e.estado).toBe(403);
     expect(e.message).toContain('complemento de Excel');

@@ -62,7 +62,7 @@ describe('borrador de decisiones', () => {
     expect(restaurarBorrador('otra', diff())).toBeNull();
   });
 
-  it('no guarda en claro ningún valor de la hoja ni de la base', () => {
+  it('no guarda en claro ningún valor del Excel ni de la base', () => {
     guardarBorrador('item', diff(), decidido());
 
     const guardado = sessionStorage.getItem(CLAVE_BORRADOR)!;

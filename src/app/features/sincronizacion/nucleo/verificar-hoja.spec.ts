@@ -50,7 +50,7 @@ describe('lecturaDesdeRango', () => {
 });
 
 describe('ubicarEscrituras', () => {
-  it('escribe en la fila donde está ahora el ID WEB, aunque la hoja se haya reordenado', () => {
+  it('escribe en la fila donde está ahora el ID WEB, aunque el Excel se haya reordenado', () => {
     const r = ubicar(escritura(), [{ 'ID WEB': 15 }, { 'ID WEB': 14, 'UBICACIÓN': 'Bloque 6' }]);
     expect(r.ubicadas.map((u) => [u.fila, u.columna])).toEqual([[3, 7]]);
     expect(r.descartadas).toEqual([]);
@@ -88,7 +88,7 @@ describe('ubicarEscrituras', () => {
 describe('ubicarIdsNuevos', () => {
   const creada = { fila: 2, obraId: 700, campos: filaHoja(2, { autor: 'Ana', titulo: 'Nueva' }).campos, heredados: [], noConvertibles: [] };
 
-  it('escribe el ID de una obra creada desde la hoja si su fila sigue siendo la misma', () => {
+  it('escribe el ID de una obra creada desde el Excel si su fila sigue siendo la misma', () => {
     const r = ubicarIdsNuevos([creada], lectura([{ AUTOR: 'Ana', TITULO: 'Nueva' }]), columnas());
     expect(r.ubicadas.map((u) => [u.fila, u.columna, u.escritura.valor])).toEqual([[2, 18, 700]]);
   });

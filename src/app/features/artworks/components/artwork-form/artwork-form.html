@@ -50,7 +50,7 @@
           </div>
           <div class="sm:col-span-4">
             <label for="autor" class="etiqueta">Autor</label>
-            <input id="autor" type="text" formControlName="autor" class="campo" placeholder="Nombre del autor o «Anónimo»"
+            <input id="autor" type="text" formControlName="autor" class="campo" placeholder="Nombre del autor o &quot;Anónimo&quot;"
               [attr.aria-invalid]="isFieldInvalid('autor')" />
             @if (isFieldInvalid('autor')) {
               <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('autor') }}</p>

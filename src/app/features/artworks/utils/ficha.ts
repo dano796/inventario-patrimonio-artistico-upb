@@ -50,7 +50,7 @@ export function ultimaCaptura(imagenes: readonly ArtworkImage[]): string | null 
 }
 
 export function mensajeBorrado(titulo: string, imagenes: number): string {
-  if (imagenes === 0) return `«${titulo}» se eliminará de forma permanente.`;
+  if (imagenes === 0) return `"${titulo}" se eliminará de forma permanente.`;
   const cuales = imagenes === 1 ? 'su imagen' : `sus ${imagenes} imágenes`;
-  return `«${titulo}» y ${cuales} se eliminarán de forma permanente.`;
+  return `"${titulo}" y ${cuales} se eliminarán de forma permanente.`;
 }

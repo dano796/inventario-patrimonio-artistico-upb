@@ -67,7 +67,7 @@ export function leerHoja(
     return datos ? parser.parseFromString(strFromU8(datos), 'application/xml') : null;
   };
   const hoja = leer(rutaDeHoja(leer, nombreHoja));
-  if (!hoja) throw new ErrorXlsx(`No se encontró la pestaña «${nombreHoja}»`);
+  if (!hoja) throw new ErrorXlsx(`No se encontró la pestaña "${nombreHoja}"`);
 
   const textos = textosCompartidos(leer('xl/sharedStrings.xml'));
   const imagenDe = mapaDeImagenes(leer);
@@ -128,9 +128,9 @@ function rutaDeHoja(leer: Lector, nombre: string): string {
   const libro = leer('xl/workbook.xml');
   if (!libro) throw new ErrorXlsx('El archivo no es un libro de Excel');
   const hoja = elementos(libro, 'sheet').find((s) => s.getAttribute('name') === nombre);
-  if (!hoja) throw new ErrorXlsx(`No se encontró la pestaña «${nombre}»`);
+  if (!hoja) throw new ErrorXlsx(`No se encontró la pestaña "${nombre}"`);
   const ruta = relaciones(leer('xl/_rels/workbook.xml.rels'), 'xl').get(idRelacion(hoja));
-  if (!ruta) throw new ErrorXlsx(`La pestaña «${nombre}» no tiene hoja asociada`);
+  if (!ruta) throw new ErrorXlsx(`La pestaña "${nombre}" no tiene hoja asociada`);
   return ruta;
 }
 

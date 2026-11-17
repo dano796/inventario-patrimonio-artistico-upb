@@ -78,6 +78,8 @@ export interface GrupoRevision {
   opciones: Opcion[];
   ref: RefDecision | null;
   filtros: Filtro[];
+  /** Solo en los grupos de persona: cuántas obras tiene a su cargo. */
+  obras?: number;
 }
 
 export interface NoSeToca {
@@ -96,10 +98,10 @@ export interface Revision {
 }
 
 const ETIQUETAS_FILTRO: Record<Filtro, string> = {
-  todo: 'Todo', conflictos: 'Conflictos', base: 'A la base', hoja: 'A la hoja', presencia: 'Altas y bajas', avisos: 'Avisos',
+  todo: 'Todo', conflictos: 'Conflictos', base: 'A la base', hoja: 'Al Excel', presencia: 'Altas y bajas', avisos: 'Avisos',
 };
 
-const ORDEN_NO_SE_TOCA = ['ID duplicado', 'ID desconocido', 'Celda ilegible'];
+const ORDEN_NO_SE_TOCA = ['ID repetido', 'ID sin obra', 'Celda ilegible'];
 const VACIO: Celda = { texto: 'Vacía', vacio: true };
 const plural = (n: number, palabra: string) => `${n} ${palabra}${n === 1 ? '' : 's'}`;
 const pesos = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
@@ -167,7 +169,7 @@ export function construirRevision(calculo: Calculo, estado: EstadoRevision): Rev
     if (aviso.tipo === 'celda_combinada' || aviso.tipo === 'cargo_sin_responsable') {
       const campo: Campo = aviso.tipo === 'celda_combinada' ? aviso.campo : 'cargo';
       const nota = aviso.tipo === 'celda_combinada'
-        ? 'La celda está combinada en la hoja: el cambio de la web no se escribe en ella.'
+        ? 'La celda está combinada en el Excel: el cambio de la web no se escribe en ella.'
         : 'La fila tiene cargo pero no responsable: el cargo no se sincroniza.';
       anadirAObra(aviso.obraId, filaFuera(
         `${aviso.tipo}|${aviso.obraId}|${campo}`, campo,
@@ -182,27 +184,27 @@ export function construirRevision(calculo: Calculo, estado: EstadoRevision): Rev
         const nueva = filaFuera(
           `fila|${a.fila}|${a.campo}`, a.campo, { texto: a.original, vacio: false },
           obra && esCampo(a.campo) ? textoValor(a.campo, obra.campos[a.campo]) : VACIO,
-          `«${a.original}»: ${a.motivo}. Este campo no se sincroniza en esta ejecución.`
+          `"${a.original}": ${a.motivo}. Este campo no se sincroniza en esta ejecución.`
         );
         if (obra) anadirAObra(obra.id, nueva);
         else filasDeAlta.set(a.fila, [...(filasDeAlta.get(a.fila) ?? []), nueva]);
       } else {
         noSeTocan.push({
           clave: `fila|${a.fila}|${a.campo}`, tipo: 'Celda ilegible',
-          titulo: `Fila ${a.fila}, columna ${encabezado(a.campo)}`, detalle: `${a.motivo}: «${a.original}»`,
+          titulo: `Fila ${a.fila}, columna ${encabezado(a.campo)}`, detalle: `"${a.original}": ${a.motivo}. Debe corregirse en el Excel.`,
         });
       }
     } else if (aviso.tipo === 'id_duplicado') {
       noSeTocan.push({
-        clave: `id_duplicado|${aviso.idWeb}`, tipo: 'ID duplicado',
-        titulo: `ID WEB ${aviso.idWeb} aparece ${aviso.filas.length} veces`,
-        detalle: `Filas ${unirFilas(aviso.filas)} de la hoja. Ninguna se toca.`,
+        clave: `id_duplicado|${aviso.idWeb}`, tipo: 'ID repetido',
+        titulo: `Las filas ${unirFilas(aviso.filas)} tienen el mismo ID WEB (${aviso.idWeb})`,
+        detalle: `El ID WEB ${aviso.idWeb} debe quedar solo en la fila de esa obra y eliminarse ${aviso.filas.length === 2 ? 'de la otra' : 'de las demás'}.`,
       });
     } else if (aviso.tipo === 'id_desconocido') {
       noSeTocan.push({
-        clave: `id_desconocido|${aviso.idWeb}`, tipo: 'ID desconocido',
-        titulo: `ID WEB ${aviso.idWeb} no existe en el inventario`,
-        detalle: `Fila ${aviso.fila} de la hoja. Puede ser una obra borrada o un ID tecleado a mano.`,
+        clave: `id_desconocido|${aviso.idWeb}`, tipo: 'ID sin obra',
+        titulo: `La fila ${aviso.fila} tiene el ID WEB ${aviso.idWeb}, que no es de ninguna obra`,
+        detalle: 'La obra pudo eliminarse en la web o el ID pudo escribirse mal. Debe corregirse o eliminarse.',
       });
     }
   }
@@ -220,8 +222,8 @@ export function construirRevision(calculo: Calculo, estado: EstadoRevision): Rev
     else if (decidida) resumen.haciaBase++;
     grupos.push(grupoPresencia({
       clave: `alta-base|${alta.fila}`, numero: `Fila ${alta.fila}`, titulo: alta.campos.titulo?.trim() || 'Sin título',
-      etiqueta: 'Solo está en la hoja',
-      resumen: ['Puede ser un alta real o una fila copiada a la que alguien borró el ID WEB. Requiere una elección.', ...textoImagenesAlta(alta)].join(' '),
+      etiqueta: 'Solo está en el Excel',
+      resumen: ['Esta fila del Excel no tiene ID WEB. Si corresponde a una obra nueva, puede crearse en la base; si es una copia de otra fila, puede ignorarse.', ...textoImagenesAlta(alta)].join(' '),
       ref: { tipo: 'altaBase', fila: alta.fila }, pendiente: decidida === undefined,
       opciones: [
         { valor: 'crear', etiqueta: 'Crear en la base', elegida: decidida === true },
@@ -235,10 +237,10 @@ export function construirRevision(calculo: Calculo, estado: EstadoRevision): Rev
     if (!ignorada) resumen.filasNuevas++;
     grupos.push(grupoPresencia({
       clave: `alta-hoja|${obraId}`, numero: `N.º ${obraId}`, titulo: tituloObra(obraDe.get(obraId)),
-      etiqueta: 'Solo está en la base', resumen: 'La obra existe en el inventario y no tiene fila en la hoja.',
+      etiqueta: 'Solo está en la base', resumen: 'La obra está en la base pero no tiene fila en el Excel. Puede añadirse una al final.',
       ref: { tipo: 'altaHoja', obraId }, pendiente: false,
       opciones: [
-        { valor: 'anadir', etiqueta: 'Añadir fila a la hoja', elegida: !ignorada },
+        { valor: 'anadir', etiqueta: 'Añadir fila al Excel', elegida: !ignorada },
         { valor: 'ignorar', etiqueta: 'Ignorar', elegida: ignorada },
       ],
       filas: [],
@@ -248,15 +250,15 @@ export function construirRevision(calculo: Calculo, estado: EstadoRevision): Rev
     if (aviso.tipo === 'fila_borrada') {
       grupos.push(grupoPresencia({
         clave: `fila-borrada|${aviso.obraId}`, numero: `N.º ${aviso.obraId}`, titulo: tituloObra(obraDe.get(aviso.obraId)),
-        etiqueta: 'Desapareció de la hoja',
-        resumen: 'Estaba en la última sincronización y alguien borró la fila. Una ausencia nunca borra una obra: si corresponde, bórrala a mano en la web.',
+        etiqueta: 'Borrada del Excel',
+        resumen: 'Su fila se eliminó del Excel después de la última sincronización. La obra se mantiene en la base, ya que la sincronización nunca elimina obras. Si ya no existe, debe eliminarse manualmente desde la web.',
         ref: null, pendiente: false, opciones: [], filas: [],
       }));
     } else if (aviso.tipo === 'obra_borrada_en_web') {
       grupos.push(grupoPresencia({
         clave: `borrada-web|${aviso.idWeb}`, numero: `N.º ${aviso.idWeb}`, titulo: tituloObra(undefined, filaDe.get(aviso.fila)),
         etiqueta: 'Borrada en la base',
-        resumen: `La obra se eliminó del inventario pero su fila sigue en la hoja (fila ${aviso.fila}). Bórrala a mano en la hoja si corresponde.`,
+        resumen: `La obra se eliminó en la web, pero su fila sigue en el Excel (fila ${aviso.fila}). Si ya no existe, esa fila debe eliminarse manualmente en el Excel.`,
         ref: null, pendiente: false, opciones: [], filas: [],
       }));
     }
@@ -286,13 +288,13 @@ function filaConflicto(
     accion: {
       tipo: 'opciones', ref: { tipo: 'conflicto', clave },
       opciones: [
-        { valor: 'hoja', etiqueta: 'Dejar la hoja', elegida: elegido === 'hoja' },
+        { valor: 'hoja', etiqueta: 'Dejar el Excel', elegida: elegido === 'hoja' },
         { valor: 'base', etiqueta: 'Dejar la base', elegida: elegido === 'base' },
       ],
     },
     nota: c.foto === undefined
       ? 'Sin versión acordada: las dos copias difieren.'
-      : `En la última sincronización era «${textoValor(c.campo, c.foto).texto}». Cambió en las dos copias.`,
+      : `Valor en la última sincronización: "${textoValor(c.campo, c.foto).texto}". Desde entonces se modificó tanto en el Excel como en la base.`,
     notaAmbar: true, pendiente: !elegido,
   };
 }
@@ -309,10 +311,10 @@ function filaImagen(i: CambioImagen, hacer: HacerCambio): FilaRevision {
 }
 
 const NOTAS_IMAGEN: Record<AvisoImagen['motivo'], string> = {
-  reemplazada: 'La imagen cambió en la web desde la última sincronización. La hoja conserva la anterior.',
-  borrada: 'La imagen se borró en la web. La hoja conserva la suya.',
-  casilla_con_texto: 'La casilla tiene texto en la hoja y nunca se sobrescribe. La web tiene una imagen nueva.',
-  url_externa: 'La imagen de la web no está en el almacenamiento del inventario y no se puede llevar a la hoja. Vuelve a subirla desde la ficha.',
+  reemplazada: 'La foto se reemplazó en la web y el Excel conserva una imagen pegada manualmente. El Excel solo se modifica si se elige actualizarlo.',
+  borrada: 'La foto se eliminó en la web y el Excel conserva una imagen pegada manualmente. El Excel solo se modifica si se elige quitarla.',
+  casilla_con_texto: 'La web tiene una foto nueva, pero esta casilla del Excel contiene texto, que la sincronización nunca sobrescribe.',
+  url_externa: 'La foto está enlazada desde un sitio externo y no almacenada en el inventario, por lo que no puede copiarse al Excel. Debe subirse de nuevo desde la ficha de la obra.',
 };
 
 function filaAvisoImagen(a: AvisoImagen, estado: EstadoRevision, contar: (lado: Lado) => void, fuera: HacerFuera): FilaRevision {
@@ -325,7 +327,7 @@ function filaAvisoImagen(a: AvisoImagen, estado: EstadoRevision, contar: (lado: 
   const opcion = (valor: DecisionImagen, etiqueta: string) => ({ valor, etiqueta, elegida: decision === valor });
   const opciones = a.motivo === 'casilla_con_texto'
     ? [opcion('dejar', 'No volver a avisar')]
-    : [opcion('reemplazar', a.motivo === 'borrada' ? 'Vaciar en la hoja' : 'Reemplazar en la hoja'), opcion('dejar', 'Dejar la de la hoja')];
+    : [opcion('reemplazar', a.motivo === 'borrada' ? 'Quitar la imagen del Excel' : 'Actualizar el Excel'), opcion('dejar', 'Conservar la del Excel')];
   if (decision === 'reemplazar' && a.motivo !== 'casilla_con_texto') contar('hoja');
   return {
     clave, campo, hoja, base, gana: decision === 'reemplazar' ? 'base' : decision === 'dejar' ? 'hoja' : null,
@@ -356,8 +358,8 @@ function filaConflictoCargo(
       opciones: c.opciones.map((o) => ({ valor: o ?? '', etiqueta: o ?? 'Vacío', elegida: decidido && elegido === o })),
     },
     nota: contraBase && c.foto !== undefined
-      ? `En la última sincronización era «${textoValor('cargo', c.foto).texto}». Cambió en las dos copias.`
-      : 'Las filas de esta persona no coinciden en el cargo. Elige el que vale para todas.',
+      ? `Valor en la última sincronización: "${textoValor('cargo', c.foto).texto}". Desde entonces se modificó tanto en el Excel como en la base.`
+      : 'Las filas de esta persona registran cargos distintos. Debe elegirse el que se aplicará a todas.',
     notaAmbar: true, pendiente: !decidido,
   };
 }
@@ -391,14 +393,14 @@ function grupoPersona(c: CambioCargo | ConflictoCargo, filas: FilaRevision[]): G
   return {
     clave: `persona|${c.clave}`, tipo: 'persona', numero: '', titulo: `Cargo de ${c.nombre}`,
     etiqueta: `Afecta a ${plural(c.filas.length, 'obra')}`, tono: conflicto ? 'ambar' : 'acento',
-    pendiente, filas, resumen: null, opciones: [], ref: null, filtros,
+    pendiente, filas, resumen: null, opciones: [], ref: null, filtros, obras: c.filas.length,
   };
 }
 
 function textoImagenesAlta(alta: AltaBase): string[] {
   const n = alta.imagenes.length;
   return [
-    ...(n ? [n === 1 ? 'Se subirá 1 imagen pegada.' : `Se subirán ${n} imágenes pegadas.`] : []),
+    ...(n ? [n === 1 ? 'También se subirá la imagen pegada en la fila.' : `También se subirán las ${n} imágenes pegadas en la fila.`] : []),
     ...alta.imagenesRechazadas.map((r) => `La imagen ${r.casilla} no se subirá: ${r.motivo}.`),
   ];
 }

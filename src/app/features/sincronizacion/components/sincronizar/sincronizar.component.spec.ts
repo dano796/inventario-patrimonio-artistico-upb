@@ -80,7 +80,7 @@ describe('SincronizarComponent: entrada y comparación', () => {
   it('sin conexión con OneDrive ofrece conectar y vuelve a esta pantalla', async () => {
     const { html, graph, servicio, boton } = await montarPagina({ conectado: false });
 
-    expect(html.textContent).toContain('Conecta con OneDrive para leer la hoja');
+    expect(html.textContent).toContain('Conexión con OneDrive');
     expect(html.textContent).toContain('OneDrive sin conectar');
     expect(html.textContent).not.toContain('Antes de continuar');
     expect(html.textContent).not.toContain('La conexión dura esta visita');
@@ -113,7 +113,7 @@ describe('SincronizarComponent: entrada y comparación', () => {
   it('si falta un encabezado se detiene y lo señala entre los esperados', async () => {
     const { html } = await montarPagina({ calcular: () => Promise.reject(new ErrorEncabezados(['UBICACIÓN'])) });
 
-    expect(html.textContent).toContain('No se encontró el encabezado «UBICACIÓN»');
+    expect(html.textContent).toContain('No se encontró el encabezado "UBICACIÓN"');
     expect(html.textContent).toContain('UBICACIÓN (no encontrado)');
     expect(html.textContent).toContain('AUTOR');
   });
@@ -130,27 +130,27 @@ describe('SincronizarComponent: entrada y comparación', () => {
     expect(html.textContent).toContain('Retrato del Fundador');
   });
 
-  it('si la hoja vinculada ya no está en OneDrive lo explica y ofrece vincularla de nuevo', async () => {
+  it('si el Excel vinculado ya no está en OneDrive lo explica y ofrece vincularla de nuevo', async () => {
     const { html } = await montarPagina({
       calcular: () => Promise.reject(new ErrorGraph(404, '{"error":{"code":"itemNotFound","message":"The resource could not be found."}}')),
     });
 
-    expect(html.textContent).toContain('No encontramos la hoja vinculada');
+    expect(html.textContent).toContain('No se encontró el Excel vinculado');
     expect(html.textContent).not.toContain('itemNotFound');
     expect(html.textContent).not.toContain('Sincronización detenida');
     expect(html.querySelector('[role="alert"]')).toBeNull();
-    expect(html.querySelector('a[href="/sincronizacion/vincular"]')?.textContent?.trim()).toBe('Vincular la hoja');
+    expect(html.querySelector('a[href="/sincronizacion/vincular"]')?.textContent?.trim()).toBe('Vincular el Excel');
   });
 
   it('si el token caducó al comparar vuelve a ofrecer conectar', async () => {
     const { html } = await montarPagina({ calcular: () => Promise.reject(new ErrorGraph(401, 'caducado')) });
-    expect(html.textContent).toContain('Conecta con OneDrive para leer la hoja');
+    expect(html.textContent).toContain('Conexión con OneDrive');
   });
 
   it('sin diferencias lo dice y registra la sincronización', async () => {
     const { html, servicio } = await montarPagina({ calcular: async () => calculoDePrueba({}, { obras: [obraBase(1, {})] }) });
 
-    expect(html.textContent).toContain('La hoja y el inventario coinciden');
+    expect(html.textContent).toContain('El Excel y el inventario coinciden');
     expect(servicio.aplicar).toHaveBeenCalledTimes(1);
   });
 
@@ -169,7 +169,7 @@ describe('SincronizarComponent: revisar y aplicar', () => {
     const { servicio, boton, actualizar } = await montarPagina({});
 
     expect(boton('Aprobar y aplicar').disabled).toBeTrue();
-    boton('Dejar la hoja').click();
+    boton('Dejar el Excel').click();
     await actualizar();
     expect(boton('Aprobar y aplicar').disabled).toBeFalse();
     boton('Aprobar y aplicar').click();
@@ -203,7 +203,7 @@ describe('SincronizarComponent: revisar y aplicar', () => {
   it('si la conexión caduca al aplicar, avisa, conserva las decisiones y reconecta', async () => {
     const { html, servicio, graph, boton, actualizar } = await montarPagina({});
     servicio.aplicar.and.rejectWith(new ErrorGraph(401, 'caducado'));
-    boton('Dejar la hoja').click();
+    boton('Dejar el Excel').click();
     await actualizar();
     boton('Aprobar y aplicar').click();
     await actualizar();
@@ -219,14 +219,14 @@ describe('SincronizarComponent: revisar y aplicar', () => {
 
   it('al volver con un borrador recupera las decisiones y lo anuncia', async () => {
     const primera = await montarPagina({});
-    primera.boton('Dejar la hoja').click();
+    primera.boton('Dejar el Excel').click();
     await primera.actualizar();
     TestBed.resetTestingModule();
 
     const { html, boton } = await montarPagina({});
 
     expect(html.textContent).toContain('Decisiones recuperadas: 1 de 1.');
-    expect(boton('Dejar la hoja').getAttribute('aria-pressed')).toBe('true');
+    expect(boton('Dejar el Excel').getAttribute('aria-pressed')).toBe('true');
     expect(boton('Aprobar y aplicar').disabled).toBeFalse();
   });
 
@@ -236,7 +236,7 @@ describe('SincronizarComponent: revisar y aplicar', () => {
       base: { aplicados: 3, descartados: [{ obra_id: 14, campo: 'valor', motivo: 'cambió en la web desde el diff' }], creadas: [] },
       escritasEnHoja: 2, altasEnHoja: 1, descartadasEnHoja: [], imagenesSubidas: 0, imagenesFallidas: [], error: null,
     });
-    boton('Dejar la hoja').click();
+    boton('Dejar el Excel').click();
     await actualizar();
     boton('Aprobar y aplicar').click();
     await actualizar();
@@ -257,7 +257,7 @@ describe('SincronizarComponent: revisar y aplicar', () => {
       imagenesSubidas: 2,
       imagenesFallidas: [{ obraId: 721, fila: 536, casilla: 3, motivo: 'Payload too large' }],
     });
-    boton('Dejar la hoja').click();
+    boton('Dejar el Excel').click();
     await actualizar();
     boton('Aprobar y aplicar').click();
     await actualizar();
@@ -267,18 +267,18 @@ describe('SincronizarComponent: revisar y aplicar', () => {
     expect(html.textContent).toContain('N.º 721');
     expect(html.textContent).toContain('imagen_3');
     expect(html.textContent).toContain('Payload too large');
-    expect(html.textContent).toContain('Súbelas desde la ficha de la obra');
+    expect(html.textContent).toContain('Deben subirse desde la ficha de la obra');
   });
 
-  it('si la hoja no se terminó de escribir lo dice en el resultado', async () => {
+  it('si el Excel no se terminó de escribir lo dice en el resultado', async () => {
     const { html, servicio, boton, actualizar } = await montarPagina({});
     servicio.aplicar.and.resolveTo({ ...SIN_RESULTADO, error: 'La conexión con OneDrive caducó.' });
-    boton('Dejar la hoja').click();
+    boton('Dejar el Excel').click();
     await actualizar();
     boton('Aprobar y aplicar').click();
     await actualizar();
 
-    expect(html.textContent).toContain('No se terminó de escribir en la hoja.');
+    expect(html.textContent).toContain('No se terminó de escribir en el Excel.');
     expect(html.textContent).toContain('La conexión con OneDrive caducó.');
   });
 });
@@ -305,8 +305,8 @@ describe('SincronizarComponent: desde el complemento de Excel', () => {
       calcular: () => (primera ? ((primera = false), otroLibro(null)()) : Promise.resolve(conConflicto())),
     });
 
-    expect(html.textContent).toContain('Confirma que este es el libro oficial');
-    expect(html.textContent).toContain('«Inventario Patrimonio UPB 1.xlsx»');
+    expect(html.textContent).toContain('Confirmación del libro oficial');
+    expect(html.textContent).toContain('"Inventario Patrimonio UPB 1.xlsx"');
     boton('Vincular este libro').click();
     await actualizar();
 
@@ -318,15 +318,15 @@ describe('SincronizarComponent: desde el complemento de Excel', () => {
   it('si el libro no es el vinculado lo dice y nombra los dos', async () => {
     const { html } = await montarPagina({ excel: true, calcular: otroLibro('https://upb/Documents/Inventario.xlsx') });
 
-    expect(html.textContent).toContain('Este libro no es la hoja vinculada');
-    expect(html.textContent).toContain('«Inventario Patrimonio UPB 1.xlsx»');
-    expect(html.textContent).toContain('«Inventario.xlsx»');
+    expect(html.textContent).toContain('Este libro no es el Excel vinculado');
+    expect(html.textContent).toContain('"Inventario Patrimonio UPB 1.xlsx"');
+    expect(html.textContent).toContain('"Inventario.xlsx"');
   });
 
   it('sin hoja vinculada no enlaza a una página que no existe dentro de Excel', async () => {
     const { html } = await montarPagina({ excel: true, hoja: null });
 
-    expect(html.textContent).toContain('Todavía no hay una hoja vinculada');
+    expect(html.textContent).toContain('Todavía no hay un Excel vinculado');
     expect(html.querySelector('a[href="/sincronizacion/vincular"]')).toBeNull();
   });
 });

@@ -6,7 +6,7 @@ const conId = (fila: number, idWeb: number | null) => filaHoja(fila, { titulo: `
 const fotos = (...ids: number[]) => new Map<number, ValoresFoto>(ids.map((id) => [id, {}]));
 
 describe('indexarPorIdWeb', () => {
-  it('empareja cada fila con su obra por ID WEB, aunque la hoja esté reordenada', () => {
+  it('empareja cada fila con su obra por ID WEB, aunque el Excel esté reordenada', () => {
     const r = indexarPorIdWeb([conId(2, 11), conId(3, 10)], [obraBase(10, {}), obraBase(11, {})], fotos(10, 11));
     expect(r.pares.map((p) => [p.fila.fila, p.obra.id])).toEqual([[2, 11], [3, 10]]);
     expect(r.avisos).toEqual([]);
@@ -37,7 +37,7 @@ describe('indexarPorIdWeb', () => {
     expect(r.altasBase).toEqual([]);
   });
 
-  it('una obra sin fila: con foto es una fila borrada; sin foto, un alta en la hoja', () => {
+  it('una obra sin fila: con foto es una fila borrada; sin foto, un alta en el Excel', () => {
     const r = indexarPorIdWeb([], [obraBase(20, {}), obraBase(21, {})], fotos(20));
     expect(r.avisos).toEqual([{ tipo: 'fila_borrada', obraId: 20 }]);
     expect(r.altasHoja).toEqual([{ obraId: 21 }]);

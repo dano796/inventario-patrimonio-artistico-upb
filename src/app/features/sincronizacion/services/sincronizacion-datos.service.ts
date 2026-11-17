@@ -75,7 +75,7 @@ export class SincronizacionDatosService {
       .eq('id', 1)
       .select('id');
     if (error) throw error;
-    if (!data?.length) throw new Error('No hay ninguna hoja vinculada que actualizar.');
+    if (!data?.length) throw new Error('No hay ningún Excel vinculado que actualizar.');
   }
 
   async obras(): Promise<ObraBase[]> {

@@ -61,7 +61,7 @@ describe('ArtworkDetailComponent', () => {
     expect(html.querySelector('a[aria-label="Editar obra"]')?.getAttribute('href')).toBe('/editar/14');
     html.querySelector<HTMLButtonElement>('button[aria-label="Eliminar obra"]')!.click();
     harness.detectChanges();
-    expect(html.querySelector('[role="dialog"]')?.textContent).toContain('«Paisaje» y sus 2 imágenes se eliminarán de forma permanente.');
+    expect(html.querySelector('[role="dialog"]')?.textContent).toContain('"Paisaje" y sus 2 imágenes se eliminarán de forma permanente.');
   });
 
   it('el clic en la imagen la amplía en el visor, con la imagen que se está viendo', async () => {
@@ -74,7 +74,7 @@ describe('ArtworkDetailComponent', () => {
     expect(html.querySelector('[role="dialog"] img')?.getAttribute('src')).toBe('https://x/b.jpg');
   });
 
-  it('una obra sin título muestra «Sin título»', async () => {
+  it('una obra sin título muestra "Sin título"', async () => {
     const { html } = await montar(obraDePrueba({ titulo: null }), false);
     expect(html.querySelector('h1')?.textContent?.trim()).toBe('Sin título');
   });

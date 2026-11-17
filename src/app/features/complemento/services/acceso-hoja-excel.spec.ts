@@ -73,7 +73,7 @@ describe('AccesoHojaExcel', () => {
     await expectAsync(acceso.descargar()).toBeRejectedWithError(/sin permiso/);
   });
 
-  it('lee el rango usado de la hoja vinculada con valores y fórmulas, como Graph', async () => {
+  it('lee el rango usado del Excel vinculado con valores y fórmulas, como Graph', async () => {
     const { acceso, getItem, rango } = crear();
 
     expect(await acceso.leerRangoUsado(HOJA)).toEqual({

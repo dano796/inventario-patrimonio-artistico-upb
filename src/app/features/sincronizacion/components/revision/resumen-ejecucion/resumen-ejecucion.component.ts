@@ -18,8 +18,8 @@ export class ResumenEjecucionComponent {
     const r = this.revision().resumen;
     return [
       { etiqueta: 'Cambios hacia la base', cifra: r.haciaBase },
-      { etiqueta: 'Cambios hacia la hoja', cifra: r.haciaHoja },
-      { etiqueta: 'Filas nuevas en la hoja', cifra: r.filasNuevas },
+      { etiqueta: 'Cambios hacia el Excel', cifra: r.haciaHoja },
+      { etiqueta: 'Filas nuevas en el Excel', cifra: r.filasNuevas },
     ];
   });
 

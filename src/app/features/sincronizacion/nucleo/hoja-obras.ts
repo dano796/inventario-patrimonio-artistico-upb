@@ -62,8 +62,8 @@ export interface ResultadoHoja {
 
 export function mensajeEncabezados(faltantes: readonly string[], repetidos: readonly string[]): string {
   return [
-    faltantes.length ? `Faltan encabezados en la hoja: ${faltantes.join(', ')}` : '',
-    repetidos.length ? `Hay encabezados repetidos en la hoja: ${repetidos.join(', ')}` : '',
+    faltantes.length ? `Faltan encabezados en el Excel: ${faltantes.join(', ')}` : '',
+    repetidos.length ? `Hay encabezados repetidos en el Excel: ${repetidos.join(', ')}` : '',
   ].filter(Boolean).join('. ');
 }
 

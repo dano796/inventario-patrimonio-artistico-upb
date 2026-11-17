@@ -18,11 +18,11 @@ export async function errorDeRespuesta(respuesta: Response): Promise<ErrorGraph>
   const estado = respuesta.status;
   if (estado === 403) {
     return new ErrorGraph(estado,
-      'Tu cuenta no tiene acceso a la hoja oficial desde la web, porque está en el OneDrive de otra persona. ' +
-      'Sincroniza desde el complemento de Excel, con la hoja oficial abierta.');
+      'Esta cuenta no tiene acceso al Excel oficial desde la web, porque está en el OneDrive de otra persona. ' +
+      'La sincronización debe hacerse desde el complemento de Excel, con el Excel oficial abierto.');
   }
   if (estado === 429 || estado === 503) {
-    return new ErrorGraph(estado, 'Microsoft está recibiendo demasiadas peticiones. Espera un momento y vuelve a intentarlo.');
+    return new ErrorGraph(estado, 'Microsoft está recibiendo demasiadas peticiones. Conviene esperar un momento antes de volver a intentarlo.');
   }
   return new ErrorGraph(estado, `OneDrive respondió con un error (${codigo ? `${codigo}, ` : ''}código ${estado}).`);
 }
@@ -142,7 +142,7 @@ export class GraphService {
   async descargar(driveId: string, itemId: string): Promise<Uint8Array> {
     const item = await this.pedir<{ '@microsoft.graph.downloadUrl'?: string }>(`/drives/${driveId}/items/${itemId}`);
     const url = item['@microsoft.graph.downloadUrl'];
-    if (!url) throw new ErrorGraph(404, 'OneDrive no dio una URL de descarga para la hoja.');
+    if (!url) throw new ErrorGraph(404, 'OneDrive no dio una URL de descarga para el Excel.');
     const respuesta = await this.fetchConTope(url, {}, TOPE_DESCARGA_MS);
     if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
     return new Uint8Array(await respuesta.arrayBuffer());
@@ -192,7 +192,7 @@ export class GraphService {
     const tope = new Promise<never>((_, reject) => {
       id = setTimeout(() => {
         controlador.abort();
-        reject(new ErrorGraph(408, 'Microsoft no respondió a tiempo. Vuelve a intentarlo.'));
+        reject(new ErrorGraph(408, 'Microsoft no respondió a tiempo.'));
       }, topeMs);
     });
 

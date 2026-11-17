@@ -47,7 +47,7 @@ export class IdWebService {
     if (autor === null || titulo === null || tecnica === null || dimension === null) {
       return {
         ok: false,
-        discrepancias: [{ fila: 1, motivo: 'la hoja no tiene las columnas AUTOR, TITULO, TECNICA y DIMENSION (cm)' }],
+        discrepancias: [{ fila: 1, motivo: 'el Excel no tiene las columnas AUTOR, TITULO, TECNICA y DIMENSION (cm)' }],
       };
     }
 

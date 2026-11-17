@@ -17,7 +17,7 @@ const enBase = (cargo: string | null) => [{ id: 9, nombre: JOBANY, cargo }];
 const fila = (n: number, obraId: number, cargo: string, combinada = false) => ({ fila: n, obraId, cargo, combinada });
 
 describe('diffCargos', () => {
-  it('un cargo cambiado en la hoja se propone una vez por persona, con todas sus filas', () => {
+  it('un cargo cambiado en el Excel se propone una vez por persona, con todas sus filas', () => {
     const r = diffCargos(
       [par(2, 1, { responsable: JOBANY, cargo: 'DIRECTOR' }), par(3, 2, { responsable: JOBANY, cargo: 'DIRECTOR' })],
       enBase('COORDINADOR'),
