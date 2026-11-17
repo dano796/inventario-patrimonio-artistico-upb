@@ -9,6 +9,8 @@ import { ImageService } from '../../../../shared/services/image.service';
 import { obraDePrueba } from '../galeria/obra-de-prueba';
 import { Artwork } from '../../../../shared/models/artwork.model';
 
+let harness: RouterTestingHarness;
+
 async function montar(url: string, obra: Artwork | null = null) {
   TestBed.configureTestingModule({
     providers: [
@@ -28,7 +30,7 @@ async function montar(url: string, obra: Artwork | null = null) {
       { provide: ImageService, useValue: {} },
     ],
   });
-  const harness = await RouterTestingHarness.create();
+  harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url, ArtworkFormComponent);
   await harness.fixture.whenStable();
   harness.detectChanges();
@@ -36,11 +38,11 @@ async function montar(url: string, obra: Artwork | null = null) {
 }
 
 describe('ArtworkFormComponent', () => {
-  it('al crear muestra los cuatro bloques y el aviso del código de ficha', async () => {
+  it('al crear muestra las imágenes, los cuatro bloques y el aviso del código de ficha', async () => {
     const html = await montar('/nueva');
     expect(html.querySelector('h1')?.textContent?.trim()).toBe('Nueva obra');
     expect(html.textContent).toContain('El código de ficha se asigna automáticamente al guardar.');
-    for (const bloque of ['01 · Identificación', '02 · Descripción técnica', '03 · Custodia', '04 · Imágenes']) {
+    for (const bloque of ['01 - Identificación', '02 - Descripción técnica', '03 - Custodia', '04 - Notas', 'Imágenes']) {
       expect(html.textContent).toContain(bloque);
     }
   });
@@ -65,5 +67,32 @@ describe('ArtworkFormComponent', () => {
     const guardar = [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Guardar obra')!;
     expect(guardar.getAttribute('type')).toBe('submit');
     expect(guardar.getAttribute('form')).toBe('formulario-obra');
+  });
+
+  for (const id of ['ano']) {
+    it(`${id} rechaza letras y signos antes de que entren al campo`, async () => {
+      const html = await montar('/nueva');
+      const campo = html.querySelector('#' + id) as HTMLInputElement;
+      expect(campo.type).toBe('text');
+      expect(campo.getAttribute('inputmode')).toBe('numeric');
+      for (const data of ['e', '3e', '-', '.', '+']) {
+        const ev = new InputEvent('beforeinput', { data, inputType: 'insertText', cancelable: true });
+        campo.dispatchEvent(ev);
+        expect(ev.defaultPrevented).withContext(data).toBeTrue();
+      }
+      const digito = new InputEvent('beforeinput', { data: '7', inputType: 'insertText', cancelable: true });
+      campo.dispatchEvent(digito);
+      expect(digito.defaultPrevented).toBeFalse();
+    });
+  }
+
+  it('un valor no numérico que llegue al campo se marca como error', async () => {
+    const html = await montar('/nueva');
+    const campo = html.querySelector('#ano') as HTMLInputElement;
+    campo.value = '3e';
+    campo.dispatchEvent(new Event('input'));
+    campo.dispatchEvent(new Event('blur'));
+    harness.detectChanges();
+    expect(campo.getAttribute('aria-invalid')).toBe('true');
   });
 });

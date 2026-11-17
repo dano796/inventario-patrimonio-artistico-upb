@@ -14,14 +14,14 @@ describe('camposFicha', () => {
     expect(campos.find((c) => c.etiqueta === 'Valor estimado')?.valor).toContain('1.200.000');
   });
 
-  it('un campo vacío o con espacios se muestra como «No registra» y se marca', () => {
+  it('un campo vacío o con espacios se muestra como "No registra" y se marca', () => {
     const dimension = camposFicha(obraDePrueba({ dimension: '  ' }), false).find((c) => c.etiqueta === 'Dimensión');
     expect(dimension).toEqual({ etiqueta: 'Dimensión', valor: 'No registra', vacio: true });
   });
 });
 
 describe('camposFicha con una lectura sin columnas restringidas', () => {
-  it('lo que no llegó se muestra como «No registra», nunca «undefined» ni «NaN»', () => {
+  it('lo que no llegó se muestra como "No registra", nunca "undefined" ni "NaN"', () => {
     const { ubicacion, bloque_asignado, valor, responsable, cargo, ...publica } = obraDePrueba();
     const textos = camposFicha(publica as never, true).map((c) => c.valor);
     expect(textos.join(' ')).not.toMatch(/undefined|NaN/);
@@ -30,7 +30,7 @@ describe('camposFicha con una lectura sin columnas restringidas', () => {
 
 describe('subtituloFicha', () => {
   it('une autor y año, y nombra lo que falta', () => {
-    expect(subtituloFicha(obraDePrueba())).toBe('Ana Pérez · 1998');
+    expect(subtituloFicha(obraDePrueba())).toBe('Ana Pérez, 1998');
     expect(subtituloFicha(obraDePrueba({ autor: null, ano: null }))).toBe('Autor no registrado');
   });
 });
@@ -41,7 +41,7 @@ describe('ultimaCaptura', () => {
       { url: 'a', nombre: 'a', fecha_creacion: '2024-03-01T12:00:00Z' },
       { url: 'b', nombre: 'b', fecha_creacion: '2025-10-22T12:00:00Z' },
     ];
-    expect(ultimaCaptura(imagenes)).toBe('Última captura 22/10/2025 · 2 imágenes');
+    expect(ultimaCaptura(imagenes)).toBe('Última captura 22/10/2025 (2 imágenes)');
   });
 
   it('sin fechas no dice nada', () => {
@@ -52,8 +52,8 @@ describe('ultimaCaptura', () => {
 
 describe('mensajeBorrado', () => {
   it('nombra la obra y sus imágenes', () => {
-    expect(mensajeBorrado('Paisaje', 3)).toBe('«Paisaje» y sus 3 imágenes se eliminarán de forma permanente.');
-    expect(mensajeBorrado('Paisaje', 1)).toBe('«Paisaje» y su imagen se eliminarán de forma permanente.');
-    expect(mensajeBorrado('Paisaje', 0)).toBe('«Paisaje» se eliminará de forma permanente.');
+    expect(mensajeBorrado('Paisaje', 3)).toBe('"Paisaje" y sus 3 imágenes se eliminarán de forma permanente.');
+    expect(mensajeBorrado('Paisaje', 1)).toBe('"Paisaje" y su imagen se eliminarán de forma permanente.');
+    expect(mensajeBorrado('Paisaje', 0)).toBe('"Paisaje" se eliminará de forma permanente.');
   });
 });

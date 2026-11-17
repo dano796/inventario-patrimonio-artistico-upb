@@ -63,7 +63,7 @@ export class SincronizacionService {
   /** Nada se escribe aquí: el diff se revisa antes de aplicar. */
   async calcular(progreso: AvisoProgreso = () => undefined): Promise<Calculo> {
     const hoja = await this.datos.hojaVinculada();
-    if (!hoja) throw new Error('No hay ninguna hoja vinculada. Vincúlala antes de sincronizar.');
+    if (!hoja) throw new Error('No hay ningún Excel vinculado. Debe vincularse antes de sincronizar.');
     await this.acceso.verificar(hoja);
     const contenido = await this.acceso.descargar(hoja);
     progreso('descargar', `${(contenido.byteLength / 1024 / 1024).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`);
@@ -95,10 +95,10 @@ export class SincronizacionService {
    */
   async aplicar(calculo: Calculo, decisiones: Decisiones): Promise<ResultadoAplicacion> {
     if ((await this.acceso.minutosRestantes()) < MARGEN_TOKEN_MIN) {
-      throw new ErrorGraph(401, 'La conexión con OneDrive está a punto de caducar. Reconecta antes de aplicar.');
+      throw new ErrorGraph(401, 'La conexión con OneDrive está a punto de caducar. Debe renovarse antes de aplicar.');
     }
     if (this.gastados.has(calculo)) {
-      throw new Error('Este cálculo ya se aplicó o se intentó aplicar. Vuelve a calcular antes de reintentar.');
+      throw new Error('Este cálculo ya se aplicó o se intentó aplicar. Debe volver a calcularse antes de reintentar.');
     }
     this.gastados.add(calculo);
     const filas = new Map(calculo.lectura.filas.map((f) => [f.fila, f]));
@@ -204,7 +204,7 @@ export class SincronizacionService {
 
 function mensajeDeError(e: unknown): string {
   if (e instanceof ErrorGraph && e.estado === 401) {
-    return 'La conexión con OneDrive caducó. Conecta de nuevo y vuelve a sincronizar: lo que falta reaparecerá.';
+    return 'La conexión con OneDrive caducó. Lo que falta aparecerá de nuevo en la próxima sincronización.';
   }
-  return e instanceof Error ? e.message : 'No se pudo terminar de escribir en la hoja.';
+  return e instanceof Error ? e.message : 'No se pudo terminar de escribir en el Excel.';
 }

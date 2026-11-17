@@ -4,14 +4,20 @@
       <p class="antetitulo">Inventario</p>
       <h1 class="titulo-pantalla">Galería de obras</h1>
     </div>
-    <div class="flex flex-wrap items-center gap-2.5">
-      <button type="button" class="btn-secundario" (click)="exportArtworksToExcel()" [disabled]="isExporting()">
-        {{ isExporting() ? 'Exportando…' : 'Exportar' }}
-      </button>
-      @if (isAdmin()) {
-        <a routerLink="/nueva" class="btn-primario">Registrar obra</a>
-      }
-    </div>
+    @if (isAdmin()) {
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button type="button" class="btn-secundario" (click)="exportArtworksToExcel()" [disabled]="isExporting()"
+          title="Descarga en Excel las obras que coinciden con la búsqueda y los filtros">
+          @if (isExporting()) {
+            <span class="indicador-carga" aria-hidden="true"></span>
+          } @else {
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>
+          }
+          {{ isExporting() ? 'Exportando…' : 'Exportar' }}
+        </button>
+        <a routerLink="/nueva" class="btn-primario"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Registrar obra</a>
+      </div>
+    }
   </header>
 
   @if (exportError()) {
@@ -77,7 +83,7 @@
           <app-tabla-obras [obras]="artworks()" [esAdmin]="isAdmin()" />
         }
         @case ('mosaico') {
-          <div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+          <div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             @for (obra of artworks(); track obra.id) {
               <app-tarjeta-obra [obra]="obra" modo="mosaico" [esAdmin]="isAdmin()" />
             }

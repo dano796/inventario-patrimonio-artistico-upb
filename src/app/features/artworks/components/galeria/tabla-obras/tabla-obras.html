@@ -1,30 +1,41 @@
 <div class="tarjeta overflow-x-auto px-5 pb-3.5 pt-1.5">
-  <table class="w-full min-w-[720px] border-collapse text-left text-[14px] font-medium">
+  <table class="w-full border-collapse text-left text-[14px] font-medium" [class]="esAdmin() ? 'min-w-[1040px]' : 'min-w-[780px]'">
     <thead>
       <tr class="border-b border-linea text-[12px] uppercase tracking-[0.08em] text-tinta-5">
-        <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="esAdmin() ? 28 : 36">Obra</th>
-        <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="esAdmin() ? 22 : 30">Autor</th>
-        <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="esAdmin() ? 18 : 24">Técnica</th>
-        @if (esAdmin()) {
-          <th scope="col" class="py-3 pr-4 font-semibold" [style.width.%]="24">Ubicación</th>
+        <th scope="col" class="py-3 pr-4 font-semibold">Autor</th>
+        <th scope="col" class="py-3 pr-4 font-semibold">Título</th>
+        @for (columna of columnas(); track columna.etiqueta) {
+          <th scope="col" class="py-3 pr-4 font-semibold" [class.whitespace-nowrap]="columna.corta">{{ columna.etiqueta }}</th>
         }
-        <th scope="col" class="py-3 font-semibold" [style.width.%]="esAdmin() ? 8 : 10">Año</th>
+        <th scope="col" class="py-3 font-semibold">Imagen</th>
       </tr>
     </thead>
     <tbody>
       @for (obra of obras(); track obra.id) {
-        <tr class="border-b border-linea-00 last:border-0">
-          <td class="py-[11px] pr-4">
+        <tr class="cursor-pointer border-b border-linea-00 align-middle last:border-0 hover:bg-sub" (click)="abrirFicha(obra, $event)">
+          <td class="py-2.5 pr-4" [class]="texto(obra.autor) ? 'text-tinta-3' : 'text-tinta-5'">{{ texto(obra.autor) ?? noRegistra }}</td>
+          <td class="py-2.5 pr-4">
             <a [routerLink]="['/obra', obra.id]" class="font-semibold text-tinta hover:text-acento-tinta">{{ titulo(obra) }}</a>
           </td>
-          <td class="py-[11px] pr-4 text-tinta-4">{{ texto(obra.autor) }}</td>
-          <td class="py-[11px] pr-4 text-tinta-4">{{ texto(obra.tecnica) }}</td>
-          @if (esAdmin()) {
-            <td class="py-[11px] pr-4 text-tinta-4">{{ texto(obra.ubicacion) }}</td>
+          @for (columna of columnas(); track columna.etiqueta) {
+            @let valor = texto(columna.valor(obra));
+            <td class="py-2.5 pr-4" [class.whitespace-nowrap]="columna.corta" [class]="valor ? 'text-tinta-3' : 'text-tinta-5'">{{ valor ?? noRegistra }}</td>
           }
-          <td class="whitespace-nowrap py-[11px] text-tinta-4">{{ texto(obra.ano) }}</td>
+          <td class="py-2.5">
+            @if (imagen(obra); as url) {
+              <button type="button" class="block rounded-lg" [attr.aria-label]="'Ampliar la imagen de ' + titulo(obra)" (click)="ampliar(obra, url)">
+                <img [src]="url" alt="" loading="lazy" class="h-11 w-11 rounded-lg bg-sub object-cover transition-transform hover:scale-105" />
+              </button>
+            } @else {
+              <span class="marcador grid h-11 w-11 place-items-center rounded-lg text-tinta-5" role="img" aria-label="Sin imagen"><app-icono-sin-imagen [tamano]="20" /></span>
+            }
+          </td>
         </tr>
       }
     </tbody>
   </table>
 </div>
+
+@if (ampliada(); as imagen) {
+  <app-visor-imagen [url]="imagen.url" [descripcion]="imagen.descripcion" (cerrar)="ampliada.set(null)" />
+}

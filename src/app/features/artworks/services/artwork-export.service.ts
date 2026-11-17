@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ArtworksService } from './artworks.service';
+import { PaginationParams } from '../../../shared/models/artwork.model';
 
 /**
  * Exportacion del inventario a Excel.
@@ -15,17 +16,17 @@ export class ArtworkExportService {
   private artworksService = inject(ArtworksService);
 
   /**
-   * Genera y descarga el .xlsx con todas las obras.
+   * Genera y descarga el .xlsx con las obras que cumplen los filtros; sin filtros, con todas.
    * @returns numero de obras exportadas, o 0 si no habia ninguna.
    */
-  async exportToExcel(): Promise<number> {
+  async exportToExcel(filtros: Omit<PaginationParams, 'page' | 'limit'> = {}): Promise<number> {
     // Importaciones dinámicas para reducir el tamaño del bundle inicial y evitar errores de exportación
     const ExcelJS = (await import('exceljs')).default;
     const fileSaverModule = await import('file-saver');
     const saveAs = fileSaverModule.saveAs || fileSaverModule.default;
 
     const allArtworks =
-      await this.artworksService.getAllArtworksNoPagination();
+      await this.artworksService.getAllArtworksNoPagination(filtros);
     if (!allArtworks || allArtworks.length === 0) {
       return 0;
     }

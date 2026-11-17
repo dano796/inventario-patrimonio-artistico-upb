@@ -3,7 +3,7 @@ import { BarraFiltrosComponent } from './barra-filtros.component';
 import { chipsFiltros, ValoresFiltros } from '../../../utils/galeria';
 
 const valores = (v: Partial<ValoresFiltros> = {}): ValoresFiltros => ({
-  busqueda: '', ubicacion: '', ubicaciones: [], responsable: '', autor: '', tecnica: '', ...v,
+  busqueda: '', ubicacion: '', ubicaciones: [], responsable: '', autor: '', tecnica: '', falta: '', ...v,
 });
 
 function montar(esAdmin: boolean, v: ValoresFiltros = valores()) {

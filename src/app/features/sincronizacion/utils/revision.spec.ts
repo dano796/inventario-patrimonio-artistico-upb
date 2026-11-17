@@ -15,7 +15,7 @@ const grupo = (r: { grupos: GrupoRevision[] }, clave: string) => r.grupos.find((
 
 describe('textoValor', () => {
   it('muestra un guion si no hay valor, el valor en pesos y el resto tal cual', () => {
-    expect(textoValor('ubicacion', null)).toEqual({ texto: '—', vacio: true });
+    expect(textoValor('ubicacion', null)).toEqual({ texto: 'Vacía', vacio: true });
     expect(textoValor('valor', 1200000)).toEqual({ texto: '$1.200.000', vacio: false });
     expect(textoValor('ano', 1998)).toEqual({ texto: '1998', vacio: false });
   });
@@ -54,11 +54,11 @@ describe('construirRevision: obras', () => {
       tipo: 'opciones',
       ref: { tipo: 'conflicto', clave: '31|ubicacion' },
       opciones: [
-        { valor: 'hoja', etiqueta: 'Dejar la hoja', elegida: false },
+        { valor: 'hoja', etiqueta: 'Dejar el Excel', elegida: false },
         { valor: 'base', etiqueta: 'Dejar la base', elegida: false },
       ],
     });
-    expect(fila.nota).toBe('En la última sincronización era «Bloque 6». Cambió en las dos copias.');
+    expect(fila.nota).toBe('Valor en la última sincronización: "Bloque 6". Desde entonces se modificó tanto en el Excel como en la base.');
     expect(fila.notaAmbar).toBeTrue();
     expect(r.pendientes).toEqual({ conflictos: 1, altas: 0 });
   });
@@ -79,7 +79,7 @@ describe('construirRevision: obras', () => {
     expect(r.resumen.haciaHoja).toBe(1);
   });
 
-  it('una imagen que va a la hoja es una fila con casilla y la miniatura de la web', () => {
+  it('una imagen que va al Excel es una fila con casilla y la miniatura de la web', () => {
     const imagen = { obraId: 14, fila: 15, casilla: 1, accion: 'escribir' as const, imagen: { id: 80, url: URL }, leida: { tipo: 'vacia' as const } };
     const r = construirRevision(calculo({ imagenes: [imagen] }, { obras }), estadoInicial());
 
@@ -105,8 +105,8 @@ describe('construirRevision: obras', () => {
       return accion.tipo === 'opciones' ? accion.opciones.map((o) => `${o.valor}:${o.etiqueta}`) : accion.tipo;
     };
 
-    expect(etiquetas(0)).toEqual(['reemplazar:Reemplazar en la hoja', 'dejar:Dejar la de la hoja']);
-    expect(etiquetas(1)).toEqual(['reemplazar:Vaciar en la hoja', 'dejar:Dejar la de la hoja']);
+    expect(etiquetas(0)).toEqual(['reemplazar:Actualizar el Excel', 'dejar:Conservar la del Excel']);
+    expect(etiquetas(1)).toEqual(['reemplazar:Quitar la imagen del Excel', 'dejar:Conservar la del Excel']);
     expect(etiquetas(2)).toEqual(['dejar:No volver a avisar']);
     expect(grupo(r, 'obra|14').filas[2].hoja.texto).toBe('Ubicación no corresponde');
     expect(grupo(r, 'obra|14').pendiente).toBeFalse();
@@ -143,7 +143,7 @@ describe('construirRevision: obras', () => {
     const g = grupo(r, 'obra|14');
     expect(g.filas.map((f) => [f.campo, f.accion.tipo])).toEqual([['ubicacion', 'fuera'], ['cargo', 'fuera'], ['valor', 'fuera']]);
     expect(g.filas[0].hoja.texto).toBe('Bloque 9');
-    expect(g.filas[2].nota).toBe('«USD 5,000»: el valor está en otra moneda. Este campo no se sincroniza en esta ejecución.');
+    expect(g.filas[2].nota).toBe('"USD 5,000": el valor está en otra moneda. Este campo no se sincroniza en esta ejecución.');
   });
 });
 
@@ -160,7 +160,7 @@ describe('construirRevision: personas', () => {
     );
 
     const g = grupo(r, 'persona|JOBANY');
-    expect([g.tipo, g.titulo, g.etiqueta]).toEqual(['persona', 'JOBANY ALONSO TOBON PEÑA · cargo', 'Afecta a 3 obras']);
+    expect([g.tipo, g.titulo, g.etiqueta]).toEqual(['persona', 'Cargo de JOBANY ALONSO TOBON PEÑA', 'Afecta a 3 obras']);
     expect(g.filas[0].accion).toEqual(jasmine.objectContaining({ tipo: 'casilla', ref: { tipo: 'descartado', clave: 'cargo|JOBANY' } }));
     expect(r.resumen.haciaBase).toBe(1);
   });
@@ -202,7 +202,7 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
     const r = construirRevision(calculo(diff, { filas }), estadoInicial());
 
     const g = grupo(r, 'alta-base|212');
-    expect([g.numero, g.titulo, g.etiqueta, g.pendiente, g.tono]).toEqual(['Fila 212', 'Naturaleza muerta', 'Solo está en la hoja', true, 'ambar']);
+    expect([g.numero, g.titulo, g.etiqueta, g.pendiente, g.tono]).toEqual(['Fila 212', 'Naturaleza muerta', 'Solo está en el Excel', true, 'ambar']);
     expect(g.opciones.map((o) => o.etiqueta)).toEqual(['Crear en la base', 'Ignorar']);
     expect(g.filas.map((f) => f.campo)).toEqual(['ano']);
     expect(r.pendientes.altas).toBe(1);
@@ -225,20 +225,20 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
     const resumen = (d: Partial<Diff>) => grupo(construirRevision(calculo(d, { filas }), estadoInicial()), 'alta-base|536').resumen;
 
     expect(resumen(alta(0, []))).not.toContain('imagen');
-    expect(resumen(alta(1, []))).toContain('Se subirá 1 imagen pegada.');
+    expect(resumen(alta(1, []))).toContain('También se subirá la imagen pegada en la fila.');
     expect(resumen(alta(2, [{ casilla: 3, motivo: 'supera los 5 MB del bucket' }]))).toContain(
-      'Se subirán 2 imágenes pegadas. La imagen 3 no se subirá: supera los 5 MB del bucket.'
+      'También se subirán las 2 imágenes pegadas en la fila. La imagen 3 no se subirá: supera los 5 MB del bucket.'
     );
   });
 
-  it('una obra sin fila se añade a la hoja salvo que se ignore', () => {
+  it('una obra sin fila se añade al Excel salvo que se ignore', () => {
     const obras = [obraBase(118, { titulo: 'Cristo de los Andes' })];
     const r = construirRevision(calculo({ altasHoja: [{ obraId: 118 }] }, { obras }), estadoInicial());
 
     const g = grupo(r, 'alta-hoja|118');
     expect([g.numero, g.titulo, g.etiqueta, g.pendiente]).toEqual(['N.º 118', 'Cristo de los Andes', 'Solo está en la base', false]);
     expect(g.opciones).toEqual([
-      { valor: 'anadir', etiqueta: 'Añadir fila a la hoja', elegida: true },
+      { valor: 'anadir', etiqueta: 'Añadir fila al Excel', elegida: true },
       { valor: 'ignorar', etiqueta: 'Ignorar', elegida: false },
     ]);
     expect(r.resumen.filasNuevas).toBe(1);
@@ -254,12 +254,12 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
       estadoInicial()
     );
 
-    expect(grupo(r, 'fila-borrada|89')).toEqual(jasmine.objectContaining({ etiqueta: 'Desapareció de la hoja', opciones: [], ref: null }));
+    expect(grupo(r, 'fila-borrada|89')).toEqual(jasmine.objectContaining({ etiqueta: 'Borrada del Excel', opciones: [], ref: null }));
     expect(grupo(r, 'borrada-web|102')).toEqual(jasmine.objectContaining({ titulo: 'Mujer con cántaro', etiqueta: 'Borrada en la base', opciones: [] }));
     expect(r.resumen).toEqual({ haciaBase: 0, haciaHoja: 0, filasNuevas: 0, pendientes: 0 });
   });
 
-  it('«No se tocarán» recoge ID duplicados, ID desconocidos y celdas de filas sin obra', () => {
+  it('las filas que no se pueden sincronizar recogen ID duplicados, ID desconocidos y celdas de filas sin obra', () => {
     const filas = [filaHoja(71, {}, { idWeb: 66 }), filaHoja(140, {}, { idWeb: 66 }), filaHoja(300, {})];
     const r = construirRevision(
       calculo(
@@ -277,22 +277,22 @@ describe('construirRevision: altas, bajas y lo que no se toca', () => {
     );
 
     expect(r.noSeTocan.map((x) => [x.tipo, x.titulo, x.detalle])).toEqual([
-      ['ID duplicado', 'ID WEB 66 aparece 2 veces', 'Filas 71 y 140 de la hoja. Ninguna se toca.'],
-      ['ID desconocido', 'ID WEB 999 no existe en el inventario', 'Fila 88 de la hoja. Puede ser una obra borrada o un ID tecleado a mano.'],
-      ['Celda ilegible', 'Fila 140 · VALOR', 'el valor está en otra moneda: «USD 1»'],
-      ['Celda ilegible', 'Fila 300 · ID WEB', 'el ID WEB no es un número entero positivo: «abc»'],
+      ['ID repetido', 'Las filas 71 y 140 tienen el mismo ID WEB (66)', 'El ID WEB 66 debe quedar solo en la fila de esa obra y eliminarse de la otra.'],
+      ['ID sin obra', 'La fila 88 tiene el ID WEB 999, que no es de ninguna obra', 'La obra pudo eliminarse en la web o el ID pudo escribirse mal. Debe corregirse o eliminarse.'],
+      ['Celda ilegible', 'Fila 140, columna VALOR', '"USD 1": el valor está en otra moneda. Debe corregirse en el Excel.'],
+      ['Celda ilegible', 'Fila 300, columna ID WEB', '"abc": el ID WEB no es un número entero positivo. Debe corregirse en el Excel.'],
     ]);
     expect(r.grupos).toEqual([]);
   });
 
-  it('los filtros cuentan las tarjetas y «Avisos» solo aparece si hay alguno', () => {
+  it('los filtros cuentan las tarjetas y "Avisos" solo aparece si hay alguno', () => {
     const obras = [obraBase(14, {}), obraBase(31, {})];
     const r = construirRevision(
       calculo({ cambios: [cambio(14, 'ubicacion', 'hoja', 'a', 'b')], conflictos: [conflicto(31)], altasHoja: [{ obraId: 14 }] }, { obras }),
       estadoInicial()
     );
 
-    expect(r.filtros.map((f) => `${f.etiqueta} · ${f.cuenta}`)).toEqual(['Todo · 3', 'Conflictos · 1', 'A la base · 0', 'A la hoja · 1', 'Altas y bajas · 1']);
+    expect(r.filtros.map((f) => `${f.etiqueta} ${f.cuenta}`)).toEqual(['Todo 3', 'Conflictos 1', 'A la base 0', 'Al Excel 1', 'Altas y bajas 1']);
   });
 });
 

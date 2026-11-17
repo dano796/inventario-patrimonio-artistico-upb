@@ -25,7 +25,7 @@ export interface AccesoHoja {
 
 export class ErrorLibroDistinto extends Error {
   constructor(readonly abierto: string, readonly vinculado: string | null) {
-    super('El libro abierto no es la hoja vinculada.');
+    super('El libro abierto no es el Excel vinculado.');
   }
 }
 

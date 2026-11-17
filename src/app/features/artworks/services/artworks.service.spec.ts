@@ -12,7 +12,7 @@ const FUERA_DE_RANGO = {
   details: 'An offset of 696 was requested, but there are only 526 rows.',
 };
 
-function montar() {
+function montar(esAdmin = true) {
   const rangos: [number, number][] = [];
   const filtros: unknown[][] = [];
   const consulta: Record<string, unknown> = {};
@@ -28,7 +28,7 @@ function montar() {
     return consulta;
   };
   consulta['then'] = (resolver: (r: unknown) => unknown) => {
-    const [desde] = rangos[rangos.length - 1];
+    const [desde] = rangos[rangos.length - 1] ?? [0];
     const respuesta = desde >= 526 ? { data: null, error: FUERA_DE_RANGO, count: null } : { data: [], error: null, count: 526 };
     return Promise.resolve(respuesta).then(resolver);
   };
@@ -44,7 +44,7 @@ function montar() {
   TestBed.configureTestingModule({
     providers: [
       { provide: SupabaseService, useValue: supabase },
-      { provide: AuthService, useValue: { isAdmin: signal(true) } },
+      { provide: AuthService, useValue: { isAdmin: signal(esAdmin) } },
       { provide: ImageService, useValue: {} },
     ],
   });
@@ -72,6 +72,41 @@ describe('ArtworksService', () => {
     expect(filtros).toEqual([
       ['or', `ubicacion.imatch.${comillas(patronSinTildes('Bloque 6'))},ubicacion.imatch.${comillas(patronSinTildes('Biblioteca'))}`],
     ]);
+  });
+
+  it('lista las obras a las que les falta un dato, con las reglas del Resumen', async () => {
+    const consultas: Record<string, unknown[][]> = {};
+    for (const falta of ['autor', 'bloque', 'imagen'] as const) {
+      const { servicio, filtros } = montar();
+      await servicio.filterArtworks({ falta });
+      consultas[falta] = filtros;
+      TestBed.resetTestingModule();
+    }
+    expect(consultas['autor']).toEqual([['or', 'autor.is.null,autor.match.^\\s*$']]);
+    expect(consultas['bloque']).toEqual([['or', 'bloque_asignado.is.null,bloque_asignado.not.imatch.^\\s*b\\S*\\s*\\d+\\s*$']]);
+    expect(consultas['imagen']).toEqual([['filter', 'imagenes', 'is', 'null']]);
+  });
+
+  it('sin rol de administrador descarta el filtro por dato faltante', async () => {
+    const { servicio, filtros } = montar(false);
+    await servicio.filterArtworks({ falta: 'bloque' });
+    expect(filtros).toEqual([]);
+  });
+
+  it('exportar lee sin paginar con los mismos filtros que la galería', async () => {
+    const { servicio, filtros, rangos } = montar();
+    await servicio.getAllArtworksNoPagination({ autor: 'Gomez', ubicacion: 'Bloque' });
+    expect(filtros).toEqual([
+      ['filter', 'ubicacion', 'imatch', patronSinTildes('Bloque')],
+      ['filter', 'autor', 'imatch', patronSinTildes('Gomez')],
+    ]);
+    expect(rangos).toEqual([]);
+  });
+
+  it('sin rol de administrador, exportar descarta los filtros por columnas restringidas', async () => {
+    const { servicio, filtros } = montar(false);
+    await servicio.getAllArtworksNoPagination({ autor: 'Gomez', ubicacion: 'Bloque', responsable: 'Pena' });
+    expect(filtros).toEqual([['filter', 'autor', 'imatch', patronSinTildes('Gomez')]]);
   });
 
   it('cambiar el tamaño de página conserva a la vista la primera obra que se mostraba', async () => {

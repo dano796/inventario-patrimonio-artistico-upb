@@ -83,7 +83,7 @@ export function verificarAsignaciones(
   for (const a of [...asignaciones].sort((x, y) => x.fila - y.fila)) {
     const actual = actuales.get(a.fila);
     if (!actual) {
-      discrepancias.push({ fila: a.fila, motivo: 'la fila no existe en la hoja' });
+      discrepancias.push({ fila: a.fila, motivo: 'la fila no existe en el Excel' });
       continue;
     }
     const campos: [string, string | null | undefined, unknown][] = [

@@ -1,0 +1,13 @@
+<svg [attr.width]="tamano()" [attr.height]="tamano()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+  <mask [attr.id]="mascara" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+    <rect width="24" height="24" fill="white" stroke="none"></rect>
+    <path d="M-1.47-2.53 26.53 25.47" stroke="black" stroke-width="3"></path>
+  </mask>
+  <g [attr.mask]="'url(#' + mascara + ')'">
+    <rect x="2.25" y="3.75" width="19.5" height="16.5" rx="1.5"></rect>
+    <circle cx="15" cy="7.5" r="1.5" fill="currentColor" stroke="none"></circle>
+    <path d="M15.5 14.62 18.74 11.38 21.75 14.39" stroke-linejoin="round"></path>
+    <path d="M2.25 17.28 9.77 9.77"></path>
+  </g>
+  <path d="M2.06 2.06 21.94 21.94"></path>
+</svg>

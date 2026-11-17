@@ -22,6 +22,7 @@ import {
   SelectorResponsableComponent,
   SeleccionResponsable,
 } from '../selector-responsable/selector-responsable.component';
+import { CampoMilesDirective } from './campo-miles.directive';
 import { ArtworkImage } from '../../../../shared/models/image.model';
 import { ImageUploaderComponent } from '../../../../shared/components/image-uploader/image-uploader.component';
 
@@ -31,7 +32,7 @@ interface ArtworkFormData {
   autor: FormControl<string | null>;
   tecnica: FormControl<string | null>;
   dimension: FormControl<string | null>;
-  ano: FormControl<number | null>;
+  ano: FormControl<string | number | null>;
   ubicacion: FormControl<string | null>;
   valor: FormControl<number | null>;
   observaciones: FormControl<string | null>;
@@ -42,7 +43,7 @@ interface ArtworkFormData {
 @Component({
   selector: 'app-artwork-form',
   standalone: true,
-  imports: [ReactiveFormsModule, ImageUploaderComponent, SelectorResponsableComponent],
+  imports: [ReactiveFormsModule, ImageUploaderComponent, SelectorResponsableComponent, CampoMilesDirective],
   templateUrl: './artwork-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -92,14 +93,15 @@ export class ArtworkFormComponent implements OnInit {
     dimension: this.formBuilder.control<string | null>(null, [
       Validators.maxLength(50),
     ]),
-    ano: this.formBuilder.control<number | null>(null, [
+    ano: this.formBuilder.control<string | number | null>(null, [
+      Validators.pattern(/^\d+$/),
       Validators.min(1700),
       Validators.max(new Date().getFullYear()),
     ]),
     ubicacion: this.formBuilder.control<string | null>(null, [
       Validators.maxLength(200),
     ]),
-    valor: this.formBuilder.control<number | null>(null, [Validators.min(0)]),
+    valor: this.formBuilder.control<number | null>(null),
     observaciones: this.formBuilder.control<string | null>(null, [
       Validators.maxLength(1000),
     ]),
@@ -221,9 +223,9 @@ export class ArtworkFormComponent implements OnInit {
         autor: formData.autor || null,
         tecnica: formData.tecnica || null,
         dimension: formData.dimension || null,
-        ano: formData.ano || null,
+        ano: aEntero(formData.ano),
         ubicacion: formData.ubicacion || null,
-        valor: formData.valor || null,
+        valor: formData.valor,
         observaciones: formData.observaciones || null,
         descripcion: formData.descripcion || null,
         bloque_asignado: formData.bloque_asignado || null,
@@ -289,6 +291,12 @@ export class ArtworkFormComponent implements OnInit {
     return !!(field && field.invalid && (field.dirty || field.touched));
   }
 
+  /** Los campos numéricos son de texto: `type="number"` deja escribir e, +, - y . por la notación científica. */
+  soloDigitos(evento: InputEvent): void {
+    const texto = evento.data ?? evento.dataTransfer?.getData('text') ?? '';
+    if (/\D/.test(texto)) evento.preventDefault();
+  }
+
   getFieldError(fieldName: keyof ArtworkFormData): string {
     const field = this.artworkForm.get(fieldName);
     if (!field || !field.errors) return '';
@@ -300,9 +308,14 @@ export class ArtworkFormComponent implements OnInit {
       return `Mínimo ${errors['minlength'].requiredLength} caracteres`;
     if (errors['maxlength'])
       return `Máximo ${errors['maxlength'].requiredLength} caracteres`;
+    if (errors['pattern']) return 'Solo números, sin puntos ni letras';
     if (errors['min']) return `Valor mínimo: ${errors['min'].min}`;
     if (errors['max']) return `Valor máximo: ${errors['max'].max}`;
 
     return 'Campo inválido';
   }
+}
+
+function aEntero(valor: string | number | null): number | null {
+  return valor === null || valor === '' ? null : Number(valor);
 }

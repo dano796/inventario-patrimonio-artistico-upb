@@ -9,9 +9,14 @@
     </div>
     <div class="flex flex-wrap gap-2.5">
       <button type="button" class="btn-secundario" (click)="exportar()" [disabled]="exportando()">
+        @if (exportando()) {
+          <span class="indicador-carga" aria-hidden="true"></span>
+        } @else {
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>
+        }
         {{ exportando() ? 'Exportando…' : 'Exportar a Excel' }}
       </button>
-      <a routerLink="/nueva" class="btn-primario">Registrar obra</a>
+      <a routerLink="/nueva" class="btn-primario"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Registrar obra</a>
     </div>
   </header>
 
@@ -21,11 +26,11 @@
 
   @if (error()) {
     <div class="tarjeta flex flex-col items-center gap-3 px-6 py-10 text-center" role="alert">
-      <p class="text-[16px] font-bold">No se pudo cargar el tablero.</p>
+      <p class="text-[16px] font-bold">No se pudo cargar el resumen.</p>
       <button type="button" class="btn-primario" (click)="cargar()">Reintentar</button>
     </div>
   } @else if (cargando() && !resumen()) {
-    <div class="grid grid-cols-1 gap-[18px] xs:grid-cols-2 lg:grid-cols-4" aria-busy="true" aria-label="Cargando el tablero">
+    <div class="grid grid-cols-1 gap-[18px] xs:grid-cols-2 lg:grid-cols-4" aria-busy="true" aria-label="Cargando el resumen">
       @for (n of [1, 2, 3, 4]; track n) {
         <div class="tarjeta h-[118px] animate-pulse"></div>
       }
@@ -35,79 +40,80 @@
       @for (cifra of cifras(); track cifra.etiqueta) {
         <div class="tarjeta px-5 py-[18px]">
           <p class="text-xs font-semibold text-tinta-4">{{ cifra.etiqueta }}</p>
-          <p class="mb-0.5 mt-1 text-[38px] font-extrabold tracking-[-0.03em]">{{ cifra.valor }}</p>
+          <p class="mb-0.5 mt-1 text-[38px] font-extrabold tracking-[-0.03em]" [attr.title]="cifra.exacta ?? null">{{ cifra.valor }}@if (cifra.unidad) {<span class="ml-1.5 text-[15px] font-bold tracking-normal text-tinta-4">{{ cifra.unidad }}</span>}</p>
           <p [class]="'text-xs font-semibold ' + cifra.tono">{{ cifra.nota }}</p>
         </div>
       }
     </div>
 
-    @if (sincronizacion()) {
-      <section class="tarjeta flex flex-wrap items-center justify-between gap-4 px-[22px] py-5">
-        <div class="min-w-0">
-          <h2 class="text-[18px] font-bold">Sincronización con la hoja oficial</h2>
-          <p class="mt-1 text-sm font-medium text-tinta-4">{{ textoSincronizacion() }}</p>
-        </div>
-        <a routerLink="/sincronizacion" class="btn-secundario">Sincronizar</a>
-      </section>
-    }
+    <ng-template #listaConteos let-ranking let-sobre="sobre" let-mas="mas">
+      <ul class="flex flex-col gap-1">
+        @for (c of ranking.primeros; track c.nombre) {
+          <li class="grid grid-cols-[minmax(0,44%)_minmax(0,1fr)_36px] items-center gap-3 py-[5px]">
+            <span class="truncate text-[14px] font-medium" [title]="c.nombre">{{ c.nombre }}</span>
+            <span class="block h-2 overflow-hidden rounded-full bg-pista-2" aria-hidden="true"><span class="block h-full rounded-full bg-acento" [style.width]="porcentaje(c.proporcion)"></span></span>
+            <span class="text-right text-[14px] font-bold text-tinta-2">{{ numero(c.obras) }}</span>
+          </li>
+        }
+      </ul>
+      <p class="mt-auto pt-4 text-xs font-medium text-tinta-5">
+        Sobre {{ numero(ranking.conDato) }} obras {{ sobre }}@if (ranking.resto) {, y {{ numero(ranking.resto) }} {{ mas }} más}.
+      </p>
+    </ng-template>
 
-    <div class="grid items-start gap-[18px] lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-      <section class="tarjeta px-[22px] py-5">
-        <div class="mb-4 flex items-baseline justify-between gap-3">
-          <h2 class="text-[18px] font-bold">Obras por ubicación</h2>
-          <span class="text-xs font-medium text-tinta-5">
-            {{ r.ubicaciones > r.porUbicacion.length ? 'Top ' + r.porUbicacion.length + ' de ' + r.ubicaciones : r.ubicaciones + ' ubicaciones' }}
-          </span>
-        </div>
-        @if (r.porUbicacion.length) {
-          <ul class="flex flex-col gap-[13px]">
-            @for (u of r.porUbicacion; track u.nombre) {
-              <li class="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_36px] items-center gap-3.5 sm:grid-cols-[200px_minmax(0,1fr)_36px]">
-                <span class="truncate text-[14px] font-medium" [title]="u.nombre">{{ u.nombre }}</span>
-                <span class="block h-2.5 overflow-hidden rounded-full bg-pista-2" aria-hidden="true">
-                  <span class="block h-full rounded-full bg-acento" [style.width]="porcentaje(u.proporcion)"></span>
-                </span>
-                <span class="text-right text-[14px] font-bold text-tinta-2">{{ numero(u.obras) }}</span>
+    <div class="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
+      <section class="tarjeta flex flex-col px-[22px] py-5">
+        <h2 class="text-[18px] font-bold">Técnicas</h2>
+        <p class="mb-3 mt-1 text-xs font-medium text-tinta-4">Agrupadas por el material principal.</p>
+        <ng-container [ngTemplateOutlet]="listaConteos" [ngTemplateOutletContext]="{ $implicit: r.coleccion.tecnicas, sobre: 'con técnica registrada', mas: 'técnicas' }" />
+      </section>
+      <section class="tarjeta flex flex-col px-[22px] py-5">
+        <h2 class="text-[18px] font-bold">Artistas</h2>
+        <p class="mb-3 mt-1 text-xs font-medium text-tinta-4">Con más obras en el inventario.</p>
+        <ng-container [ngTemplateOutlet]="listaConteos" [ngTemplateOutletContext]="{ $implicit: r.coleccion.autores, sobre: 'con autor registrado', mas: 'artistas' }" />
+      </section>
+      <section class="tarjeta flex flex-col px-[22px] py-5">
+        <h2 class="text-[18px] font-bold">Épocas</h2>
+        <p class="mb-3 mt-1 text-xs font-medium text-tinta-4">Obras por década de creación.</p>
+        @if (r.coleccion.epocas.length) {
+          <ul class="flex min-h-[172px] flex-1 items-stretch gap-2.5">
+            @for (e of r.coleccion.epocas; track e.nombre) {
+              <li class="flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5" [attr.aria-label]="e.nombre + ': ' + numero(e.obras) + ' obras'">
+                <span class="text-xs font-bold text-tinta-2">{{ numero(e.obras) }}</span>
+                <span class="block w-full max-w-[38px] rounded-t-md bg-acento" [style.height]="'calc((100% - 58px) * ' + e.proporcion + ')'" aria-hidden="true"></span>
+                <span class="flex h-7 items-start text-center text-[11px] font-semibold leading-tight text-tinta-4">{{ e.nombre }}</span>
               </li>
             }
           </ul>
         } @else {
-          <p class="text-sm font-medium text-tinta-4">Ninguna obra tiene ubicación registrada.</p>
+          <p class="text-sm font-medium text-tinta-4">Ninguna obra tiene año registrado.</p>
         }
-      </section>
-
-      <section class="tarjeta px-[22px] py-5">
-        <h2 class="mb-1 text-[18px] font-bold">Fichas por completar</h2>
-        <p class="mb-2.5 text-xs font-medium text-tinta-4">Registros sin el mínimo de catalogación.</p>
-        @for (p of pendientes; track p.clave) {
-          <div class="border-t border-linea-suave">
-            <div class="flex items-center justify-between gap-3 py-[11px]">
-              <span class="text-[14px] font-medium">{{ p.etiqueta }}</span>
-              <span class="flex items-center gap-3">
-                <span class="rounded-full bg-ambar-suave px-2.5 py-[3px] text-xs font-bold text-ambar">{{ numero(r.pendientes[p.clave].length) }}</span>
-                @if (r.pendientes[p.clave].length) {
-                  <button type="button" class="text-xs font-semibold text-acento hover:text-acento-tinta" (click)="alternar(p.clave)"
-                    [attr.aria-expanded]="abierta() === p.clave" [attr.aria-controls]="'pendientes-' + p.clave">
-                    {{ abierta() === p.clave ? 'Ocultar' : 'Revisar' }}
-                  </button>
-                } @else {
-                  <span class="text-xs font-semibold text-verde">Completo</span>
-                }
-              </span>
-            </div>
-            @if (abierta() === p.clave) {
-              <ul [id]="'pendientes-' + p.clave" class="mb-3 max-h-64 overflow-auto rounded-xl bg-sub px-3 py-1.5">
-                @for (o of r.pendientes[p.clave]; track o.id) {
-                  <li class="border-b border-linea-0 py-1.5 last:border-0">
-                    <a [routerLink]="['/obra', o.id]" class="text-[14px] font-medium text-tinta hover:text-acento-tinta">{{ titulo(o) }}</a>
-                    <span class="text-xs text-tinta-5"> · N.º {{ o.id }}</span>
-                  </li>
-                }
-              </ul>
-            }
-          </div>
-        }
+        <p class="pt-4 text-xs font-medium text-tinta-5">Sobre {{ numero(r.coleccion.conAno) }} obras con año registrado.</p>
       </section>
     </div>
+
+    <section class="tarjeta px-[22px] py-5">
+      <h2 class="mb-1 text-[18px] font-bold">Completitud de las fichas</h2>
+      <p class="mb-2.5 text-xs font-medium text-tinta-4">Porcentaje de obras con cada dato registrado.</p>
+      @for (p of pendientes; track p.clave) {
+        <div class="border-t border-linea-suave">
+          <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-[11px] sm:grid-cols-[150px_minmax(0,1fr)_52px_124px]">
+            <span class="text-[14px] font-medium">{{ p.campo }}</span>
+            <span class="col-span-2 row-start-2 flex items-center gap-3 sm:contents">
+              <span class="block h-2 flex-1 overflow-hidden rounded-full bg-pista-2" aria-hidden="true"><span class="block h-full rounded-full bg-acento" [style.width]="completo(r.pendientes[p.clave].length) + '%'"></span></span>
+              <span class="w-[52px] text-right text-[14px] font-bold text-tinta-2">{{ completo(r.pendientes[p.clave].length) }} %</span>
+            </span>
+            <span class="flex items-center justify-end gap-3" [attr.aria-label]="p.etiqueta + ': ' + numero(r.pendientes[p.clave].length)">
+              <span class="inline-grid h-[22px] min-w-[22px] place-items-center rounded-full bg-ambar-suave px-1.5 text-xs font-bold text-ambar"><span class="[text-box:trim-both_cap_alphabetic]">{{ numero(r.pendientes[p.clave].length) }}</span></span>
+              @if (r.pendientes[p.clave].length) {
+                <a routerLink="/" [queryParams]="{ falta: p.clave }" class="text-xs font-semibold text-acento hover:text-acento-tinta">Revisar</a>
+              } @else {
+                <span class="text-xs font-semibold text-verde">Completo</span>
+              }
+            </span>
+          </div>
+        </div>
+      }
+    </section>
   }
 </main>

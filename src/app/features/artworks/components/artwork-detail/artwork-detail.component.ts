@@ -1,13 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ArtworksService } from '../../services/artworks.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
+import { IconoSinImagenComponent } from '../../../../shared/components/icono-sin-imagen/icono-sin-imagen.component';
+import { VisorImagenComponent } from '../../../../shared/components/visor-imagen/visor-imagen.component';
 import { camposFicha, mensajeBorrado, NO_REGISTRA, subtituloFicha, ultimaCaptura } from '../../utils/ficha';
 
 @Component({
   selector: 'app-artwork-detail',
-  imports: [RouterLink, ConfirmModalComponent],
+  imports: [RouterLink, ConfirmModalComponent, IconoSinImagenComponent, VisorImagenComponent],
   templateUrl: './artwork-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -18,6 +21,13 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
 
   isAdmin = this.authService.isAdmin;
+  /**
+   * El mapa abre las fichas con este estado de navegación. El router lo escribe en el historial al terminar,
+   * después de crear este componente: se lee de la navegación en curso y, al recargar, del historial.
+   */
+  private vieneDelMapa =
+    (this.router.getCurrentNavigation()?.extras.state ?? inject(DOCUMENT).defaultView?.history.state)?.['desde'] === 'mapa';
+  volver = this.vieneDelMapa ? { ruta: '/mapa', texto: 'Volver al mapa' } : { ruta: '/', texto: 'Volver a la galería' };
   artwork = this.artworksService.selectedArtwork;
   isLoading = this.artworksService.loading;
   error = this.artworksService.error;
@@ -29,6 +39,7 @@ export class ArtworkDetailComponent implements OnInit, OnDestroy {
   private id: number | null = null;
 
   imagenes = computed(() => this.artwork()?.imagenes ?? []);
+  ampliada = signal(false);
   imagenActual = computed(() => this.imagenes()[this.currentImageIndex()] ?? this.imagenes()[0] ?? null);
   titulo = computed(() => this.artwork()?.titulo?.trim() || 'Sin título');
   subtitulo = computed(() => {

@@ -9,8 +9,10 @@
       <a routerLink="/" [class.!text-acento-tinta]="enGaleria()" [class.!border-acento]="enGaleria()" [attr.aria-current]="enGaleria() ? 'page' : null"
         class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Galería</a>
       @if (esAdmin()) {
-        <a routerLink="/tablero" routerLinkActive="!text-acento-tinta !border-acento"
-          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Tablero</a>
+        <a routerLink="/resumen" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Resumen</a>
+        <a routerLink="/mapa" routerLinkActive="!text-acento-tinta !border-acento"
+          class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Mapa</a>
         <a routerLink="/sincronizacion" routerLinkActive="!text-acento-tinta !border-acento"
           class="-mb-[11px] border-b-2 border-transparent px-0.5 py-3.5 text-sm font-semibold text-tinta-5 hover:text-tinta-3">Sincronizar</a>
       }
@@ -45,12 +47,12 @@
               <div class="my-4 border-t border-linea-suave"></div>
 
               <span id="etiqueta-tema" class="etiqueta">Tema</span>
-              <div class="flex gap-0.5 rounded-xl bg-segmento p-[3px]" role="group" aria-labelledby="etiqueta-tema">
+              <div class="flex gap-0.5 rounded-xl bg-pista p-[3px]" role="group" aria-labelledby="etiqueta-tema">
                 @for (opcion of opcionesTema; track opcion.valor) {
                   <button type="button" (click)="elegirTema(opcion.valor)" [attr.aria-pressed]="tema() === opcion.valor"
                     [class]="tema() === opcion.valor
                       ? 'flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-segmento-activo py-2.5 text-[14px] font-semibold text-tinta shadow-sm'
-                      : 'flex flex-1 items-center justify-center gap-2 rounded-[10px] py-2.5 text-[14px] font-semibold text-tinta-4 hover:text-tinta-2'">
+                      : 'flex flex-1 items-center justify-center gap-2 rounded-[10px] py-2.5 text-[14px] font-semibold text-tinta-3 hover:text-tinta'">
                     @if (opcion.valor === 'oscuro') {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
                     } @else {
@@ -64,7 +66,7 @@
               <div class="my-4 border-t border-linea-suave"></div>
 
               <button type="button" (click)="cerrarSesion()"
-                class="flex w-full items-center gap-3 rounded-xl bg-rojo-tenue px-3.5 py-3 text-[15px] font-semibold text-rojo hover:bg-rojo-suave">
+                class="flex w-full items-center gap-3 rounded-xl bg-rojo-suave px-3.5 py-3 text-[15px] font-semibold text-rojo-2 hover:bg-rojo-linea">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
                 Cerrar sesión
               </button>
@@ -82,7 +84,7 @@
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path></svg>
           }
         </button>
-        <a routerLink="/autenticacion/iniciar-sesion" class="btn-secundario hidden !px-3.5 !py-2 sm:inline-flex">Iniciar sesión</a>
+        <a routerLink="/autenticacion/iniciar-sesion" class="btn-secundario hidden h-[34px] !rounded-[11px] !px-3.5 !py-0 sm:inline-flex">Iniciar sesión</a>
       }
 
       <button type="button" (click)="menuAbierto.set(!menuAbierto())" [attr.aria-expanded]="menuAbierto()"
@@ -97,7 +99,8 @@
     <nav id="menu-movil" class="border-t border-linea px-4 py-3 md:hidden" aria-label="Menú móvil">
       <a routerLink="/" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Galería</a>
       @if (esAdmin()) {
-        <a routerLink="/tablero" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Tablero</a>
+        <a routerLink="/resumen" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Resumen</a>
+        <a routerLink="/mapa" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Mapa</a>
         <a routerLink="/sincronizacion" (click)="menuAbierto.set(false)" class="block py-2 text-sm font-semibold text-tinta-2">Sincronizar</a>
       }
       @if (!conSesion()) {

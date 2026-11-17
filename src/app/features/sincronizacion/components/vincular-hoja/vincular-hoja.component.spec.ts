@@ -35,7 +35,7 @@ describe('VincularHojaComponent', () => {
 
       expect(html.innerHTML).not.toMatch(/\b(?:bg|text|border|ring|hover:bg|hover:text)-(?:gray|blue|red|green|amber)-\d/);
       expect(html.querySelector('a[href="/sincronizacion"]')).not.toBeNull();
-      expect(html.textContent).toContain('Vincular la hoja oficial');
+      expect(html.textContent).toContain('Vincular el Excel oficial');
     });
   }
 
@@ -52,7 +52,7 @@ describe('VincularHojaComponent', () => {
 
     await buscar(html);
 
-    expect(html.textContent).toContain('Ningún archivo .xlsx de tu OneDrive coincide con «Inventario».');
+    expect(html.textContent).toContain('Ningún archivo .xlsx del OneDrive coincide con "Inventario".');
   });
 
   it('al vincular no dice que no encontró el archivo', async () => {
@@ -64,7 +64,7 @@ describe('VincularHojaComponent', () => {
     await new Promise((ok) => setTimeout(ok));
     TestBed.tick();
 
-    expect(html.textContent).toContain('Hoja vinculada: Inventario.xlsx');
+    expect(html.textContent).toContain('Excel vinculado: Inventario.xlsx');
     expect(html.textContent).not.toContain('Ningún archivo .xlsx');
   });
 });

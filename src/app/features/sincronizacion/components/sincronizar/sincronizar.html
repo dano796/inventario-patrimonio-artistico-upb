@@ -1,7 +1,7 @@
-<main class="mx-auto flex min-w-0 max-w-[1400px] flex-col gap-[22px] px-4 pb-16 pt-[26px] md:px-8">
+<main class="mx-auto flex min-w-0 max-w-[1400px] flex-col gap-[22px] px-4 pb-16 pt-[26px] md:px-8" [class.!pb-8]="previa()" [style.min-height]="previa() && !enExcel ? 'calc(100dvh - 62px)' : null">
   <header class="flex flex-wrap items-end justify-between gap-5">
     <div class="min-w-0">
-      <p class="antetitulo">Hoja oficial e inventario web</p>
+      <p class="antetitulo">Excel oficial e inventario web</p>
       <h1 class="titulo-pantalla">Sincronización</h1>
       @if (subtitulo()) {
         <p class="mt-1.5 text-[15px] font-medium text-tinta-4">{{ subtitulo() }}</p>
@@ -14,138 +14,197 @@
     }
   </header>
 
-  @switch (fase()) {
-    @case ('cargando') {
-      <div class="tarjeta h-[220px] animate-pulse" aria-busy="true" aria-label="Cargando la sincronización"></div>
-    }
-
-    @case ('sin-hoja') {
-      <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
-        <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Todavía no hay una hoja vinculada</h2>
-        <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
-          Antes de sincronizar hay que elegir, desde el OneDrive de quien la custodia, el archivo de la hoja oficial.
-          @if (enExcel) { Se hace en la página Sincronización de la aplicación web. }
-        </p>
-        @if (!enExcel) {
-          <div><a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a></div>
-        }
-      </section>
-    }
-
-    @case ('otro-libro') {
-      @if (libroAbierto(); as l) {
-        <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
-          <span class="self-start rounded-full bg-ambar-suave px-[11px] py-1 text-xs font-bold text-ambar">Libro sin confirmar</span>
-          @if (l.vinculado) {
-            <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Este libro no es la hoja vinculada</h2>
-            <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
-              Está abierto «{{ l.abierto }}» y la hoja vinculada es «{{ l.vinculado }}». Si la hoja oficial se renombró o se
-              movió, vincula este libro. Si es una copia, ciérrala y abre la hoja oficial: sincronizar contra una copia
-              llevaría sus diferencias al inventario.
-            </p>
-          } @else {
-            <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Confirma que este es el libro oficial</h2>
-            <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
-              Es la primera vez que se sincroniza desde Excel con esta hoja vinculada. Vincula «{{ l.abierto }}» solo si es
-              la hoja oficial del inventario y no una copia.
-            </p>
+  @if (previa()) {
+    <section class="tarjeta grid flex-1 overflow-hidden lg:grid-cols-[minmax(0,1.3fr)_minmax(360px,1fr)]" [class.!border-rojo-linea]="fase() === 'error'">
+      <div class="flex flex-col justify-center px-6 py-8 sm:px-[30px] lg:px-14 lg:py-12">
+        @switch (fase()) {
+          @case ('cargando') {
+            <div class="flex flex-col gap-3.5" aria-busy="true" aria-label="Cargando la sincronización">
+              <div class="h-8 w-3/4 animate-pulse rounded-lg bg-sub"></div>
+              <div class="h-4 w-full animate-pulse rounded bg-sub"></div>
+              <div class="h-4 w-2/3 animate-pulse rounded bg-sub"></div>
+            </div>
           }
-          <div>
-            <button type="button" class="btn-primario" (click)="vincularLibro()" [disabled]="vinculando()">
-              @if (vinculando()) { <span class="indicador-carga"></span> Vinculando… } @else { Vincular este libro }
-            </button>
-          </div>
-        </section>
-      }
-    }
 
-    @case ('hoja-perdida') {
-      <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
-        <span class="self-start rounded-full bg-ambar-suave px-[11px] py-1 text-xs font-bold text-ambar">Hoja no encontrada</span>
-        <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">No encontramos la hoja vinculada</h2>
-        <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
-          El archivo vinculado no está en el OneDrive de la cuenta con la que conectaste: puede que se haya borrado o
-          movido a otra cuenta. Vincúlalo de nuevo para poder sincronizar.
-        </p>
-        <div class="flex flex-wrap gap-2.5">
-          <a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular la hoja</a>
-          <button type="button" class="btn-secundario" (click)="comparar()">Volver a comparar</button>
-        </div>
-      </section>
-    }
+          @case ('sin-hoja') {
+            <div class="flex flex-col gap-3.5">
+              <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">Todavía no hay un Excel vinculado</h2>
+              <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+                Antes de sincronizar hay que elegir, desde el OneDrive de quien lo custodia, el archivo del Excel oficial.
+                @if (enExcel) { Se hace en la página Sincronización de la aplicación web. }
+              </p>
+              @if (!enExcel) {
+                <div><a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular el Excel</a></div>
+              }
+            </div>
+          }
 
-    @case ('conectar') {
-      <section class="tarjeta flex max-w-[720px] flex-col gap-3.5 px-[30px] py-7">
-        <div class="grid h-11 w-11 place-items-center rounded-[13px] bg-acento-tenue-2 text-acento">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
-        </div>
-        <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Conecta con OneDrive para leer la hoja</h2>
-        <p class="max-w-[54ch] text-[15px] font-medium leading-relaxed text-tinta-3">
-          La aplicación descarga la hoja oficial y la compara con el inventario campo por campo. No se escribe nada en
-          ninguna de las dos copias hasta que revises y apruebes.
-        </p>
-        <div class="mt-1">
-          <button type="button" class="btn-primario" (click)="conectar()" [disabled]="conectando()">
-            @if (conectando()) { <span class="indicador-carga"></span> Conectando… } @else { Conectar con OneDrive }
-          </button>
-        </div>
-      </section>
-    }
-
-    @case ('calculando') {
-      <section class="tarjeta grid items-start gap-7 px-[30px] py-7 md:grid-cols-2" aria-live="polite">
-        <div class="flex flex-col gap-2">
-          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">Comparando las dos copias</h2>
-          <p class="text-[15px] font-medium leading-relaxed text-tinta-3">Solo lectura. Todavía no se ha escrito nada.</p>
-        </div>
-        <ol>
-          @for (p of pasos(); track p.paso) {
-            <li class="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-3 border-t border-linea-suave py-3 first:border-t-0 first:pt-0">
-              <span class="grid place-items-center">
-                @if (p.estado === 'hecho') {
-                  <svg class="text-verde" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
-                } @else if (p.estado === 'en-curso') {
-                  <span class="block h-3.5 w-3.5 animate-spin rounded-full border-2 border-acento-linea border-t-acento"></span>
+          @case ('otro-libro') {
+            @if (libroAbierto(); as l) {
+              <div class="flex flex-col gap-3.5">
+                <span class="self-start rounded-full bg-ambar-suave px-[11px] py-1 text-xs font-bold text-ambar">Libro sin confirmar</span>
+                @if (l.vinculado) {
+                  <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">Este libro no es el Excel vinculado</h2>
+                  <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+                    Está abierto "{{ l.abierto }}" y el Excel vinculado es "{{ l.vinculado }}". Si el Excel oficial se renombró o se
+                    movió, este libro debe vincularse. Si es una copia, debe cerrarse y abrirse el Excel oficial, porque sincronizar
+                    contra una copia llevaría sus diferencias al inventario.
+                  </p>
                 } @else {
-                  <span class="h-2 w-2 rounded-full bg-linea-2"></span>
+                  <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">Confirmación del libro oficial</h2>
+                  <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+                    Es la primera vez que se sincroniza desde Excel con este archivo vinculado. "{{ l.abierto }}" solo debe vincularse si es
+                    el Excel oficial del inventario y no una copia.
+                  </p>
+                }
+                <div>
+                  <button type="button" class="btn-primario" (click)="vincularLibro()" [disabled]="vinculando()">
+                    @if (vinculando()) { <span class="indicador-carga"></span> Vinculando… } @else { Vincular este libro }
+                  </button>
+                </div>
+              </div>
+            }
+          }
+
+          @case ('hoja-perdida') {
+            <div class="flex flex-col gap-3.5">
+              <span class="self-start rounded-full bg-ambar-suave px-[11px] py-1 text-xs font-bold text-ambar">Excel no encontrado</span>
+              <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">No se encontró el Excel vinculado</h2>
+              <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+                El archivo vinculado no está en el OneDrive de la cuenta conectada. Es posible que se haya eliminado o movido
+                a otra cuenta. Debe vincularse de nuevo para poder sincronizar.
+              </p>
+              <div class="flex flex-wrap gap-2.5">
+                <a routerLink="/sincronizacion/vincular" class="btn-primario">Vincular el Excel</a>
+                <button type="button" class="btn-secundario" (click)="comparar()">Volver a comparar</button>
+              </div>
+            </div>
+          }
+
+          @case ('conectar') {
+            <div class="flex flex-col gap-3.5">
+              <div class="grid h-11 w-11 place-items-center rounded-[13px] bg-acento-tenue-2 text-acento">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
+              </div>
+              <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">Conexión con OneDrive</h2>
+              <p class="max-w-[60ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+                La aplicación descarga el Excel oficial y lo compara con el inventario campo por campo. No se escribe nada en
+                ninguna de las dos copias hasta que los cambios se revisen y aprueben.
+              </p>
+              <div class="mt-1">
+                <button type="button" class="btn-primario" (click)="conectar()" [disabled]="conectando()">
+                  @if (conectando()) { <span class="indicador-carga"></span> Conectando… } @else { Conectar con OneDrive }
+                </button>
+              </div>
+            </div>
+          }
+
+          @case ('calculando') {
+            <div class="flex flex-col gap-6" aria-live="polite">
+              <div class="flex flex-col gap-2">
+                <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">Comparando las dos copias</h2>
+                <p class="text-[15px] font-medium leading-relaxed text-tinta-3">Solo lectura. Todavía no se ha escrito nada.</p>
+              </div>
+              <ol>
+                @for (p of pasos(); track p.paso) {
+                  <li class="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-3 border-t border-linea-suave py-3 first:border-t-0 first:pt-0">
+                    <span class="grid place-items-center">
+                      @if (p.estado === 'hecho') {
+                        <svg class="text-verde" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                      } @else if (p.estado === 'en-curso') {
+                        <span class="block h-3.5 w-3.5 animate-spin rounded-full border-2 border-acento-linea border-t-acento"></span>
+                      } @else {
+                        <span class="h-2 w-2 rounded-full bg-linea-2"></span>
+                      }
+                    </span>
+                    <span class="text-[14px] font-semibold" [class]="p.estado === 'pendiente' ? 'text-tinta-5' : 'text-tinta'">{{ p.etiqueta }}</span>
+                    <span class="text-[13px] font-medium text-tinta-5">{{ p.detalle }}</span>
+                  </li>
+                }
+              </ol>
+            </div>
+          }
+
+          @case ('error') {
+            <div class="flex flex-col gap-4" role="alert">
+              <span class="self-start rounded-full bg-rojo-tenue px-[11px] py-1 text-xs font-bold text-rojo-2">Sincronización detenida</span>
+              @if (encabezados()) {
+                <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">{{ tituloEncabezados() }}</h2>
+                <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">
+                  La comparación se detuvo antes de empezar y no se escribió nada. Si la columna se renombró en el Excel,
+                  debe recuperar su nombre antes de volver a intentarlo.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (chip of chipsEncabezados(); track chip.texto) {
+                    <span class="rounded-full px-[11px] py-[5px] text-xs font-semibold" [class]="chip.mal ? 'bg-rojo-tenue text-rojo-2' : 'bg-linea-suave text-tinta-3'">{{ chip.texto }}</span>
+                  }
+                </div>
+              } @else {
+                <h2 class="text-[26px] font-extrabold leading-tight tracking-[-0.015em] lg:text-[30px]">No se pudo comparar</h2>
+                <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">{{ error() }} No se escribió nada.</p>
+              }
+              <div><button type="button" class="btn-secundario" (click)="comparar()">Volver a intentar</button></div>
+            </div>
+          }
+        }
+      </div>
+      <aside class="flex flex-col justify-center gap-6 bg-sub px-6 py-8 sm:px-[30px] lg:px-12 lg:py-12" aria-label="Etapas de la sincronización">
+        <p class="antetitulo">Cómo se sincroniza</p>
+        <ol class="flex flex-col">
+          @for (e of etapas(); track e.clave; let ultima = $last) {
+            <li class="grid grid-cols-[32px_minmax(0,1fr)] gap-x-4">
+              <span class="flex flex-col items-center">
+                @switch (e.estado) {
+                  @case ('hecho') {
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-verde-suave text-verde">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </span>
+                  }
+                  @case ('en-curso') {
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acento-tenue-2">
+                      <span class="block h-4 w-4 animate-spin rounded-full border-2 border-acento-linea border-t-acento"></span>
+                    </span>
+                  }
+                  @case ('actual') {
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acento text-[14px] font-bold text-white">{{ e.numero }}</span>
+                  }
+                  @case ('aviso') {
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ambar-suave text-[14px] font-bold text-ambar">!</span>
+                  }
+                  @case ('error') {
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-rojo-tenue text-rojo-2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+                    </span>
+                  }
+                  @default {
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-superficie text-[14px] font-bold text-tinta-5 shadow-tarjeta">{{ e.numero }}</span>
+                  }
+                }
+                @if (!ultima) {
+                  <span class="my-1.5 w-0.5 flex-1 rounded-full" [class]="e.estado === 'hecho' ? 'bg-verde-suave' : 'bg-linea-2'"></span>
                 }
               </span>
-              <span class="text-[14px] font-semibold" [class]="p.estado === 'pendiente' ? 'text-tinta-5' : 'text-tinta'">{{ p.etiqueta }}</span>
-              <span class="text-[13px] font-medium text-tinta-5">{{ p.detalle }}</span>
+              <span class="flex min-w-0 flex-col gap-1 pt-[5px]" [class.pb-7]="!ultima">
+                <span class="text-[15px] font-bold" [class]="e.estado === 'pendiente' ? 'text-tinta-3' : 'text-tinta'">{{ e.titulo }}</span>
+                <span class="text-[14px] font-medium leading-normal text-tinta-4">{{ e.texto }}</span>
+              </span>
             </li>
           }
         </ol>
-      </section>
-    }
+        <p class="border-t border-linea pt-5 text-[13px] font-medium leading-normal text-tinta-4">
+          Nada se escribe en la base ni en el Excel hasta que se aprueba la revisión.
+        </p>
+      </aside>
+    </section>
+  }
 
-    @case ('error') {
-      <section class="tarjeta flex flex-col gap-4 !border-rojo-linea px-[30px] py-7" role="alert">
-        <span class="self-start rounded-full bg-rojo-tenue px-[11px] py-1 text-xs font-bold text-rojo-2">Sincronización detenida</span>
-        @if (encabezados()) {
-          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">{{ tituloEncabezados() }}</h2>
-          <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">
-            La comparación se detuvo antes de empezar y no se escribió nada. Si la columna se renombró en la hoja,
-            devuélvele su nombre y vuelve a intentarlo.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            @for (chip of chipsEncabezados(); track chip.texto) {
-              <span class="rounded-full px-[11px] py-[5px] text-xs font-semibold" [class]="chip.mal ? 'bg-rojo-tenue text-rojo-2' : 'bg-linea-suave text-tinta-3'">{{ chip.texto }}</span>
-            }
-          </div>
-        } @else {
-          <h2 class="text-[24px] font-extrabold tracking-[-0.01em]">No se pudo comparar</h2>
-          <p class="max-w-[70ch] text-[15px] font-medium leading-relaxed text-tinta-3">{{ error() }} No se escribió nada.</p>
-        }
-        <div><button type="button" class="btn-secundario" (click)="comparar()">Volver a intentar</button></div>
-      </section>
-    }
-
+  @switch (fase()) {
     @case ('vacio') {
       <section class="tarjeta flex flex-col items-center gap-2.5 px-[30px] py-12 text-center">
         <div class="grid h-12 w-12 place-items-center rounded-[14px] bg-verde-suave text-verde">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
         </div>
-        <h2 class="mt-1.5 text-[24px] font-extrabold tracking-[-0.01em]">La hoja y el inventario coinciden</h2>
+        <h2 class="mt-1.5 text-[24px] font-extrabold tracking-[-0.01em]">El Excel y el inventario coinciden</h2>
         <p class="text-[15px] font-medium text-tinta-4">{{ calculo()?.obras?.length }} obras comparadas campo por campo. No hay nada que aplicar.</p>
         <button type="button" class="btn-secundario mt-2" (click)="comparar()">Volver a comparar</button>
       </section>
@@ -164,7 +223,7 @@
         @if (caducado()) {
           <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-rojo-linea bg-rojo-tenue px-[18px] py-3.5" role="alert">
             <span class="text-[14px] font-medium leading-normal text-rojo-3"><strong class="font-bold">La conexión con OneDrive caducó al aplicar.</strong>
-              No se escribió nada en la hoja y tus decisiones siguen aquí.</span>
+              No se escribió nada en el Excel y las decisiones tomadas se conservan.</span>
             <button type="button" class="btn-primario" (click)="reconectar()" [disabled]="conectando()">
               @if (conectando()) { <span class="indicador-carga"></span> Conectando… } @else { Reconectar y reintentar }
             </button>
@@ -184,7 +243,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrar diferencias">
                 @for (f of r.filtros; track f.filtro) {
-                  <button type="button" class="chip" [attr.aria-pressed]="filtro() === f.filtro" (click)="filtro.set(f.filtro)">{{ f.etiqueta }} · {{ f.cuenta }}</button>
+                  <button type="button" class="chip" [attr.aria-pressed]="filtro() === f.filtro" (click)="filtro.set(f.filtro)">{{ f.etiqueta }} ({{ f.cuenta }})</button>
                 }
               </div>
               <span class="text-[13px] font-medium text-tinta-5">{{ gruposVisibles().length }} de {{ r.grupos.length }} con diferencias</span>
@@ -207,7 +266,7 @@
       @if (resultado(); as r) {
         @if (r.error) {
           <p class="rounded-2xl border border-rojo-linea bg-rojo-tenue px-[18px] py-3.5 text-[14px] font-medium leading-normal text-rojo-3" role="alert">
-            <strong class="font-bold">No se terminó de escribir en la hoja.</strong> {{ r.error }}
+            <strong class="font-bold">No se terminó de escribir en el Excel.</strong> {{ r.error }}
           </p>
         }
         <div class="grid grid-cols-1 gap-[18px] xs:grid-cols-2" [class]="cifrasResultado().length === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'">
@@ -242,7 +301,7 @@
           <section class="tarjeta px-[22px] py-5">
             <h2 class="text-[18px] font-bold">Imágenes sin subir</h2>
             <p class="mb-3 mt-1.5 max-w-[72ch] text-[14px] font-medium leading-normal text-tinta-4">
-              La obra se creó, pero estas imágenes pegadas en la hoja no llegaron al inventario. Súbelas desde la ficha de la obra.
+              La obra se creó, pero estas imágenes pegadas en el Excel no llegaron al inventario. Deben subirse desde la ficha de la obra.
             </p>
             @for (f of imagenesFallidas(); track f.clave) {
               <div class="grid grid-cols-[90px_minmax(0,1fr)] gap-x-3.5 gap-y-1 border-t border-linea-suave py-[11px] text-[14px] font-medium sm:grid-cols-[90px_130px_minmax(0,1fr)]">
@@ -260,9 +319,9 @@
 
 <ng-template #noSeTocan let-lista>
   <section class="tarjeta px-5 py-[18px]">
-    <h3 class="mb-1 text-[16px] font-bold">No se tocarán</h3>
+    <h3 class="mb-1 text-[16px] font-bold">Filas del Excel que no se pueden sincronizar</h3>
     <p class="mb-2 text-[13px] font-medium leading-normal text-tinta-4">
-      Filas de la hoja que no se pueden emparejar con seguridad. Corrígelas en la hoja y vuelve a comparar.
+      Se omiten en esta sincronización. Deben corregirse en el Excel antes de volver a comparar.
     </p>
     @for (x of lista; track x.clave) {
       <div class="grid gap-x-3.5 gap-y-1.5 border-t border-linea-suave py-[11px] sm:grid-cols-[150px_minmax(0,1fr)]">

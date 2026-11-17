@@ -25,7 +25,7 @@ function montar(g: GrupoRevision) {
 }
 
 const boton = (html: HTMLElement, texto: string) =>
-  [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto) as HTMLButtonElement;
+  [...html.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === texto) as HTMLButtonElement;
 
 describe('GrupoRevisionComponent', () => {
   it('pinta el número, el título, la etiqueta y la acción del cambio', () => {
@@ -54,12 +54,12 @@ describe('GrupoRevisionComponent', () => {
       gana: null, pendiente: true, nota: 'Cambió en las dos copias.', notaAmbar: true,
       accion: {
         tipo: 'opciones', ref: { tipo: 'conflicto', clave: '31|ubicacion' },
-        opciones: [{ valor: 'hoja', etiqueta: 'Dejar la hoja', elegida: true }, { valor: 'base', etiqueta: 'Dejar la base', elegida: false }],
+        opciones: [{ valor: 'hoja', etiqueta: 'Dejar el Excel', elegida: true }, { valor: 'base', etiqueta: 'Dejar la base', elegida: false }],
       },
     });
     const { html, emitidos } = montar(grupo({ filas: [conflicto], pendiente: true }));
 
-    expect(boton(html, 'Dejar la hoja').getAttribute('aria-pressed')).toBe('true');
+    expect(boton(html, 'Dejar el Excel').getAttribute('aria-pressed')).toBe('true');
     expect(boton(html, 'Dejar la base').getAttribute('aria-pressed')).toBe('false');
     boton(html, 'Dejar la base').click();
 
@@ -74,14 +74,14 @@ describe('GrupoRevisionComponent', () => {
     });
     const { html } = montar(grupo({ filas: [fuera] }));
 
-    expect(html.textContent).toContain('Queda fuera');
+    expect(html.textContent).toContain('No se puede copiar');
     expect(html.querySelector('a')?.getAttribute('href')).toBe('/obra/31');
     expect(html.querySelector('img')?.getAttribute('alt')).toBe('');
   });
 
   it('una tarjeta de alta muestra su resumen y emite la opción elegida', () => {
     const { html, emitidos } = montar(grupo({
-      clave: 'alta-base|212', tipo: 'presencia', numero: 'Fila 212', etiqueta: 'Solo está en la hoja', filas: [],
+      clave: 'alta-base|212', tipo: 'presencia', numero: 'Fila 212', etiqueta: 'Solo está en el Excel', filas: [],
       resumen: 'Requiere una elección.', ref: { tipo: 'altaBase', fila: 212 }, pendiente: true,
       opciones: [{ valor: 'crear', etiqueta: 'Crear en la base', elegida: false }, { valor: 'ignorar', etiqueta: 'Ignorar', elegida: false }],
     }));

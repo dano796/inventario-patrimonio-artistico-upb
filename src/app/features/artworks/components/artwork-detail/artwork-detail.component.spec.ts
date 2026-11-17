@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ArtworkDetailComponent } from './artwork-detail.component';
 import { ArtworksService } from '../../services/artworks.service';
@@ -8,7 +8,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { obraDePrueba } from '../galeria/obra-de-prueba';
 import { Artwork } from '../../../../shared/models/artwork.model';
 
-async function montar(obra: Artwork, esAdmin: boolean, admin = signal(esAdmin), listo: () => Promise<void> = () => Promise.resolve()) {
+async function montar(obra: Artwork, esAdmin: boolean, admin = signal(esAdmin), listo: () => Promise<void> = () => Promise.resolve(), estado?: Record<string, unknown>) {
   const servicio = {
     selectedArtwork: signal<Artwork | null>(obra), loading: signal(false), error: signal(false),
     getArtworkById: jasmine.createSpy('getArtworkById').and.resolveTo(undefined),
@@ -23,13 +23,23 @@ async function montar(obra: Artwork, esAdmin: boolean, admin = signal(esAdmin), 
     ],
   });
   const harness = await RouterTestingHarness.create();
-  await harness.navigateByUrl('/obra/14', ArtworkDetailComponent);
+  if (estado) await TestBed.inject(Router).navigateByUrl('/obra/14', { state: estado });
+  else await harness.navigateByUrl('/obra/14', ArtworkDetailComponent);
   await harness.fixture.whenStable();
   harness.detectChanges();
   return { harness, servicio, html: harness.routeNativeElement as HTMLElement };
 }
 
 describe('ArtworkDetailComponent', () => {
+  it('vuelve a la galería, o al mapa si se llegó desde él', async () => {
+    const volver = (html: HTMLElement) => html.querySelector('main > a') as HTMLAnchorElement;
+    let { html } = await montar(obraDePrueba(), true);
+    expect([volver(html).getAttribute('href'), volver(html).textContent?.trim()]).toEqual(['/', 'Volver a la galería']);
+    TestBed.resetTestingModule();
+    ({ html } = await montar(obraDePrueba(), true, undefined, undefined, { desde: 'mapa' }));
+    expect([volver(html).getAttribute('href'), volver(html).textContent?.trim()]).toEqual(['/mapa', 'Volver al mapa']);
+  });
+
   it('carga la obra de la ruta', async () => {
     const { servicio } = await montar(obraDePrueba(), false);
     expect(servicio.getArtworkById).toHaveBeenCalledWith(14);
@@ -38,7 +48,8 @@ describe('ArtworkDetailComponent', () => {
   it('sin rol de administrador no muestra custodia, valor ni acciones', async () => {
     const { html } = await montar(obraDePrueba(), false);
     expect(html.textContent).toContain('Técnica');
-    for (const oculto of ['Valor estimado', 'Bloque 6', 'JOBANY TOBÓN', 'Editar', 'Eliminar']) {
+    expect(html.querySelector('[aria-label="Editar obra"], [aria-label="Eliminar obra"]')).toBeNull();
+    for (const oculto of ['Valor estimado', 'Bloque 6', 'JOBANY TOBÓN']) {
       expect(html.textContent).not.toContain(oculto);
     }
   });
@@ -47,12 +58,23 @@ describe('ArtworkDetailComponent', () => {
     const imagenes = [{ id: 1, url: 'https://x/a.jpg', nombre: 'a' }, { id: 2, url: 'https://x/b.jpg', nombre: 'b' }];
     const { harness, html } = await montar(obraDePrueba({ imagenes }), true);
     expect(html.textContent).toContain('Valor estimado');
-    [...html.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Eliminar')!.click();
+    expect(html.querySelector('a[aria-label="Editar obra"]')?.getAttribute('href')).toBe('/editar/14');
+    html.querySelector<HTMLButtonElement>('button[aria-label="Eliminar obra"]')!.click();
     harness.detectChanges();
-    expect(html.querySelector('[role="dialog"]')?.textContent).toContain('«Paisaje» y sus 2 imágenes se eliminarán de forma permanente.');
+    expect(html.querySelector('[role="dialog"]')?.textContent).toContain('"Paisaje" y sus 2 imágenes se eliminarán de forma permanente.');
   });
 
-  it('una obra sin título muestra «Sin título»', async () => {
+  it('el clic en la imagen la amplía en el visor, con la imagen que se está viendo', async () => {
+    const imagenes = [{ id: 1, url: 'https://x/a.jpg', nombre: 'a' }, { id: 2, url: 'https://x/b.jpg', nombre: 'b' }];
+    const { harness, html } = await montar(obraDePrueba({ imagenes } as never), false);
+    html.querySelector<HTMLButtonElement>('button[aria-label="Imagen siguiente"]')!.click();
+    harness.detectChanges();
+    html.querySelector<HTMLButtonElement>('button[aria-label^="Ampliar"]')!.click();
+    harness.detectChanges();
+    expect(html.querySelector('[role="dialog"] img')?.getAttribute('src')).toBe('https://x/b.jpg');
+  });
+
+  it('una obra sin título muestra "Sin título"', async () => {
     const { html } = await montar(obraDePrueba({ titulo: null }), false);
     expect(html.querySelector('h1')?.textContent?.trim()).toBe('Sin título');
   });

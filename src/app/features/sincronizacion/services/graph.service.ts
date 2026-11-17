@@ -7,6 +7,26 @@ export class ErrorGraph extends Error {
   }
 }
 
+/** Graph responde con JSON en inglés; quien sincroniza solo debe ver un motivo y qué hacer. */
+export async function errorDeRespuesta(respuesta: Response): Promise<ErrorGraph> {
+  let codigo = '';
+  try {
+    codigo = (JSON.parse(await respuesta.text()) as { error?: { code?: string } }).error?.code ?? '';
+  } catch {
+    codigo = '';
+  }
+  const estado = respuesta.status;
+  if (estado === 403) {
+    return new ErrorGraph(estado,
+      'Esta cuenta no tiene acceso al Excel oficial desde la web, porque está en el OneDrive de otra persona. ' +
+      'La sincronización debe hacerse desde el complemento de Excel, con el Excel oficial abierto.');
+  }
+  if (estado === 429 || estado === 503) {
+    return new ErrorGraph(estado, 'Microsoft está recibiendo demasiadas peticiones. Conviene esperar un momento antes de volver a intentarlo.');
+  }
+  return new ErrorGraph(estado, `OneDrive respondió con un error (${codigo ? `${codigo}, ` : ''}código ${estado}).`);
+}
+
 export interface ArchivoOneDrive {
   id: string;
   name: string;
@@ -86,7 +106,7 @@ export class GraphService {
     });
     if (respuesta.ok) return true;
     if (respuesta.status === 401 || respuesta.status === 403) return false;
-    throw new ErrorGraph(respuesta.status, await respuesta.text());
+    throw await errorDeRespuesta(respuesta);
   }
 
   /** La búsqueda de OneDrive devuelve por páginas y mezcla todo tipo de archivos. */
@@ -122,9 +142,9 @@ export class GraphService {
   async descargar(driveId: string, itemId: string): Promise<Uint8Array> {
     const item = await this.pedir<{ '@microsoft.graph.downloadUrl'?: string }>(`/drives/${driveId}/items/${itemId}`);
     const url = item['@microsoft.graph.downloadUrl'];
-    if (!url) throw new ErrorGraph(404, 'OneDrive no dio una URL de descarga para la hoja.');
+    if (!url) throw new ErrorGraph(404, 'OneDrive no dio una URL de descarga para el Excel.');
     const respuesta = await this.fetchConTope(url, {}, TOPE_DESCARGA_MS);
-    if (!respuesta.ok) throw new ErrorGraph(respuesta.status, await respuesta.text());
+    if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
     return new Uint8Array(await respuesta.arrayBuffer());
   }
 
@@ -149,7 +169,7 @@ export class GraphService {
       ...init,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
-    if (!respuesta.ok) throw new ErrorGraph(respuesta.status, await respuesta.text());
+    if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
     return (respuesta.status === 204 ? undefined : await respuesta.json()) as T;
   }
 
@@ -172,7 +192,7 @@ export class GraphService {
     const tope = new Promise<never>((_, reject) => {
       id = setTimeout(() => {
         controlador.abort();
-        reject(new ErrorGraph(408, 'Microsoft no respondió a tiempo. Vuelve a intentarlo.'));
+        reject(new ErrorGraph(408, 'Microsoft no respondió a tiempo.'));
       }, topeMs);
     });
 

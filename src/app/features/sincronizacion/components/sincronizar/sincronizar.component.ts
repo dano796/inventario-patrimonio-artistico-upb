@@ -20,12 +20,16 @@ type Fase = 'cargando' | 'sin-hoja' | 'hoja-perdida' | 'otro-libro' | 'conectar'
 const RUTA = '/sincronizacion';
 
 const PASOS: { paso: PasoCalculo; etiqueta: string }[] = [
-  { paso: 'descargar', etiqueta: 'Descargar la hoja' },
+  { paso: 'descargar', etiqueta: 'Descargar el Excel' },
   { paso: 'encabezados', etiqueta: 'Localizar encabezados' },
   { paso: 'inventario', etiqueta: 'Leer el inventario' },
   { paso: 'foto', etiqueta: 'Leer la última sincronización' },
   { paso: 'comparar', etiqueta: 'Comparar campo por campo' },
 ];
+
+const PREVIAS: Fase[] = ['cargando', 'sin-hoja', 'hoja-perdida', 'otro-libro', 'conectar', 'calculando', 'error'];
+
+type EstadoEtapa = 'hecho' | 'actual' | 'en-curso' | 'aviso' | 'error' | 'pendiente';
 
 const ESPERADOS = [...Object.values(ENCABEZADOS), ...ENCABEZADOS_IMAGEN, ENCABEZADO_ID_WEB];
 
@@ -74,7 +78,7 @@ export class SincronizarComponent implements OnInit {
     const hoja = this.hoja();
     if (!hoja) return '';
     const ultima = hoja.fecha_ultima ? fecha.format(new Date(hoja.fecha_ultima)) : 'nunca';
-    return `${this.archivo() ?? 'Hoja oficial'}, hoja ${hoja.nombre_hoja}. Última sincronización: ${ultima}.`;
+    return `${this.archivo() ?? 'Excel oficial'}, pestaña ${hoja.nombre_hoja}. Última sincronización: ${ultima}.`;
   });
 
   conexion = computed(() => {
@@ -100,8 +104,8 @@ export class SincronizarComponent implements OnInit {
     if (!r) return [];
     return [
       { etiqueta: 'Campos escritos en la base', cifra: r.base.aplicados },
-      { etiqueta: 'Celdas escritas en la hoja', cifra: r.escritasEnHoja },
-      { etiqueta: 'Filas añadidas a la hoja', cifra: r.altasEnHoja },
+      { etiqueta: 'Celdas escritas en el Excel', cifra: r.escritasEnHoja },
+      { etiqueta: 'Filas añadidas al Excel', cifra: r.altasEnHoja },
       { etiqueta: 'Descartados por concurrencia', cifra: this.descartados().length },
       ...(r.imagenesSubidas || r.imagenesFallidas.length ? [{ etiqueta: 'Imágenes subidas', cifra: r.imagenesSubidas }] : []),
     ];
@@ -133,10 +137,44 @@ export class SincronizarComponent implements OnInit {
     const enCurso = PASOS.find((p) => !(p.paso in hechos))?.paso;
     return PASOS.map((p) => ({
       ...p,
-      etiqueta: p.paso === 'descargar' ? (this.enExcel ? 'Leer el libro abierto' : 'Descargar la hoja desde OneDrive') : p.etiqueta,
+      etiqueta: p.paso === 'descargar' ? (this.enExcel ? 'Leer el libro abierto' : 'Descargar el Excel desde OneDrive') : p.etiqueta,
       detalle: hechos[p.paso] ?? '',
       estado: p.paso in hechos ? 'hecho' : p.paso === enCurso ? 'en-curso' : 'pendiente',
     }));
+  });
+
+  previa = computed(() => PREVIAS.includes(this.fase()));
+
+  etapas = computed(() => {
+    const fase = this.fase();
+    const hayHoja = !!this.hoja();
+    const vincular: EstadoEtapa =
+      fase === 'cargando' ? 'pendiente'
+      : fase === 'sin-hoja' ? 'actual'
+      : fase === 'hoja-perdida' || fase === 'otro-libro' ? 'aviso'
+      : fase === 'error' && !hayHoja ? 'error'
+      : 'hecho';
+    const conectar: EstadoEtapa =
+      vincular !== 'hecho' ? 'pendiente'
+      : fase === 'conectar' ? 'actual'
+      : fase === 'error' && !this.conectado() ? 'error'
+      : 'hecho';
+    const listo = vincular === 'hecho' && (this.enExcel || conectar === 'hecho');
+    const comparar: EstadoEtapa =
+      !listo ? 'pendiente'
+      : fase === 'calculando' ? 'en-curso'
+      : fase === 'error' ? 'error'
+      : 'pendiente';
+    return [
+      this.enExcel
+        ? { clave: 'vincular', titulo: 'Confirmar el libro oficial', texto: 'El libro abierto en Excel tiene que ser el archivo vinculado, no una copia.', estado: vincular }
+        : { clave: 'vincular', titulo: 'Vincular el Excel oficial', texto: 'El archivo del OneDrive de quien lo custodia, que se compara con el inventario.', estado: vincular },
+      ...(this.enExcel ? [] : [
+        { clave: 'conectar', titulo: 'Conectar con OneDrive', texto: 'Permiso para leer y escribir el Excel, pedido solo desde esta página.', estado: conectar },
+      ]),
+      { clave: 'comparar', titulo: 'Comparar campo por campo', texto: 'Solo lectura: se leen las dos copias y se buscan las diferencias.', estado: comparar },
+      { clave: 'revisar', titulo: 'Revisar y aprobar', texto: 'Se elige qué valor queda en cada diferencia. Al aprobar, los cambios se escriben en la base y en el Excel.', estado: 'pendiente' as EstadoEtapa },
+    ].map((e, i) => ({ ...e, numero: i + 1 }));
   });
 
   chipsEncabezados = computed(() => {
@@ -145,14 +183,14 @@ export class SincronizarComponent implements OnInit {
     return ESPERADOS.map((texto) => {
       const falta = error.faltantes.includes(texto);
       const repetido = error.repetidos.includes(texto);
-      return { texto: falta ? `${texto} · no encontrado` : repetido ? `${texto} · repetido` : texto, mal: falta || repetido };
+      return { texto: falta ? `${texto} (no encontrado)` : repetido ? `${texto} (repetido)` : texto, mal: falta || repetido };
     });
   });
 
   tituloEncabezados = computed(() => {
     const error = this.encabezados();
     if (!error) return '';
-    const lista = (nombres: string[]) => nombres.map((n) => `«${n}»`).join(', ');
+    const lista = (nombres: string[]) => nombres.map((n) => `"${n}"`).join(', ');
     if (error.faltantes.length === 1) return `No se encontró el encabezado ${lista(error.faltantes)}`;
     if (error.faltantes.length > 1) return `No se encontraron los encabezados ${lista(error.faltantes)}`;
     return `Hay encabezados repetidos: ${lista(error.repetidos)}`;

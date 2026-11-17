@@ -50,7 +50,7 @@ async function montar(opciones: { host?: string | null; rol?: 'admin' | 'usuario
 describe('PanelComponent', () => {
   it('fuera de Excel no intenta nada y lo explica', async () => {
     const { html } = await montar({ host: null });
-    expect(html.textContent).toContain('Abre esta página desde Excel');
+    expect(html.textContent).toContain('Esta página se abre desde Excel');
     expect(html.textContent).not.toContain('SINCRONIZAR');
   });
 
@@ -89,7 +89,7 @@ describe('PanelComponent', () => {
 
   it('una cuenta sin rol de administrador no llega a la sincronización', async () => {
     const { html } = await montar({ rol: 'usuario' });
-    expect(html.textContent).toContain('Tu cuenta no puede sincronizar');
+    expect(html.textContent).toContain('Esta cuenta no puede sincronizar');
     expect(html.textContent).not.toContain('SINCRONIZAR');
   });
 

@@ -2,7 +2,7 @@
   <a routerLink="/sincronizacion" class="self-start text-sm font-semibold text-acento hover:text-acento-tinta">← Volver a la sincronización</a>
   <header>
     <p class="antetitulo">Sincronización</p>
-    <h1 class="titulo-pantalla">Vincular la hoja oficial</h1>
+    <h1 class="titulo-pantalla">Vincular el Excel oficial</h1>
   </header>
 
   @if (error()) {
@@ -23,7 +23,7 @@
         <p class="text-sm font-semibold text-verde">Conectado. La conexión dura alrededor de una hora.</p>
       } @else {
         <p class="text-sm font-medium text-tinta-4">
-          Microsoft pedirá permiso para acceder a tus archivos. La aplicación solo usa la hoja que elijas.
+          Microsoft pedirá permiso para acceder a los archivos de la cuenta. La aplicación solo usa el Excel que se elija.
         </p>
         <div><button type="button" class="btn-primario" (click)="conectar()" [disabled]="ocupado()">
           @if (enCurso() === 'conectar') { <span class="indicador-carga"></span> Conectando… } @else { Conectar con OneDrive }
@@ -33,9 +33,9 @@
 
     @if (conectado()) {
       <section class="tarjeta flex flex-col gap-3 px-[22px] py-5">
-        <h2 class="text-[18px] font-bold">2. Elegir la hoja</h2>
+        <h2 class="text-[18px] font-bold">2. Elegir el Excel</h2>
         @if (hoja()) {
-          <p class="text-sm font-medium text-tinta-3">Hay una hoja vinculada. Elegir otra la reemplaza.</p>
+          <p class="text-sm font-medium text-tinta-3">Hay un Excel vinculado. Elegir otro lo reemplaza.</p>
         }
         <form class="flex gap-2.5" (submit)="$event.preventDefault(); buscar(texto.value)">
           <input #texto type="text" placeholder="Nombre del archivo" value="Inventario" class="campo flex-1" aria-label="Nombre del archivo" />
@@ -45,7 +45,7 @@
         </form>
         @if (buscado() && !resultados().length) {
           <p class="text-sm font-medium text-tinta-4">
-            Ningún archivo .xlsx de tu OneDrive coincide con «{{ buscado() }}». Si lo acabas de subir, OneDrive puede tardar
+            Ningún archivo .xlsx del OneDrive coincide con "{{ buscado() }}". Si se subió hace poco, OneDrive puede tardar
             unos minutos en encontrarlo.
           </p>
         }
@@ -67,7 +67,7 @@
 
       @if (hoja()) {
         <section class="tarjeta flex flex-col gap-3 px-[22px] py-5">
-          <h2 class="text-[18px] font-bold">3. Escribir «ID WEB»</h2>
+          <h2 class="text-[18px] font-bold">3. Escribir "ID WEB"</h2>
           <p class="text-sm font-medium leading-relaxed text-tinta-4">
             Carga <code class="font-mono text-[13px]">importacion/id-web.json</code>, generado por el script de importación. Antes de
             escribir se comprueba que cada fila sigue teniendo el mismo autor y título que la copia importada.
@@ -77,7 +77,7 @@
           @if (asignaciones(); as lista) {
             <p class="text-sm font-medium text-tinta-3">{{ lista.length }} filas por escribir.</p>
             <div><button type="button" class="btn-primario" (click)="escribir()" [disabled]="ocupado()">
-              @if (enCurso() === 'escribir') { <span class="indicador-carga"></span> Escribiendo… } @else { Escribir ID WEB en la hoja }
+              @if (enCurso() === 'escribir') { <span class="indicador-carga"></span> Escribiendo… } @else { Escribir ID WEB en el Excel }
             </button></div>
           }
           @if (progreso(); as p) {
@@ -85,7 +85,7 @@
           }
           @if (discrepancias().length) {
             <div class="flex flex-col gap-1 rounded-xl border border-ambar-linea bg-ambar-tenue px-4 py-3 text-sm font-medium text-ambar">
-              <p class="font-bold">No se escribió nada: la hoja no coincide con la copia importada.</p>
+              <p class="font-bold">No se escribió nada: el Excel no coincide con la copia importada.</p>
               @for (d of discrepancias(); track d.fila) {
                 <p>Fila {{ d.fila }}: {{ d.motivo }}</p>
               }

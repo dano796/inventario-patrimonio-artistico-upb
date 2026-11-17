@@ -25,37 +25,37 @@ src/app/
 │
 ├── features/
 │   ├── artworks/
-│   │   ├── components/        # artwork-list · artwork-detail · artwork-form · selector-responsable
-│   │   │   └── galeria/       # barra-filtros · tarjeta-obra · tabla-obras · paginacion (solo presentan)
-│   │   ├── utils/             # galeria (chips, vista) · ficha (campos por rol) · buscar-responsables
+│   │   ├── components/        # artwork-list, artwork-detail, artwork-form, selector-responsable
+│   │   │   └── galeria/       # barra-filtros, tarjeta-obra, tabla-obras, paginacion (solo presentan)
+│   │   ├── utils/             # galeria (chips, vista), ficha (campos por rol), buscar-responsables
 │   │   ├── services/
 │   │   │   ├── artworks.service.ts        # estado + CRUD + paginación
 │   │   │   └── artwork-export.service.ts  # generación del .xlsx
 │   │   └── artwork.routes.ts  # rutas con loadComponent (carga diferida)
 │   ├── auth/
-│   │   ├── components/        # auth-log-in · forgot-password · update-password
+│   │   ├── components/        # auth-log-in, forgot-password, update-password
 │   │   └── auth.routes.ts
 │   ├── complemento/           # complemento de Excel: la misma sincronización sobre el libro abierto
-│   │   ├── services/          # office.service (carga office.js, diálogo) · acceso-hoja-excel (Office.js)
-│   │   ├── components/        # panel (/complemento) · entrar (/complemento/entrar, diálogo de inicio de sesión)
+│   │   ├── services/          # office.service (carga office.js, diálogo), acceso-hoja-excel (Office.js)
+│   │   ├── components/        # panel (/complemento), entrar (/complemento/entrar, diálogo de inicio de sesión)
 │   │   └── complemento.routes.ts
 │   ├── sincronizacion/
 │   │   ├── nucleo/            # TS puro, compartido con scripts/importar-hoja.ts
-│   │   ├── services/          # acceso-hoja (interfaz + Graph) · graph.service (token delegado) · sincronizacion · sincronizacion-datos
-│   │   ├── utils/             # revision (modelo de vista puro) · borrador (decisiones en sessionStorage)
-│   │   ├── components/        # sincronizar (/sincronizacion) · revision/ (grupo-revision, resumen-ejecucion) · vincular-hoja
+│   │   ├── services/          # acceso-hoja (interfaz + Graph), graph.service (token delegado), sincronizacion, sincronizacion-datos
+│   │   ├── utils/             # revision (modelo de vista puro), borrador (decisiones en sessionStorage)
+│   │   ├── components/        # sincronizar (/sincronizacion), revision/ (grupo-revision, resumen-ejecucion), vincular-hoja
 │   │   └── sincronizacion.routes.ts
-│   └── tablero/               # estado del inventario (solo administradores, lee obras_admin)
+│   └── tablero/               # Resumen (/resumen) y Mapa (/mapa): solo administradores, leen obras_admin
 │       ├── tablero.ts         # calcularTablero: función pura
 │       ├── tablero.service.ts
-│       └── components/        # tablero
+│       └── components/        # tablero (Resumen), mapa-obras (Mapa), mapa-campus (el plano MapLibre)
 │
 └── shared/
-    ├── components/            # cabecera · confirm-modal · image-uploader
-    ├── models/                # artwork.model · image.model · user.model
+    ├── components/            # cabecera, confirm-modal, image-uploader
+    ├── models/                # artwork.model, image.model, user.model
     ├── constants/
     ├── services/              # image.service (Storage)
-    └── utils/                 # validation.service · almacen (localStorage seguro) · leer-por-paginas
+    └── utils/                 # validation.service, almacen (localStorage seguro), leer-por-paginas
 ```
 
 Los imports son rutas relativas directas. No hay barrels ni path aliases.
@@ -137,9 +137,9 @@ function `netlify/edge-functions/complemento.ts` relaja esa misma CSP solo en
 juntas indican qué obra vale cuánto y dónde encontrarla. Se aplica en tres
 capas, y las tres hacen falta:
 
-1. `COLUMNAS_PUBLICAS` en `artworks.service.ts` — no se piden.
-2. `@if (isAdmin())` en las plantillas — no se pintan.
-3. `GRANT SELECT (columnas)` en Postgres — **la única que de verdad protege.**
+1. `COLUMNAS_PUBLICAS` en `artworks.service.ts`: no se piden.
+2. `@if (isAdmin())` en las plantillas: no se pintan.
+3. `GRANT SELECT (columnas)` en Postgres: **la única que de verdad protege.**
 
 Por el mismo motivo los filtros por ubicación y responsable solo existen para
 administradores: poder filtrar por una columna oculta permite deducir su

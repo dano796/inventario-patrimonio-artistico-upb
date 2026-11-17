@@ -2,7 +2,7 @@
   @if (error(); as texto) {
     <h1 class="text-[20px] font-extrabold">No se pudo iniciar sesión</h1>
     <p class="max-w-[48ch] text-[14px] font-medium leading-relaxed text-tinta-3" role="alert">{{ texto }}</p>
-    <p class="text-[13px] font-medium text-tinta-5">Cierra esta ventana y vuelve a intentarlo desde el panel.</p>
+    <p class="text-[13px] font-medium text-tinta-5">Esta ventana puede cerrarse para volver a intentarlo desde el panel.</p>
   } @else {
     <span class="block h-6 w-6 animate-spin rounded-full border-2 border-acento-linea border-t-acento" aria-hidden="true"></span>
     <p class="text-[15px] font-semibold text-tinta-3" aria-live="polite">Iniciando sesión con Microsoft…</p>

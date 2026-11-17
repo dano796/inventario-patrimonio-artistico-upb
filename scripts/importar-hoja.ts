@@ -92,7 +92,7 @@ async function todas<T>(
 /**
  * Compara dos copias de una tabla por conjunto de ids: cuántas filas son nuevas,
  * cuántas faltan y (si se da `cambio`) cuántas de las que siguen ahí cambiaron.
- * Solo devuelve totales — nunca los datos de la fila — para no filtrar columnas
+ * Solo devuelve totales (nunca los datos de la fila) para no filtrar columnas
  * restringidas al reportar la diferencia.
  */
 function compararConjunto<T>(
@@ -237,7 +237,7 @@ async function comandoEmparejar(ruta: string, db: SupabaseClient) {
   });
   const cuenta = (m: string) => emparejamientos.filter((e) => e.metodo === m).length;
   console.log(
-    `Filas ${resultado.filas.length} · exactas ${cuenta('exacto')} · por ID WEB ${cuenta('id-web')} · por título ${cuenta('titulo')} · ambiguas ${cuenta('ambiguo')} · nuevas ${cuenta('nueva')} · obras sin fila ${obrasSinFila.length}`
+    `Filas ${resultado.filas.length}, exactas ${cuenta('exacto')}, por ID WEB ${cuenta('id-web')}, por título ${cuenta('titulo')}, ambiguas ${cuenta('ambiguo')}, nuevas ${cuenta('nueva')}, obras sin fila ${obrasSinFila.length}`
   );
   console.log('Revisa importacion/emparejamiento.json: en cada entrada con "revisado": false, pon "obraId" (o null si es nueva) y "revisado": true.');
   console.log('Comprueba también "obrasSinFila": una obra de ahí que esté en la hoja como «nueva» se duplicaría.');
@@ -278,7 +278,7 @@ async function comandoGenerarIdWeb(ruta: string, db: SupabaseClient) {
   const cuenta = (m: string) => emparejamientos.filter((e) => e.metodo === m).length;
   const pendientes = emparejamientos.filter((e) => e.metodo === 'ambiguo' || e.metodo === 'nueva');
   console.log(
-    `Filas ${resultado.filas.length} · listas para ID WEB: ${obraDeFila.size} (exactas ${cuenta('exacto')}, por ID WEB ${cuenta('id-web')}, por título ${cuenta('titulo')}) · ambiguas ${cuenta('ambiguo')} · nuevas ${cuenta('nueva')}.`
+    `Filas ${resultado.filas.length}, listas para ID WEB: ${obraDeFila.size} (exactas ${cuenta('exacto')}, por ID WEB ${cuenta('id-web')}, por título ${cuenta('titulo')}), ambiguas ${cuenta('ambiguo')}, nuevas ${cuenta('nueva')}.`
   );
   if (pendientes.length) {
     guardar('id-web-pendientes.json', pendientes);
@@ -292,7 +292,7 @@ async function comandoGenerarIdWeb(ruta: string, db: SupabaseClient) {
 /**
  * Crea como obras nuevas solo las filas con número >= `desdeFila`: el límite
  * lo decide quien corre el comando (ya revisó a mano que esas filas son
- * piezas nuevas), no el emparejamiento automático — así nunca se arriesga a
+ * piezas nuevas), no el emparejamiento automático: así nunca se arriesga a
  * tratar como «nueva» una fila preexistente sin título que el emparejador no
  * supo reconocer.
  */
@@ -321,8 +321,8 @@ async function comandoCrearNuevas(ruta: string, desdeFila: number, db: SupabaseC
   });
 
   console.log(`Filas ${filas.map((f) => f.fila).join(', ')}: se crearán ${plan.altas.length} obra(s) nueva(s).`);
-  console.log(`Responsables en estas filas: ${plan.responsables.length} · con cargos distintos: ${plan.cargosEnConflicto.length}`);
-  console.log(`Imágenes: ${plan.imagenes.length} · rechazadas: ${plan.imagenesRechazadas.length}`);
+  console.log(`Responsables en estas filas: ${plan.responsables.length}, con cargos distintos: ${plan.cargosEnConflicto.length}`);
+  console.log(`Imágenes: ${plan.imagenes.length}, rechazadas: ${plan.imagenesRechazadas.length}`);
   for (const r of plan.imagenesRechazadas) console.log(`  Fila ${r.fila} casilla ${r.casilla}: ${r.motivo}`);
   if (plan.cargosEnConflicto.length) {
     throw new Error(`Responsable(s) con cargos distintos en estas filas, corrígelo en la hoja:\n${JSON.stringify(plan.cargosEnConflicto, null, 2)}`);
@@ -462,10 +462,10 @@ async function comandoSimular(ruta: string, db: SupabaseClient) {
   console.log(`Obras a actualizar: ${plan.actualizaciones.length}`);
   for (const [campo, n] of porCampo) console.log(`  ${campo}: ${n}`);
   console.log(`Obras nuevas: ${plan.altas.length}`);
-  console.log(`Responsables en la hoja: ${plan.responsables.length} · con cargos distintos: ${plan.cargosEnConflicto.length}`);
-  console.log(`Imágenes a subir: ${plan.imagenes.length} · rechazadas: ${plan.imagenesRechazadas.length}`);
+  console.log(`Responsables en la hoja: ${plan.responsables.length}, con cargos distintos: ${plan.cargosEnConflicto.length}`);
+  console.log(`Imágenes a subir: ${plan.imagenes.length}, rechazadas: ${plan.imagenesRechazadas.length}`);
   console.log(`Campos que la hoja tiene vacíos y se conservan de la base: ${plan.conservados.length}`);
-  console.log(`Avisos: ${plan.avisos.length} · obras de la base sin fila: ${plan.obrasSinFila.length}`);
+  console.log(`Avisos: ${plan.avisos.length}, obras de la base sin fila: ${plan.obrasSinFila.length}`);
   console.log('Detalle en importacion/simulacion.json. Para conservar el valor de la base en un campo, añádelo a importacion/excepciones.json como { "obraId": 5, "campo": "ubicacion" }.');
 }
 

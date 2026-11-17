@@ -47,15 +47,17 @@ describe('CabeceraComponent', () => {
     expect(montar({ admin: false, sesion: true }).querySelector('a[href="/sincronizacion"]')).toBeNull();
   });
 
-  it('sin sesión ofrece iniciar sesión y no muestra el Tablero', () => {
+  it('sin sesión ofrece iniciar sesión y no muestra Resumen ni Mapa', () => {
     const html = montar({ admin: false, sesion: false });
     expect(html.textContent).toContain('Iniciar sesión');
-    expect(html.textContent).not.toContain('Tablero');
+    expect(html.querySelector('a[href="/resumen"]')).toBeNull();
+    expect(html.querySelector('a[href="/mapa"]')).toBeNull();
   });
 
-  it('un administrador ve el Tablero, sus iniciales, su nombre y su rol; el correo está en su perfil', () => {
+  it('un administrador ve Resumen y Mapa, sus iniciales, su nombre y su rol; el correo está en su perfil', () => {
     const html = montar({ admin: true, sesion: true, nombre: 'Jobany Tobón' });
-    expect(html.textContent).toContain('Tablero');
+    expect(html.querySelector('nav[aria-label="Principal"] a[href="/resumen"]')?.textContent?.trim()).toBe('Resumen');
+    expect(html.querySelector('nav[aria-label="Principal"] a[href="/mapa"]')?.textContent?.trim()).toBe('Mapa');
     const boton = botonPerfil(html).textContent!;
     expect(boton).toContain('JT');
     expect(boton).toContain('Jobany Tobón');
@@ -67,9 +69,10 @@ describe('CabeceraComponent', () => {
     expect(texto.indexOf('jobany.tobon@upb.edu.co')).toBeGreaterThan(texto.indexOf('Jobany Tobón'));
   });
 
-  it('una sesión sin rol de administrador no ve el Tablero', () => {
+  it('una sesión sin rol de administrador no ve Resumen ni Mapa', () => {
     const html = montar({ admin: false, sesion: true, nombre: 'Ana Pérez' });
-    expect(html.textContent).not.toContain('Tablero');
+    expect(html.querySelector('a[href="/resumen"]')).toBeNull();
+    expect(html.querySelector('a[href="/mapa"]')).toBeNull();
     abrirPerfil(html);
     expect(html.textContent).toContain('Consulta');
   });
@@ -141,7 +144,7 @@ describe('CabeceraComponent', () => {
     expect(html.querySelector('#menu-perfil')).toBeNull();
   });
 
-  it('la galería sigue marcada en la ficha, el registro y la edición, pero no en el Tablero', async () => {
+  it('la galería sigue marcada en la ficha, el registro y la edición, pero no en Resumen ni en Mapa', async () => {
     const html = montar({ admin: true, sesion: true });
     const enlace = (texto: string) => [...html.querySelectorAll('nav[aria-label="Principal"] a')].find((a) => a.textContent?.trim() === texto)!;
     const marcada = (texto: string) => enlace(texto).classList.contains('!text-acento-tinta');
@@ -150,9 +153,11 @@ describe('CabeceraComponent', () => {
       TestBed.tick();
       expect(marcada('Galería')).withContext(url).toBeTrue();
     }
-    await TestBed.inject(Router).navigateByUrl('/tablero');
-    TestBed.tick();
-    expect(marcada('Galería')).toBeFalse();
-    expect(marcada('Tablero')).toBeTrue();
+    for (const [url, texto] of [['/resumen', 'Resumen'], ['/mapa', 'Mapa']]) {
+      await TestBed.inject(Router).navigateByUrl(url);
+      TestBed.tick();
+      expect(marcada('Galería')).withContext(url).toBeFalse();
+      expect(marcada(texto)).withContext(url).toBeTrue();
+    }
   });
 });

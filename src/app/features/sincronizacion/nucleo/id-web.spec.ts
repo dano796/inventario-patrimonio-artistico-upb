@@ -19,7 +19,7 @@ describe('verificarAsignaciones', () => {
     expect(r).toEqual({ ok: true, pendientes: [asignacion(2, 10, 'Uno'), asignacion(3, 11, 'Dos')] });
   });
 
-  it('se detiene si la hoja se desplazó desde la copia', () => {
+  it('se detiene si el Excel se desplazó desde la copia', () => {
     const r = verificarAsignaciones(
       [asignacion(2, 10, 'Uno'), asignacion(3, 11, 'Dos')],
       new Map([[2, estado('Fila insertada')], [3, estado('Uno')]])
@@ -62,7 +62,7 @@ describe('verificarAsignaciones', () => {
     expect(r).toEqual({ ok: false, discrepancias: [{ fila: 2, motivo: 'ya tiene el ID WEB #REF!, se esperaba 10' }] });
   });
 
-  it('se detiene si dos asignaciones repiten fila u obra, sin llegar a comparar con la hoja', () => {
+  it('se detiene si dos asignaciones repiten fila u obra, sin llegar a comparar con el Excel', () => {
     const r = verificarAsignaciones(
       [asignacion(2, 10, 'Uno'), asignacion(2, 11, 'Otra'), asignacion(3, 10, 'Dos')],
       new Map()

@@ -1,0 +1,94 @@
+<main class="flex flex-col lg:relative lg:block lg:h-[calc(100dvh-62px)] lg:overflow-hidden">
+  <div class="relative h-[68dvh] min-h-[440px] bg-sub lg:absolute lg:inset-0 lg:h-auto">
+    @if (resumen(); as r) {
+      @if (r.porBloque.length) {
+        <app-mapa-campus class="absolute inset-0 isolate" [bloques]="r.porBloque" [relleno]="rellenoMapa()" [(elegido)]="bloqueElegido" />
+      }
+    } @else if (cargando()) {
+      <div class="absolute inset-0 animate-pulse bg-sub" aria-busy="true" aria-label="Cargando el plano"></div>
+    }
+    <div class="tarjeta absolute left-4 right-4 top-4 px-5 py-[18px] sm:right-auto sm:w-[340px]">
+      <h1 class="text-[24px] font-extrabold leading-tight tracking-[-0.02em]">Dónde están las obras</h1>
+      @if (resumen(); as r) {
+        <p class="mt-1.5 text-sm font-medium text-tinta-4">Distribución de las obras del patrimonio artístico en el campus de Laureles.</p>
+        @if (r.sinBloque) {
+          <p class="mt-2.5 flex items-start gap-1.5 text-xs font-semibold text-ambar-2">
+            <svg class="mt-px flex-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>
+            {{ numero(r.sinBloque) }} obras sin bloque, fuera del plano
+          </p>
+        }
+      }
+    </div>
+  </div>
+
+  <aside class="tarjeta m-4 flex min-h-0 flex-col px-[18px] py-4 lg:absolute lg:bottom-4 lg:right-4 lg:top-4 lg:m-0 lg:w-[380px]">
+    <h2 class="text-[18px] font-bold">Bloques</h2>
+    <p class="mb-3 mt-0.5 text-xs font-medium text-tinta-4">Elige un bloque aquí o en el plano para ver sus lugares.</p>
+    @if (error()) {
+      <div class="flex flex-col items-start gap-3 py-2" role="alert">
+        <p class="text-sm font-medium text-tinta-4">No se pudo cargar el mapa.</p>
+        <button type="button" class="btn-primario" (click)="cargar()">Reintentar</button>
+      </div>
+    } @else if (resumen(); as r) {
+      @if (r.porBloque.length) {
+        <ul #lista (scroll)="guardarDesplazamiento($event)" class="barra-fina -mx-2 flex min-h-0 flex-col gap-0.5 overflow-auto">
+          @for (b of r.porBloque; track b.numero) {
+            <li>
+              <button type="button" (click)="elegirBloque(b.numero)" [attr.aria-pressed]="bloqueElegido() === b.numero"
+                class="group grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_72px_40px] items-center gap-3 rounded-xl px-2.5 py-[7px] text-left hover:bg-sub focus-visible:outline-offset-[-2px] aria-pressed:bg-ambar-suave">
+                <span class="flex min-w-0 items-center gap-2">
+                  <span class="inline-grid h-[22px] min-w-[22px] place-items-center rounded-full bg-acento px-1 text-[11px] font-extrabold text-white group-aria-pressed:bg-ambar-3"><span class="[text-box:trim-both_cap_alphabetic]">{{ b.numero }}</span></span>
+                  <span class="truncate text-[14px] font-medium group-aria-pressed:font-semibold">{{ nombreBloque(b.numero, b.nombre) }}</span>
+                </span>
+                <span class="block h-2 overflow-hidden rounded-full bg-pista-2" aria-hidden="true">
+                  <span class="block h-full rounded-full bg-acento group-aria-pressed:bg-ambar-3" [style.width]="porcentaje(b.proporcion)"></span>
+                </span>
+                <span class="text-right text-[14px] font-bold text-tinta-2 group-aria-pressed:text-tinta">{{ numero(b.obras) }}</span>
+              </button>
+              @if (bloqueElegido() === b.numero) {
+                @if (b.lugares.length) {
+                  <ul class="mb-2 ml-5 mr-2.5 mt-1 border-l-2 pt-0.5 border-linea-2 pl-4" [attr.aria-label]="'Lugares dentro de ' + nombreBloque(b.numero, b.nombre)">
+                    @for (l of b.lugares; track l.nombre) {
+                      <li class="relative before:absolute before:-left-5 before:top-[13px] before:h-1.5 before:w-1.5 before:rounded-full before:bg-tinta-5 before:ring-2 before:ring-superficie">
+                        <button type="button" (click)="alternarLugar(l.nombre)" [attr.aria-expanded]="lugarAbierto() === l.nombre"
+                          class="group/lugar flex w-full cursor-pointer items-baseline justify-between gap-4 rounded-lg py-[5px] text-left text-[13px] hover:text-tinta focus-visible:outline-offset-[-2px]">
+                          <span [class]="l.nombre ? 'min-w-0 font-medium text-tinta-3 group-hover/lugar:text-tinta' : 'min-w-0 font-medium text-tinta-5 group-hover/lugar:text-tinta'">{{ l.nombre ?? 'Sin ubicación registrada' }}</span>
+                          <span class="flex flex-none items-center gap-1.5 font-semibold text-tinta-4">
+                            {{ numero(l.obras) }}
+                            <svg class="transition-transform group-aria-expanded/lugar:rotate-90" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                          </span>
+                        </button>
+                        @if (lugarAbierto() === l.nombre) {
+                          <ul class="mb-2 mt-1 rounded-xl bg-sub px-3 py-1.5" [attr.aria-label]="'Obras en ' + (l.nombre ?? 'ubicación sin registrar')">
+                            @for (o of l.fichas; track o.id) {
+                              <li class="border-b border-linea-0 py-2 last:border-0">
+                                <a [routerLink]="['/obra', o.id]" [state]="{ desde: 'mapa' }" class="block text-[13px] font-medium text-tinta-2 hover:text-acento-tinta">{{ titulo(o) }}</a>
+                                @if (o.autor) {
+                                  <span class="mt-0.5 block text-xs font-medium text-tinta-5">{{ o.autor }}</span>
+                                }
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="mb-2 ml-5 mt-1 border-l-2 border-linea-2 py-[5px] pl-4 text-[13px] font-medium text-tinta-4">Sus obras no tienen ubicación registrada.</p>
+                }
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="text-sm font-medium text-tinta-4">Ninguna obra tiene bloque asignado.</p>
+      }
+    } @else {
+      <div class="flex flex-col gap-2" aria-hidden="true">
+        @for (n of [1, 2, 3, 4, 5, 6]; track n) {
+          <div class="h-8 animate-pulse rounded-xl bg-sub"></div>
+        }
+      </div>
+    }
+  </aside>
+</main>

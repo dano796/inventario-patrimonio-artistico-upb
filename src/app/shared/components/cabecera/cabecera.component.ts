@@ -46,7 +46,7 @@ export class CabeceraComponent {
     ),
     { initialValue: this.router.url },
   );
-  enGaleria = computed(() => !/^\/(tablero|sincronizacion|autenticacion)(\/|\?|$)/.test(this.url()));
+  enGaleria = computed(() => !/^\/(resumen|mapa|tablero|sincronizacion|autenticacion)(\/|\?|$)/.test(this.url()));
 
   alternarTema(): void {
     this.temas.alternar();

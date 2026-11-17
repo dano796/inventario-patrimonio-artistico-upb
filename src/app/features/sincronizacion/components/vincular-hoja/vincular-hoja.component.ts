@@ -68,7 +68,7 @@ export class VincularHojaComponent implements OnInit {
       this.hoja.set({ ...hoja, fecha_ultima: null });
       this.resultados.set([]);
       this.buscado.set(null);
-      this.mensaje.set(`Hoja vinculada: ${archivo.name}`);
+      this.mensaje.set(`Excel vinculado: ${archivo.name}`);
     }, 'vincular');
   }
 
@@ -112,7 +112,7 @@ export class VincularHojaComponent implements OnInit {
     } catch (e) {
       if (e instanceof ErrorGraph && e.estado === 401) {
         this.conectado.set(false);
-        this.error.set('La conexión con OneDrive caducó. Conecta de nuevo y repite: las filas ya escritas se omiten.');
+        this.error.set('La conexión con OneDrive caducó. Al conectar de nuevo y repetir, las filas ya escritas se omiten.');
       } else {
         this.error.set(e instanceof Error ? e.message : 'Ha ocurrido un error inesperado.');
       }
