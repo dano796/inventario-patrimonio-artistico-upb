@@ -1,4 +1,4 @@
-<main class="mx-auto flex max-w-[1400px] flex-col gap-[18px] px-4 pb-16 pt-[26px] md:px-8">
+<main class="mx-auto flex max-w-[1400px] flex-col gap-[18px] px-4 pb-6 pt-[26px] md:px-8">
   <header class="flex flex-wrap items-end justify-between gap-5">
     <div>
       <p class="antetitulo">Inventario</p>
@@ -101,4 +101,6 @@
   }
 
   <app-paginacion [paginaActual]="currentPage()" [totalPaginas]="totalPages()" (irA)="goToSpecificPage($event)" />
+
+  <footer class="pt-6 text-center text-xs font-medium text-tinta-5">Elaborado por Daniel Ortiz Aristizábal</footer>
 </main>
