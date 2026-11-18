@@ -1,4 +1,4 @@
-<main class="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 pb-10 pt-[26px] md:px-8">
+<main class="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 pb-10 pt-[26px] md:px-8 lg:min-h-[calc(100dvh-62px)] lg:pb-8">
   <header class="flex flex-wrap items-end justify-between gap-5">
     <div>
       <p class="antetitulo">Catalogación</p>
@@ -23,7 +23,7 @@
   }
 
   <form id="formulario-obra" [formGroup]="artworkForm" (ngSubmit)="onSubmit()" novalidate
-    class="grid items-start gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
+    class="grid items-start gap-5 lg:flex-1 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-stretch">
     <section class="tarjeta order-last flex flex-col gap-3 p-5 lg:order-none lg:self-stretch">
       <div>
         <h2 class="text-[16px] font-bold">Imágenes</h2>
@@ -120,20 +120,20 @@
           </div>
         </div>
       </div>
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-3 lg:flex-1">
         <h2 class="text-[16px] font-bold"><span class="text-tinta-5">04 -</span> Notas</h2>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-12">
-          <div class="sm:col-span-6">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 lg:flex-1">
+          <div class="flex flex-col sm:col-span-6">
             <label for="descripcion" class="etiqueta">Descripción</label>
-            <textarea id="descripcion" formControlName="descripcion" rows="3" class="campo min-h-[96px] resize-y" placeholder="Qué representa la obra y cómo es"
+            <textarea id="descripcion" formControlName="descripcion" rows="3" class="campo min-h-[96px] resize-y lg:flex-1" placeholder="Qué representa la obra y cómo es"
               [attr.aria-invalid]="isFieldInvalid('descripcion')"></textarea>
             @if (isFieldInvalid('descripcion')) {
               <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('descripcion') }}</p>
             }
           </div>
-          <div class="sm:col-span-6">
+          <div class="flex flex-col sm:col-span-6">
             <label for="observaciones" class="etiqueta">Observaciones</label>
-            <textarea id="observaciones" formControlName="observaciones" rows="3" class="campo min-h-[96px] resize-y" placeholder="Procedencia, inscripciones, notas de conservación…"
+            <textarea id="observaciones" formControlName="observaciones" rows="3" class="campo min-h-[96px] resize-y lg:flex-1" placeholder="Procedencia, inscripciones, notas de conservación…"
               [attr.aria-invalid]="isFieldInvalid('observaciones')"></textarea>
             @if (isFieldInvalid('observaciones')) {
               <p class="mt-1 text-xs font-medium text-rojo-2">{{ getFieldError('observaciones') }}</p>
