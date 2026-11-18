@@ -5,6 +5,8 @@
       <h1 class="titulo-pantalla">Estado del inventario</h1>
       @if (hora()) {
         <p class="mt-1.5 text-sm font-medium text-tinta-4">{{ hora() }}</p>
+      } @else if (cargando() && !error()) {
+        <p class="mt-1.5 text-sm font-medium"><span class="inline-block h-3 w-32 animate-pulse rounded bg-linea align-middle"></span></p>
       }
     </div>
     <div class="flex flex-wrap gap-2.5">
@@ -30,10 +32,76 @@
       <button type="button" class="btn-primario" (click)="cargar()">Reintentar</button>
     </div>
   } @else if (cargando() && !resumen()) {
-    <div class="grid grid-cols-1 gap-[18px] xs:grid-cols-2 lg:grid-cols-4" aria-busy="true" aria-label="Cargando el resumen">
-      @for (n of [1, 2, 3, 4]; track n) {
-        <div class="tarjeta h-[118px] animate-pulse"></div>
-      }
+    <div class="contents" aria-busy="true" aria-label="Cargando el resumen">
+      <div class="grid grid-cols-1 gap-[18px] xs:grid-cols-2 lg:grid-cols-4">
+        @for (etiqueta of ['Obras registradas', 'Valor estimado', 'Fichas incompletas', 'Sin imagen']; track etiqueta) {
+          <div class="tarjeta px-5 py-[18px]">
+            <p class="text-xs font-semibold text-tinta-4">{{ etiqueta }}</p>
+            <p class="mb-0.5 mt-1 text-[38px] font-extrabold tracking-[-0.03em]"><span class="inline-block h-[30px] w-24 animate-pulse rounded-lg bg-linea-2 align-middle"></span></p>
+            <p class="text-xs font-semibold"><span class="inline-block h-2.5 w-28 animate-pulse rounded bg-linea align-middle"></span></p>
+          </div>
+        }
+      </div>
+
+      <ng-template #listaVacia>
+        <ul class="flex flex-col gap-1">
+          @for (ancho of [78, 64, 86, 52, 70, 58]; track $index) {
+            <li class="grid grid-cols-[minmax(0,44%)_minmax(0,1fr)_36px] items-center gap-3 py-[5px]">
+              <span class="text-[14px] font-medium"><span class="inline-block h-3 animate-pulse rounded bg-linea-2 align-middle" [style.width.%]="ancho"></span></span>
+              <span class="block h-2 rounded-full bg-pista-2" aria-hidden="true"></span>
+              <span class="text-right text-[14px] font-bold"><span class="inline-block h-3 w-5 animate-pulse rounded bg-linea-2 align-middle"></span></span>
+            </li>
+          }
+        </ul>
+        <p class="mt-auto pt-4 text-xs font-medium"><span class="inline-block h-2.5 w-3/4 animate-pulse rounded bg-linea align-middle"></span></p>
+      </ng-template>
+
+      <div class="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
+        <section class="tarjeta flex flex-col px-[22px] py-5">
+          <h2 class="text-[18px] font-bold">Técnicas</h2>
+          <p class="mb-3 mt-1 text-xs font-medium text-tinta-4">Agrupadas por el material principal.</p>
+          <ng-container [ngTemplateOutlet]="listaVacia" />
+        </section>
+        <section class="tarjeta flex flex-col px-[22px] py-5">
+          <h2 class="text-[18px] font-bold">Artistas</h2>
+          <p class="mb-3 mt-1 text-xs font-medium text-tinta-4">Con más obras en el inventario.</p>
+          <ng-container [ngTemplateOutlet]="listaVacia" />
+        </section>
+        <section class="tarjeta flex flex-col px-[22px] py-5">
+          <h2 class="text-[18px] font-bold">Épocas</h2>
+          <p class="mb-3 mt-1 text-xs font-medium text-tinta-4">Obras por década de creación.</p>
+          <ul class="flex min-h-[172px] flex-1 items-stretch gap-2.5">
+            @for (alto of [0.25, 0.2, 0.85, 1, 0.45, 0.1]; track $index) {
+              <li class="flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
+                <span class="text-xs font-bold"><span class="inline-block h-2.5 w-4 animate-pulse rounded bg-linea align-middle"></span></span>
+                <span class="block w-full max-w-[38px] animate-pulse rounded-t-md bg-linea-2" [style.height]="'calc((100% - 58px) * ' + alto + ')'"></span>
+                <span class="flex h-7 items-start"><span class="mt-0.5 inline-block h-2.5 w-7 animate-pulse rounded bg-linea"></span></span>
+              </li>
+            }
+          </ul>
+          <p class="pt-4 text-xs font-medium"><span class="inline-block h-2.5 w-1/2 animate-pulse rounded bg-linea align-middle"></span></p>
+        </section>
+      </div>
+
+      <section class="tarjeta px-[22px] py-5">
+        <h2 class="mb-1 text-[18px] font-bold">Completitud de las fichas</h2>
+        <p class="mb-2.5 text-xs font-medium text-tinta-4">Porcentaje de obras con cada dato registrado.</p>
+        @for (p of pendientes; track p.clave) {
+          <div class="border-t border-linea-suave">
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-[11px] sm:grid-cols-[150px_minmax(0,1fr)_52px_124px]">
+              <span class="text-[14px] font-medium">{{ p.campo }}</span>
+              <span class="col-span-2 row-start-2 flex items-center gap-3 sm:contents">
+                <span class="block h-2 flex-1 rounded-full bg-pista-2" aria-hidden="true"></span>
+                <span class="w-[52px] text-right text-[14px] font-bold"><span class="inline-block h-3 w-9 animate-pulse rounded bg-linea-2 align-middle"></span></span>
+              </span>
+              <span class="flex items-center justify-end gap-3">
+                <span class="inline-block h-[22px] w-8 animate-pulse rounded-full bg-linea"></span>
+                <span class="inline-block h-2.5 w-11 animate-pulse rounded bg-linea"></span>
+              </span>
+            </div>
+          </div>
+        }
+      </section>
     </div>
   } @else if (resumen(); as r) {
     <div class="grid grid-cols-1 gap-[18px] xs:grid-cols-2 lg:grid-cols-4">
